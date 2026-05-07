@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: #fbfaf6;
+  --color-paper-deep: #f2efe6;
+  --color-card: #ffffff;
+  --color-ink: #0f0f10;
+  --color-ink-soft: #2b2a28;
+  --color-ink-muted: #6b6963;
+  --color-ink-faint: #a09d94;
+  --color-rule: #dad6cb;
+  --color-rule-soft: #e8e5dc;
+  --color-accent: #1f4bff;
+  --color-accent-hover: #1738d6;
+  --color-accent-soft: #e8edff;
+  --color-warm: #d96a2c;
+  --color-warm-soft: #fbe8d6;
+  --color-success: #2f7d4f;
+  --color-success-soft: #dcebe1;
+  --color-danger: #c12a1f;
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans-custom);
+  --font-mono: var(--font-mono-custom);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.hero-bg {
+  background:
+    radial-gradient(
+      ellipse 60% 40% at 85% 0%,
+      var(--color-warm-soft) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 35% at 0% 100%,
+      var(--color-accent-soft) 0%,
+      transparent 55%
+    ),
+    var(--color-paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
 }
+
+::selection {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-rule-soft) 0%,
+    var(--color-paper-deep) 50%,
+    var(--color-rule-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .shimmer {
+    animation: none;
+  }
+}
+

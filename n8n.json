@@ -1,0 +1,265 @@
+{
+  "name": "Instagram Reels Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Posts",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "pending"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "get-rows",
+      "name": "Get row(s) in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert en marketing Instagram. Crée un post engageant pour le sujet suivant :\n\nSujet: {{ $json.topic }}\nNiche: {{ $json.niche }}\nTon: {{ $json.tone }}\n\nGénère :\n1. Une caption captivante (max 2200 caractères)\n2. 15-20 hashtags pertinents\n3. Un titre court pour l'image (max 60 caractères)\n4. Un sous-titre (max 100 caractères)\n\nRéponds UNIQUEMENT en JSON valide avec cette structure :\n{\n  \"caption\": \"...\",\n  \"hashtags\": \"#tag1 #tag2 ...\",\n  \"image_title\": \"...\",\n  \"image_subtitle\": \"...\"\n}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Tu es un expert en copywriting Instagram. Réponds toujours en JSON valide, sans markdown."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "id": "gemini-model",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [620, 500],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDS_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and prepare image config\nconst aiOutput = JSON.parse($input.first().json.output);\nconst rowData = $('Get row(s) in sheet').first().json;\n\n// Image generation config (envoyé à un service comme Bannerbear, Placid, ou ton propre serveur)\nconst imageConfig = {\n  template_id: rowData.template_id || 'default',\n  layers: [\n    {\n      type: 'background',\n      color: rowData.bg_color || '#1a1a2e',\n      gradient: rowData.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'\n    },\n    {\n      type: 'image',\n      url: rowData.image_url,\n      x: 0,\n      y: 0,\n      width: 1080,\n      height: 1080,\n      opacity: 0.6,\n      filter: 'blur(2px)'\n    },\n    {\n      type: 'text',\n      content: aiOutput.image_title,\n      font: 'Inter',\n      weight: 900,\n      size: 72,\n      color: '#ffffff',\n      x: 540,\n      y: 480,\n      align: 'center',\n      shadow: '0 4px 20px rgba(0,0,0,0.5)'\n    },\n    {\n      type: 'text',\n      content: aiOutput.image_subtitle,\n      font: 'Inter',\n      weight: 400,\n      size: 32,\n      color: '#e0e0e0',\n      x: 540,\n      y: 600,\n      align: 'center'\n    }\n  ],\n  output: {\n    width: 1080,\n    height: 1080,\n    format: 'jpg',\n    quality: 95\n  }\n};\n\nreturn [{\n  json: {\n    caption: aiOutput.caption + '\\n\\n' + aiOutput.hashtags,\n    image_config: imageConfig,\n    row_id: rowData.row_number,\n    media_type: rowData.media_type || 'IMAGE'\n  }\n}];"
+      },
+      "id": "prepare-data",
+      "name": "Prepare Image Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.bannerbear.com/v2/images",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.image_config) }}",
+        "options": {}
+      },
+      "id": "generate-image",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_BANNERBEAR_CREDS",
+          "name": "Bannerbear API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.IG_ACCOUNT_ID }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('Prepare Image Config').item.json.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-container",
+      "name": "Facebook Graph API - Create Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "wait",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1560, 300],
+      "webhookId": "wait-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.IG_ACCOUNT_ID }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $('Facebook Graph API - Create Media').item.json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "publish-media",
+      "name": "Facebook Graph API - Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Posts",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Prepare Image Config').item.json.row_id }}",
+            "status": "published",
+            "post_id": "={{ $json.id }}",
+            "published_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": ["row_number"]
+        }
+      },
+      "id": "update-sheet",
+      "name": "Update row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2000, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDS_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{ "node": "Get row(s) in sheet", "type": "main", "index": 0 }]]
+    },
+    "Get row(s) in sheet": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "Prepare Image Config", "type": "main", "index": 0 }]]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Prepare Image Config": {
+      "main": [[{ "node": "Generate Image", "type": "main", "index": 0 }]]
+    },
+    "Generate Image": {
+      "main": [[{ "node": "Facebook Graph API - Create Media", "type": "main", "index": 0 }]]
+    },
+    "Facebook Graph API - Create Media": {
+      "main": [[{ "node": "Wait", "type": "main", "index": 0 }]]
+    },
+    "Wait": {
+      "main": [[{ "node": "Facebook Graph API - Publish", "type": "main", "index": 0 }]]
+    },
+    "Facebook Graph API - Publish": {
+      "main": [[{ "node": "Update row in sheet", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "active": false,
+  "versionId": "1"
+}
