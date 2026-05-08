@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthBanner } from "../components/AuthBanner";
+import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readLastCV } from "../lib/cvStore";
 import type { CoverLetter, LetterResponse, OptimizedCV } from "../types";
 
@@ -38,7 +41,7 @@ export default function LetterPage() {
     try {
       let res: Response;
       if (source === "stored" && storedCv) {
-        res = await fetch("/api/cover-letter", {
+        res = await fetchWithAuth("/api/cover-letter", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cv: storedCv.cv, offer }),
@@ -52,7 +55,7 @@ export default function LetterPage() {
         const body = new FormData();
         body.append("cv", cvFile);
         body.append("offer", offer);
-        res = await fetch("/api/cover-letter", { method: "POST", body });
+        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body });
       }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
@@ -66,16 +69,15 @@ export default function LetterPage() {
 
   return (
     <main className="min-h-screen">
+      <AuthBanner />
+
       {/* HERO */}
       <section className="hero-bg border-b border-rule">
         <div className="mx-auto max-w-7xl px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
-          <div className="mb-12 flex items-baseline justify-between font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-            <span className="inline-flex items-center gap-2">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-warm" />
-              Lettre de motivation · FR
-            </span>
+          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <Logo size="md" />
             <ServiceNav />
-            <span>v.01</span>
+            <span className="hidden sm:inline">v.01</span>
           </div>
 
           <h1 className="font-display text-[clamp(2.75rem,9vw,7.5rem)] font-light leading-[0.93] tracking-[-0.02em] text-ink">
@@ -366,7 +368,7 @@ function DownloadLetterButton({ letter }: { letter: CoverLetter }) {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch("/api/letter-pdf", {
+      const res = await fetchWithAuth("/api/letter-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ letter }),

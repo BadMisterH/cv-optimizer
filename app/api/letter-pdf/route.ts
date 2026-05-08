@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import type { CoverLetter } from "@/app/types";
+import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 
@@ -216,6 +217,9 @@ function buildHtml(letter: CoverLetter): string {
 export async function POST(req: Request) {
   let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
   try {
+    const guard = await requireSession(req);
+    if (guard.response) return guard.response;
+
     const body = await req.json();
     const letter = body?.letter as CoverLetter | undefined;
     if (!letter?.fullName) {

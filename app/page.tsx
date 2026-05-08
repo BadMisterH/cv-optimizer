@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AuthBanner } from "./components/AuthBanner";
+import { Logo } from "./components/Logo";
 import { ServiceNav } from "./components/ServiceNav";
+import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readPhoto, saveLastCV, savePhoto } from "./lib/cvStore";
 import type { OptimizeResponse, OptimizedCV } from "./types";
 
@@ -45,7 +48,7 @@ export default function Page() {
       body.append("cv", cvFile);
       body.append("offer", offer);
 
-      const res = await fetch("/api/optimize", { method: "POST", body });
+      const res = await fetchWithAuth("/api/optimize", { method: "POST", body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
       setResult(data);
@@ -60,16 +63,15 @@ export default function Page() {
 
   return (
     <main className="min-h-screen">
+      <AuthBanner />
+
       {/* HERO */}
       <section className="hero-bg border-b border-rule">
         <div className="mx-auto max-w-7xl px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
-          <div className="mb-12 flex items-baseline justify-between font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-            <span className="inline-flex items-center gap-2">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-              CV Optimizer · FR
-            </span>
+          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <Logo size="md" />
             <ServiceNav />
-            <span>v.01</span>
+            <span className="hidden sm:inline">v.01</span>
           </div>
 
           <h1 className="font-display text-[clamp(2.75rem,9vw,7.5rem)] font-light leading-[0.93] tracking-[-0.02em] text-ink">
@@ -445,7 +447,7 @@ function DownloadButton({
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch("/api/pdf", {
+      const res = await fetchWithAuth("/api/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cv, photo }),

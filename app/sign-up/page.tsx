@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { GoogleButton } from "@/app/components/GoogleButton";
+import { Logo } from "@/app/components/Logo";
 import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
@@ -44,12 +46,7 @@ function SignUpForm() {
   return (
     <main className="min-h-screen hero-bg">
       <div className="mx-auto flex max-w-md flex-col px-6 pt-20 pb-16">
-        <Link
-          href="/"
-          className="mb-10 self-start font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
-        >
-          ← CV Optimizer
-        </Link>
+        <Logo size="md" className="mb-10 self-start" />
 
         <h1 className="font-display text-5xl font-light leading-[0.95] tracking-tight text-ink">
           Crée ton <span className="italic font-normal text-warm">compte</span>.
@@ -58,7 +55,19 @@ function SignUpForm() {
           Optimise tes CV et lettres autant que tu veux. Pas de carte bancaire pour démarrer.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-10 space-y-5">
+        <div className="mt-10 space-y-4">
+          <GoogleButton
+            callbackURL={redirectTo}
+            label="S'inscrire avec Google"
+          />
+          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
+            <span className="h-px flex-1 bg-rule" />
+            ou avec email
+            <span className="h-px flex-1 bg-rule" />
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <div>
             <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
               Prénom <span className="text-ink-faint">(optionnel)</span>

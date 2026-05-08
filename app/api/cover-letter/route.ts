@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { OptimizedCV } from "@/app/types";
+import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 
@@ -116,6 +117,9 @@ function todayInFrench(): string {
 
 export async function POST(req: Request) {
   try {
+    const guard = await requireSession(req);
+    if (guard.response) return guard.response;
+
     const contentType = req.headers.get("content-type") ?? "";
 
     let cvAsText: string | null = null;

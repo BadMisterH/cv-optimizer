@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import type { CVSection, OptimizedCV } from "@/app/types";
+import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,13 @@ const SIDEBAR_KEYWORDS = [
   "intérêt",
   "hobby",
   "loisir",
+  "formation",
+  "education",
+  "éducation",
+  "diplôme",
+  "diplome",
+  "studies",
+  "parcours",
 ];
 
 function isSidebarSection(title: string): boolean {
@@ -305,6 +313,9 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 export async function POST(req: Request) {
   let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
   try {
+    const guard = await requireSession(req);
+    if (guard.response) return guard.response;
+
     const body = await req.json();
     const cv = body?.cv as OptimizedCV | undefined;
     const photoDataUrl =

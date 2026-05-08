@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
-@theme inline {
+/* Active la variante Tailwind `dark:` ciblée sur [data-theme="dark"]
+   posé par next-themes sur <html>. Permet `dark:bg-foo` dans les composants
+   tout en gardant les overrides de tokens CSS plus bas. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Colors : @theme (sans inline) → utility classes utilisent var(--color-...)
+   donc les overrides [data-theme="dark"] plus bas s'appliquent au runtime. */
+@theme {
   --color-paper: #fbfaf6;
   --color-paper-deep: #f2efe6;
   --color-card: #ffffff;
@@ -18,7 +25,10 @@
   --color-success: #2f7d4f;
   --color-success-soft: #dcebe1;
   --color-danger: #c12a1f;
+}
 
+/* Fonts : @theme inline → résout les var(--font-*-custom) posées par next/font. */
+@theme inline {
   --font-display: var(--font-display);
   --font-sans: var(--font-sans-custom);
   --font-mono: var(--font-mono-custom);
@@ -28,6 +38,32 @@ html,
 body {
   background: var(--color-paper);
   color: var(--color-ink);
+}
+
+html {
+  color-scheme: light;
+}
+
+/* ===== Dark mode ===== */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: #0e0e10;
+  --color-paper-deep: #18181a;
+  --color-card: #1b1b1e;
+  --color-ink: #f2f0ea;
+  --color-ink-soft: #d8d6d0;
+  --color-ink-muted: #8a8780;
+  --color-ink-faint: #5c5a56;
+  --color-rule: #2a2a2d;
+  --color-rule-soft: #1f1f22;
+  --color-accent: #5879ff;
+  --color-accent-hover: #7591ff;
+  --color-accent-soft: #1e2a4f;
+  --color-warm: #e68847;
+  --color-warm-soft: #3a2418;
+  --color-success: #5ba77a;
+  --color-success-soft: #1b2d22;
+  --color-danger: #e04a3f;
 }
 
 .hero-bg {

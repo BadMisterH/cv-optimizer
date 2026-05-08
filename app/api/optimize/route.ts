@@ -27,11 +27,11 @@ Méthodologie :
 
 2. Lis et analyse le CV PDF fourni en pièce jointe
 
-3. Génère une nouvelle version du CV structurée pour une mise en page A4 deux colonnes (sidebar gauche : Compétences / Langues / Centres d'intérêt — colonne principale droite : Accroche, Expérience, Formation, et optionnellement Projets). **Important : les deux colonnes doivent être à peu près équilibrées en hauteur.** La sidebar (Compétences + Langues + Centres d'intérêt) doit générer assez de contenu pour ne pas finir mi-page, sinon l'A4 paraît vide.
+3. Génère une nouvelle version du CV structurée pour une mise en page A4 deux colonnes (sidebar gauche : Compétences / Langues / Formation / Centres d'intérêt — colonne principale droite : Accroche, Expérience, et optionnellement Projets). **Important : les deux colonnes doivent être à peu près équilibrées en hauteur.** La sidebar doit générer assez de contenu pour ne pas finir mi-page.
    - Titre adapté à l'offre
    - Accroche personnalisée (3 phrases, 50-65 mots) qui pose le profil, le parcours et la motivation pour l'offre
    - Expériences : 3 expériences les plus pertinentes, **3 bullets par poste**, chaque bullet de 14-20 mots avec verbe d'action + contexte + impact concret. Dans le subheading, ajoute le secteur/contexte (ex: "2023 — 2024 · E-commerce")
-   - Formations : 3 entrées les plus pertinentes/récentes
+   - Formations (en sidebar) : 3 à 4 entrées récentes/pertinentes, format compact : heading = intitulé court (ex: "Ingénieur Informatique"), subheading = "établissement · années"
    - **Section "Projets" recommandée** dans la colonne principale si le CV original mentionne des réalisations (2 items, heading=nom du projet, subheading=stack/contexte, 1 bullet par projet décrivant l'enjeu)
    - Compétences : **4 sous-sections regroupées par catégorie**, 5-7 tags par sous-section, choisis pour matcher l'offre. Couvre largement : relation/commerce, qualités personnelles, outils techniques, et une 4e catégorie pertinente (ex: communication, méthodologie, langues techniques selon le profil)
    - Ajout de mots-clés stratégiques issus de l'offre
@@ -118,6 +118,9 @@ const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
+    const guard = await requireSession(req);
+    if (guard.response) return guard.response;
+
     const formData = await req.formData();
     const cvEntry = formData.get("cv");
     const offer = formData.get("offer");

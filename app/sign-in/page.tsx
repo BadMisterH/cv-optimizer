@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { GoogleButton } from "@/app/components/GoogleButton";
+import { Logo } from "@/app/components/Logo";
 import { signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
@@ -17,6 +19,7 @@ function SignInForm() {
   const router = useRouter();
   const search = useSearchParams();
   const redirectTo = search.get("redirect") ?? "/";
+  const justReset = search.get("reset") === "ok";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,12 +42,7 @@ function SignInForm() {
   return (
     <main className="min-h-screen hero-bg">
       <div className="mx-auto flex max-w-md flex-col px-6 pt-20 pb-16">
-        <Link
-          href="/"
-          className="mb-10 self-start font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
-        >
-          ← CV Optimizer
-        </Link>
+        <Logo size="md" className="mb-10 self-start" />
 
         <h1 className="font-display text-5xl font-light leading-[0.95] tracking-tight text-ink">
           Bon <span className="italic font-normal text-accent">retour</span>.
@@ -53,7 +51,22 @@ function SignInForm() {
           Connecte-toi pour optimiser ton CV et générer ta lettre.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-10 space-y-5">
+        {justReset && (
+          <div className="mt-6 border-l-2 border-success bg-success-soft/40 p-4 font-mono text-[11px] uppercase tracking-[0.16em] text-success">
+            ✓ Mot de passe mis à jour — connecte-toi avec le nouveau
+          </div>
+        )}
+
+        <div className="mt-10 space-y-4">
+          <GoogleButton callbackURL={redirectTo} />
+          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
+            <span className="h-px flex-1 bg-rule" />
+            ou avec email
+            <span className="h-px flex-1 bg-rule" />
+          </div>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <div>
             <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
               Email
@@ -69,9 +82,17 @@ function SignInForm() {
           </div>
 
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-              Mot de passe
-            </label>
+            <div className="mb-2 flex items-baseline justify-between">
+              <label className="block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+                Mot de passe
+              </label>
+              <Link
+                href="/forgot-password"
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted hover:text-accent"
+              >
+                Oublié ?
+              </Link>
+            </div>
             <input
               type="password"
               value={password}
