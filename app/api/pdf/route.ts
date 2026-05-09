@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
 import type { CVSection, OptimizedCV } from "@/app/types";
+import { launchBrowser } from "@/lib/browser";
 import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const SIDEBAR_KEYWORDS = [
   "compétence",
@@ -311,7 +312,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 }
 
 export async function POST(req: Request) {
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+  let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
   try {
     const guard = await requireSession(req);
     if (guard.response) return guard.response;
@@ -328,10 +329,7 @@ export async function POST(req: Request) {
 
     const html = buildHtml(cv, photoDataUrl);
 
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    browser = await launchBrowser();
     const page = await browser.newPage();
 
     // A4 portrait viewport at 96dpi : 794 × 1123 px

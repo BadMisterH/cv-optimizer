@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { GoogleButton } from "@/app/components/GoogleButton";
 import { Logo } from "@/app/components/Logo";
@@ -16,7 +16,6 @@ export default function SignUpPage() {
 }
 
 function SignUpForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const redirectTo = search.get("redirect") ?? "/";
   const [name, setName] = useState("");
@@ -24,6 +23,7 @@ function SignUpForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,14 +33,15 @@ function SignUpForm() {
       email,
       password,
       name: name.trim() || email.split("@")[0],
+      callbackURL: redirectTo,
     });
     if (err) {
       setError(err.message ?? "Échec d'inscription");
       setLoading(false);
       return;
     }
-    router.push(redirectTo);
-    router.refresh();
+    setSent(true);
+    setLoading(false);
   }
 
   return (
@@ -51,6 +52,23 @@ function SignUpForm() {
         <h1 className="font-display text-5xl font-light leading-[0.95] tracking-tight text-ink">
           Crée ton <span className="italic font-normal text-warm">compte</span>.
         </h1>
+
+        {sent ? (
+          <div className="mt-8 border-l-2 border-success bg-success-soft/40 p-5">
+            <p className="font-display text-lg font-medium text-ink">
+              ✓ Email envoyé
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              Un lien de confirmation a été envoyé à{" "}
+              <strong className="text-ink">{email}</strong>. Clique dessus pour
+              activer ton compte (lien valable 1h).
+            </p>
+            <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+              Pense à vérifier les spams. Tu seras connecté automatiquement après confirmation.
+            </p>
+          </div>
+        ) : (
+          <>
         <p className="mt-4 text-base text-ink-soft">
           Optimise tes CV et lettres autant que tu veux. Pas de carte bancaire pour démarrer.
         </p>
@@ -137,6 +155,8 @@ function SignUpForm() {
             Se connecter →
           </Link>
         </p>
+          </>
+        )}
       </div>
     </main>
   );
