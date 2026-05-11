@@ -71,12 +71,18 @@ async function sendEmail(opts: {
 
   try {
     await trySend(configuredFrom);
+    console.log(
+      `[${opts.fallbackLabel}] Email envoyé à ${opts.to} via Resend from=${configuredFrom}`
+    );
   } catch (firstError) {
     console.error(`[${opts.fallbackLabel}] Erreur Resend avec from=${configuredFrom}:`, firstError);
     if (configuredFrom !== defaultFrom) {
       try {
         console.log(`[${opts.fallbackLabel}] Réessai avec from=${defaultFrom}`);
         await trySend(defaultFrom);
+        console.log(
+          `[${opts.fallbackLabel}] Email envoyé à ${opts.to} via Resend from=${defaultFrom}`
+        );
         return;
       } catch (secondError) {
         console.error(
@@ -124,11 +130,12 @@ async function sendVerificationEmail(email: string, url: string) {
   });
 }
 
+const productionUrl =
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+
 const BASE_URL =
   process.env.BETTER_AUTH_URL ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "http://localhost:3000");
+  (productionUrl ? `https://${productionUrl}` : "http://localhost:3000");
 
 const isDev = process.env.NODE_ENV !== "production";
 
