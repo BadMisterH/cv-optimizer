@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { CVSection, OptimizedCV } from "@/app/types";
 import { launchBrowser } from "@/lib/browser";
-import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,61 +49,34 @@ function visibleItems(section: CVSection) {
   );
 }
 
-function isDuplicateHeading(sectionTitle: string, itemHeading: string): boolean {
-  const norm = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-z0-9]/g, "")
-      .trim();
-  return norm(sectionTitle) === norm(itemHeading);
-}
-
 function renderSection(section: CVSection): string {
   const items = visibleItems(section);
   if (items.length === 0) return "";
 
-  const isOrphanList =
-    items.length > 1 &&
-    items.every(
-      (it) => it.bullets.length === 0 && it.tags.length === 0 && !!it.heading
-    );
+  const sectionTitle = escapeHtml(section.title);
 
-  const itemsHtml = isOrphanList
-    ? items
-        .map(
-          (it) =>
-            `<p class="bullet">• ${escapeHtml(
-              [it.heading, it.subheading].filter(Boolean).join(" — ")
-            )}</p>`
-        )
-        .join("")
-    : items
-        .map((it) => {
-          // Skip heading if it just duplicates the section title (ex: "Langues" inside LANGUES)
-          const showHeading =
-            it.heading && !isDuplicateHeading(section.title, it.heading);
-          const heading = showHeading
-            ? `<p class="item-heading">${escapeHtml(it.heading!)}</p>`
-            : "";
-          const subheading = it.subheading
-            ? `<p class="item-subheading">${escapeHtml(it.subheading)}</p>`
-            : "";
-          const bullets = it.bullets
-            .map((b) => `<p class="bullet">• ${escapeHtml(b)}</p>`)
-            .join("");
-          const tags =
-            it.tags.length > 0
-              ? `<p class="skills">${escapeHtml(it.tags.join(" · "))}</p>`
-              : "";
-          return `<div class="item">${heading}${subheading}${bullets}${tags}</div>`;
-        })
-        .join("");
+  const itemsHtml = items
+    .map((it) => {
+      const heading = it.heading ? escapeHtml(it.heading) : "";
+      const subheading = it.subheading ? escapeHtml(it.subheading) : "";
+      const headingRow = heading
+        ? `<div class="item-header"><span class="item-heading">${heading}</span>${subheading ? `<span class="item-meta">${subheading}</span>` : ""}</div>`
+        : "";
+      const bullets = it.bullets.length
+        ? `<ul class="item-bullets">${it.bullets
+            .map((b) => `<li>${escapeHtml(b)}</li>`)
+            .join("")}</ul>`
+        : "";
+      const tags = it.tags.length
+        ? `<div class="skills">${it.tags
+            .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+            .join("")}</div>`
+        : "";
+      return `<div class="item">${headingRow}${bullets}${tags}</div>`;
+    })
+    .join("");
 
-  return `<section class="cv-section"><h2 class="section-title">${escapeHtml(
-    section.title
-  )}</h2>${itemsHtml}</section>`;
+  return `<section class="cv-section"><h2 class="section-title">${sectionTitle}</h2>${itemsHtml}</section>`;
 }
 
 function ensureProtocol(url: string): string {
@@ -146,9 +118,7 @@ function buildContactHtml(contact: OptimizedCV["contact"]): string {
 
 function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
   const contactHtml = buildContactHtml(cv.contact);
-
-  const sidebarSections = cv.sections.filter((s) => isSidebarSection(s.title));
-  const mainSections = cv.sections.filter((s) => !isSidebarSection(s.title));
+  const sectionsHtml = cv.sections.map(renderSection).join("");
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -159,153 +129,147 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: #0f0f10;
-    font-size: 10pt;
+    color: #111111;
+    font-size: 11pt;
     line-height: 1.5;
     background: #ffffff;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .header {
-    border-bottom: 1.5pt solid #1f4bff;
-    padding-bottom: 8pt;
-    margin-bottom: 14pt;
-    display: flex;
-    align-items: flex-start;
-    gap: 16pt;
+  body {
+    padding: 24px 28px;
   }
-  .header-text { flex: 1; min-width: 0; }
-  .header-photo {
-    width: 88px;
-    height: 110px;
-    object-fit: cover;
-    border-radius: 3pt;
-    flex-shrink: 0;
+  .container {
+    max-width: 794px;
+    margin: 0 auto;
+  }
+  .header {
+    margin-bottom: 18px;
+  }
+  .top-line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
   }
   .title {
     font-size: 22pt;
     font-weight: 700;
     letter-spacing: -0.4pt;
-    color: #0f0f10;
-    line-height: 1.15;
+    color: #111111;
+    margin-bottom: 6px;
   }
   .name {
-    font-size: 12pt;
-    font-weight: 500;
-    color: #2b2a28;
-    margin-top: 4pt;
+    font-size: 14pt;
+    font-weight: 700;
+    color: #111111;
+  }
+  .subtitle {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1f4bff;
+    margin-top: 4px;
   }
   .contact {
     font-size: 9pt;
     color: #5d5b56;
-    margin-top: 6pt;
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .contact .link {
-    color: #1f4bff;
-    text-decoration: underline;
-    text-decoration-color: rgba(31, 75, 255, 0.35);
-    text-underline-offset: 1.5pt;
-    word-break: break-all;
+    color: #111111;
+    text-decoration: none;
   }
   .contact .sep {
     color: #b0aea5;
-    margin: 0 2pt;
   }
-  .body {
-    display: grid;
-    grid-template-columns: 32% 1fr;
-    column-gap: 20pt;
+  .divider {
+    margin: 18px 0;
+    border-top: 1.5pt solid #111111;
   }
-  .sidebar {
-    border-right: 0.5pt solid #e5e2d8;
-    padding-right: 16pt;
+  .cv-section {
+    margin-bottom: 16px;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
-  .main { padding-left: 0; }
-  .cv-section { break-inside: avoid; page-break-inside: avoid; }
   .section-title {
     font-size: 9.5pt;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.6pt;
-    border-bottom: 1pt solid #1f4bff;
-    padding-bottom: 3pt;
-    margin-top: 14pt;
-    margin-bottom: 8pt;
-    color: #0f0f10;
-  }
-  .sidebar .cv-section:first-child .section-title,
-  .main .cv-section:first-child .section-title {
-    margin-top: 0;
-  }
-  .main > .cv-section:first-of-type .section-title {
-    margin-top: 0;
+    letter-spacing: 1.4pt;
+    color: #111111;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #111111;
   }
   .item {
-    margin-bottom: 9pt;
-    break-inside: avoid;
-    page-break-inside: avoid;
+    margin-bottom: 12px;
   }
-  .sidebar .item { margin-bottom: 7pt; }
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
   .item-heading {
+    font-size: 10.2pt;
     font-weight: 700;
-    font-size: 10pt;
-    color: #0f0f10;
-    line-height: 1.35;
+    color: #111111;
   }
-  .item-subheading {
+  .item-meta {
     font-size: 9pt;
     color: #5d5b56;
-    margin-top: 1pt;
-    margin-bottom: 3pt;
+    text-align: right;
+    min-width: 120px;
   }
-  .bullet {
+  .item-bullets {
+    margin-top: 6px;
+    padding-left: 16px;
+    color: #222222;
     font-size: 9.5pt;
-    margin-left: 10pt;
-    margin-bottom: 2pt;
-    color: #2b2a28;
-    line-height: 1.45;
-    text-indent: -10pt;
-    padding-left: 10pt;
+    line-height: 1.55;
   }
-  .sidebar .bullet { font-size: 9pt; line-height: 1.4; }
+  .item-bullets li {
+    margin-bottom: 4px;
+  }
   .skills {
-    font-size: 9pt;
-    color: #2b2a28;
-    margin-top: 2pt;
-    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .skills span {
+    display: inline-flex;
+    background: #f0f5ff;
+    color: #1f4bff;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 8.8pt;
   }
   .accroche {
     font-size: 10pt;
-    color: #2b2a28;
-    line-height: 1.55;
+    color: #222222;
+    line-height: 1.6;
+    margin-top: 6px;
   }
 </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-text">
-      ${cv.title ? `<h1 class="title">${escapeHtml(cv.title)}</h1>` : ""}
-      <p class="name">${escapeHtml(cv.fullName)}</p>
-      ${contactHtml ? `<p class="contact">${contactHtml}</p>` : ""}
-    </div>
-    ${
-      photoDataUrl
-        ? `<img class="header-photo" src="${escapeHtml(photoDataUrl)}" alt="" />`
-        : ""
-    }
-  </header>
-  <div class="body">
-    <aside class="sidebar">${sidebarSections.map(renderSection).join("")}</aside>
-    <main class="main">
-      ${
-        cv.accroche
-          ? `<section class="cv-section"><h2 class="section-title">À propos</h2><p class="accroche">${escapeHtml(
-              cv.accroche
-            )}</p></section>`
-          : ""
-      }
-      ${mainSections.map(renderSection).join("")}
-    </main>
+  <div class="container">
+    <header class="header">
+      <div class="top-line">
+        <div>
+          <p class="title">${escapeHtml(cv.fullName)}</p>
+          ${cv.title ? `<p class="subtitle">${escapeHtml(cv.title)}</p>` : ""}
+        </div>
+      </div>
+      ${contactHtml ? `<div class="contact">${contactHtml}</div>` : ""}
+    </header>
+    <div class="divider"></div>
+    ${sectionsHtml}
   </div>
 </body>
 </html>`;
@@ -314,9 +278,6 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 export async function POST(req: Request) {
   let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
   try {
-    const guard = await requireSession(req);
-    if (guard.response) return guard.response;
-
     const body = await req.json();
     const cv = body?.cv as OptimizedCV | undefined;
     const photoDataUrl =
@@ -373,9 +334,16 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
+    console.error("[api/pdf] generation failed:", err);
     const message = err instanceof Error ? err.message : "Erreur inconnue";
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeErr) {
+        console.warn("[api/pdf] browser.close() failed:", closeErr);
+      }
+    }
   }
 }

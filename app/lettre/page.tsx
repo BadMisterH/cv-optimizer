@@ -247,7 +247,14 @@ export default function LetterPage() {
         </div>
       </section>
 
-      {result && <LetterResult data={result} />}
+      {result && (
+        <LetterResult
+          data={result}
+          onLetterChange={(letter) =>
+            setResult((prev) => (prev ? { ...prev, letter } : prev))
+          }
+        />
+      )}
 
       <footer className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
@@ -306,12 +313,26 @@ function SourceOption({
   );
 }
 
-function LetterResult({ data }: { data: LetterResponse }) {
+function LetterResult({
+  data,
+  onLetterChange,
+}: {
+  data: LetterResponse;
+  onLetterChange: (letter: CoverLetter) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [original] = useState<CoverLetter>(() => data.letter);
+  const isEdited = JSON.stringify(data.letter) !== JSON.stringify(original);
+
+  function handleReset() {
+    onLetterChange(original);
+  }
+
   return (
     <section className="rise border-b border-rule bg-paper-deep">
       <div className="mx-auto max-w-7xl px-6 py-14">
-        <header className="mb-10 flex items-baseline justify-between border-b border-rule pb-5">
-          <div className="flex items-baseline gap-4">
+        <header className="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-rule pb-5">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-warm">
               03
             </span>
@@ -321,14 +342,46 @@ function LetterResult({ data }: { data: LetterResponse }) {
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-success">
               ✓ Personnalisée
             </span>
+            {isEdited && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-warm-soft px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-warm">
+                ✎ Modifiée
+              </span>
+            )}
           </div>
-          <DownloadLetterButton letter={data.letter} />
+          <div className="flex flex-wrap items-center gap-3">
+            {editing && isEdited && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+                title="Annuler tes modifications et revenir à la version IA"
+              >
+                ↺ Réinitialiser
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 font-mono text-xs uppercase tracking-[0.18em] transition ${
+                editing
+                  ? "border-ink bg-ink text-paper hover:bg-ink/90"
+                  : "border-rule bg-card text-ink hover:border-ink"
+              }`}
+            >
+              {editing ? "Terminer l'édition" : "✎ Modifier"}
+            </button>
+            <DownloadLetterButton letter={data.letter} />
+          </div>
         </header>
 
         <div className="grid gap-10 lg:grid-cols-12">
           <article className="lg:col-span-8">
             <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
-              <LetterPreview letter={data.letter} />
+              {editing ? (
+                <LetterEditor letter={data.letter} onChange={onLetterChange} />
+              ) : (
+                <LetterPreview letter={data.letter} />
+              )}
             </div>
           </article>
 
@@ -352,6 +405,13 @@ function LetterResult({ data }: { data: LetterResponse }) {
                   </li>
                 ))}
               </ol>
+              {editing && (
+                <p className="mt-8 rounded-sm bg-paper-deep p-4 font-mono text-[11px] leading-relaxed text-ink-muted">
+                  💡 Astuce : modifie librement les paragraphes, l&apos;objet,
+                  la formule de politesse… Le PDF généré reprendra ta version
+                  finale.
+                </p>
+              )}
             </div>
           </aside>
         </div>
@@ -360,9 +420,243 @@ function LetterResult({ data }: { data: LetterResponse }) {
   );
 }
 
+function LetterEditor({
+  letter,
+  onChange,
+}: {
+  letter: CoverLetter;
+  onChange: (letter: CoverLetter) => void;
+}) {
+  function update<K extends keyof CoverLetter>(key: K, value: CoverLetter[K]) {
+    onChange({ ...letter, [key]: value });
+  }
+  function updateRecipient<K extends keyof CoverLetter["recipient"]>(
+    key: K,
+    value: CoverLetter["recipient"][K]
+  ) {
+    onChange({ ...letter, recipient: { ...letter.recipient, [key]: value } });
+  }
+  function updateParagraph(idx: number, value: string) {
+    const next = [...letter.paragraphs];
+    next[idx] = value;
+    update("paragraphs", next);
+  }
+  function addParagraph() {
+    update("paragraphs", [...letter.paragraphs, ""]);
+  }
+  function removeParagraph(idx: number) {
+    update(
+      "paragraphs",
+      letter.paragraphs.filter((_, i) => i !== idx)
+    );
+  }
+
+  const totalWords = letter.paragraphs
+    .join(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
+  return (
+    <div className="space-y-8">
+      <FieldGroup label="Destinataire">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <EditInput
+            label="Entreprise"
+            value={letter.recipient.company}
+            onChange={(v) => updateRecipient("company", v)}
+            placeholder="Acme Inc."
+          />
+          <EditInput
+            label="Poste"
+            value={letter.recipient.role}
+            onChange={(v) => updateRecipient("role", v)}
+            placeholder="Développeur Full-Stack"
+          />
+          <EditInput
+            label="Service / département"
+            value={letter.recipient.department}
+            onChange={(v) => updateRecipient("department", v)}
+            placeholder="Pôle Tech"
+          />
+          <EditInput
+            label="Adresse"
+            value={letter.recipient.address}
+            onChange={(v) => updateRecipient("address", v)}
+            placeholder="Paris"
+          />
+        </div>
+      </FieldGroup>
+
+      <FieldGroup label="Lieu et date">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <EditInput
+            label="Ville d'envoi"
+            value={letter.city}
+            onChange={(v) => update("city", v)}
+            placeholder="Paris"
+          />
+          <EditInput
+            label="Date"
+            value={letter.date}
+            onChange={(v) => update("date", v)}
+            placeholder="9 mai 2026"
+          />
+        </div>
+      </FieldGroup>
+
+      <FieldGroup label="En-tête de lettre">
+        <EditInput
+          label="Objet"
+          value={letter.subject}
+          onChange={(v) => update("subject", v)}
+          placeholder="Candidature au poste de…"
+        />
+        <EditInput
+          label="Formule d'ouverture"
+          value={letter.salutation}
+          onChange={(v) => update("salutation", v)}
+          placeholder="Madame, Monsieur,"
+        />
+      </FieldGroup>
+
+      <FieldGroup
+        label={`Corps (${letter.paragraphs.length} paragraphe${
+          letter.paragraphs.length > 1 ? "s" : ""
+        } · ${totalWords} mots)`}
+      >
+        <div className="space-y-4">
+          {letter.paragraphs.map((p, i) => (
+            <div key={i} className="relative">
+              <div className="mb-1.5 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                <span>Paragraphe {String(i + 1).padStart(2, "0")}</span>
+                {letter.paragraphs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeParagraph(i)}
+                    className="text-ink-faint hover:text-danger"
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+              <AutoTextarea
+                value={p}
+                onChange={(v) => updateParagraph(i, v)}
+                placeholder="Tape ton paragraphe…"
+              />
+            </div>
+          ))}
+          {letter.paragraphs.length < 5 && (
+            <button
+              type="button"
+              onClick={addParagraph}
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm underline-offset-4 hover:underline"
+            >
+              + Ajouter un paragraphe
+            </button>
+          )}
+        </div>
+      </FieldGroup>
+
+      <FieldGroup label="Pied de lettre">
+        <AutoTextarea
+          label="Formule de politesse"
+          value={letter.closing}
+          onChange={(v) => update("closing", v)}
+          placeholder="Je vous prie d'agréer…"
+        />
+        <EditInput
+          label="Signature"
+          value={letter.signature}
+          onChange={(v) => update("signature", v)}
+          placeholder="Prénom Nom"
+        />
+      </FieldGroup>
+    </div>
+  );
+}
+
+function FieldGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="mb-3 border-b border-rule pb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-warm">
+        {label}
+      </p>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function EditInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      {label && (
+        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+          {label}
+        </span>
+      )}
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full border border-rule bg-card px-3 py-2 text-[14px] text-ink placeholder:text-ink-faint outline-none transition focus:border-warm focus:shadow-[0_0_0_3px_var(--color-warm-soft)]"
+      />
+    </label>
+  );
+}
+
+function AutoTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      {label && (
+        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+          {label}
+        </span>
+      )}
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={Math.max(3, Math.min(10, Math.ceil((value.length || 1) / 80) + 1))}
+        className="w-full resize-y border border-rule bg-card px-3 py-2 text-[14px] leading-relaxed text-ink placeholder:text-ink-faint outline-none transition focus:border-warm focus:shadow-[0_0_0_3px_var(--color-warm-soft)]"
+      />
+    </label>
+  );
+}
+
 function DownloadLetterButton({ letter }: { letter: CoverLetter }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const downloadDisabled = loading;
 
   async function handleDownload() {
     setLoading(true);
@@ -398,7 +692,7 @@ function DownloadLetterButton({ letter }: { letter: CoverLetter }) {
       <button
         type="button"
         onClick={handleDownload}
-        disabled={loading}
+        disabled={downloadDisabled}
         className="group inline-flex items-center gap-3 bg-warm px-5 py-3 text-sm font-medium text-paper transition hover:bg-warm/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span>{loading ? "Génération…" : "Télécharger le PDF"}</span>

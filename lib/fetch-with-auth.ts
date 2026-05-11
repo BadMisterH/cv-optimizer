@@ -9,11 +9,5 @@ export async function fetchWithAuth(
   init?: RequestInit
 ): Promise<Response> {
   const res = await fetch(input, init);
-  if (res.status === 401 && typeof window !== "undefined") {
-    const current = window.location.pathname + window.location.search;
-    window.location.href = `/sign-in?redirect=${encodeURIComponent(current)}`;
-    // Retourne quand même la réponse pour que les callers ne crash pas
-    // (le redirect est en cours)
-  }
   return res;
 }

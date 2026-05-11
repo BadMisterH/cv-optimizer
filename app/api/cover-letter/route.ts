@@ -1,39 +1,61 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { OptimizedCV } from "@/app/types";
-import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 
-const SYSTEM_PROMPT = `Tu es un expert en rédaction de lettres de motivation pour le marché français.
+const SYSTEM_PROMPT = `Tu es un rédacteur de lettres de motivation pour le marché français. Tu écris des lettres qui sonnent humaines, jamais corporate ni générique.
 
-Ta mission est de produire une lettre de motivation puissante, personnalisée et professionnelle qui aligne le profil du candidat à l'offre visée.
+OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'appuyant sur des éléments concrets du CV et de l'offre.
 
-Principes de rédaction :
-- Ton professionnel, direct, sans clichés ni phrases creuses
-- Structure classique française : accroche → adéquation profil/poste → motivation → conclusion
-- Référence à des expériences ou compétences précises tirées du CV (ne jamais inventer)
-- Reprise des mots-clés et enjeux de l'offre, sans paraphraser bêtement
-- Concis : 3 à 4 paragraphes, pas plus de 350 mots au total dans le corps de lettre
-- Première personne, ton respectueux mais affirmé
+== RÈGLES D'ÉCRITURE (non négociables) ==
 
-Structure attendue dans le JSON :
-- "fullName" : nom complet du candidat
-- "contact" : email, phone, location, linkedin, github, portfolio (reprise du CV)
-- "recipient" : { company, role, department, address } — déduits de l'offre. Si une information n'est pas trouvée, mets une chaîne vide.
-- "city" : ville d'envoi (utiliser la ville du candidat si trouvée, sinon "")
-- "date" : au format français long (ex: "7 mai 2026")
-- "subject" : ligne d'objet (ex: "Candidature pour le poste de [role]")
-- "salutation" : formule d'ouverture, par défaut "Madame, Monsieur," ou avec nom si trouvé dans l'offre
-- "paragraphs" : tableau de 3 à 4 paragraphes du corps de lettre
-  - Paragraphe 1 (accroche) : pourquoi cette entreprise / ce poste précis, lien avec ton parcours
-  - Paragraphe 2 (adéquation) : compétences clés et expériences pertinentes du CV qui répondent à l'offre
-  - Paragraphe 3 (motivation/projet) : ce que tu vas apporter, vision du poste, valeurs partagées
-  - Paragraphe 4 (optionnel, conclusion ouverte) : disponibilité, demande d'entretien
-- "closing" : formule de politesse française classique (ex: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.")
-- "signature" : nom complet du candidat (sera signé en bas de lettre)
+1. TON HUMAIN ET NATUREL
+- Écris comme un candidat sincère qui veut vraiment ce poste, pas comme une IA polie.
+- Phrases courtes et variées (en moyenne 12 à 22 mots), alterne phrases simples et composées.
+- Concret toujours préféré à l'abstrait. Exemple : "j'ai mené 3 audits clients en stage" est meilleur que "j'ai développé mes compétences en relation client".
+- Bannis les formules-types et clichés : "fort de mon expérience", "passionné par votre secteur", "représente une opportunité unique", "j'ai à cœur de", "vivement intéressé", "votre dynamisme", "challenge", "synergie", "écosystème", "leverage", "saisir l'opportunité", "rejoindre vos équipes".
+- Pas d'auto-flagornerie ("très motivé", "extrêmement rigoureux", "force de proposition"). Montre-le par les faits.
 
-Retourne aussi "notes" : 3-5 puces expliquant tes choix éditoriaux (quels éléments du CV tu as mis en avant, quels mots-clés de l'offre tu as repris, le ton choisi).`;
+2. INTERDICTION ABSOLUE DES TIRETS DU MILIEU
+- Aucun caractère "—" (tiret cadratin / em dash).
+- Aucun caractère "–" (tiret demi-cadratin / en dash).
+- Aucun caractère "−" (signe moins typographique).
+- Le tiret simple "-" est seulement toléré dans les mots composés (ex: "porte-parole"). Jamais comme ponctuation.
+- Pour séparer une idée : utilise virgule, point, ou parenthèses.
+- INTERDIT : "ma formation — sérieuse — m'a appris..."
+- OK : "ma formation, sérieuse et exigeante, m'a appris..."
+
+3. PERSONNALISATION FORTE
+- Cite au moins UN élément précis et nommé tiré du CV (un projet, une mission, un chiffre, une techno, un secteur).
+- Cite au moins UN élément précis de l'offre (une mission, un produit, une valeur affichée par l'entreprise, un défi cité).
+- Le lien entre ces deux éléments doit être explicite, pas implicite.
+
+4. STRUCTURE
+- 3 ou 4 paragraphes, 280 à 340 mots au total dans le corps (paragraphs).
+- § 1 (40-60 mots) : pourquoi cette boîte, ce poste. Angle personnel, pas générique.
+- § 2 (90-120 mots) : 1 ou 2 expériences pertinentes du CV, avec verbes d'action et résultats concrets si possible.
+- § 3 (60-90 mots) : ce que tu vas apporter au poste. Concret, pas des mots creux.
+- § 4 optionnel (30-50 mots) : disponibilité, demande d'entretien.
+
+5. VOCABULAIRE
+- Verbes d'action : conçu, piloté, lancé, débogué, présenté, négocié, recruté, animé, structuré, déployé.
+- "Je" plutôt que "j'aimerais" ou "j'aurais" (on n'est pas dans le conditionnel poli mou).
+
+== CHAMPS JSON ATTENDUS ==
+
+- "fullName" : nom complet du candidat (depuis le CV).
+- "contact" : email, phone, location, linkedin, github, portfolio (depuis le CV).
+- "recipient" : { company, role, department, address } déduits de l'offre. Si l'information n'est pas trouvée, chaîne vide.
+- "city" : ville d'envoi (ville du candidat si trouvée, sinon "").
+- "date" : au format français long (ex: "9 mai 2026"). Utilise la date d'envoi fournie.
+- "subject" : ligne d'objet courte (ex: "Candidature au poste de Développeur Full-Stack").
+- "salutation" : "Madame, Monsieur," par défaut, ou avec nom si trouvé dans l'offre.
+- "paragraphs" : tableau de 3 ou 4 chaînes (les paragraphes du corps).
+- "closing" : formule de politesse française classique (ex: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.").
+- "signature" : nom complet du candidat.
+
+Retourne aussi "notes" : 3 à 5 puces concrètes expliquant tes choix éditoriaux (quel élément CV mis en avant, quel mot-clé offre repris, ton choisi). Pas de meta-blabla, juste des faits.`;
 
 const letterSchema = {
   type: "object",
@@ -96,6 +118,32 @@ const letterSchema = {
 
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
+// Filet de sécurité : enlève les tirets cadratins/demi-cadratins
+// au cas où le modèle en glisse malgré la consigne.
+function stripDashes(s: string): string {
+  return s
+    .replace(/\s*[—–−]\s*/g, ", ")
+    .replace(/\s*,\s*,\s*/g, ", ")
+    .replace(/\s*,\s*\./g, ".")
+    .replace(/\s+,/g, ",")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripDashesFromLetter<T extends Record<string, unknown>>(letter: T): T {
+  const out = { ...letter } as Record<string, unknown>;
+  for (const k of ["subject", "salutation", "closing"] as const) {
+    const v = out[k];
+    if (typeof v === "string") out[k] = stripDashes(v);
+  }
+  if (Array.isArray(out.paragraphs)) {
+    out.paragraphs = (out.paragraphs as unknown[]).map((p) =>
+      typeof p === "string" ? stripDashes(p) : p
+    );
+  }
+  return out as T;
+}
+
 function todayInFrench(): string {
   const months = [
     "janvier",
@@ -117,9 +165,6 @@ function todayInFrench(): string {
 
 export async function POST(req: Request) {
   try {
-    const guard = await requireSession(req);
-    if (guard.response) return guard.response;
-
     const contentType = req.headers.get("content-type") ?? "";
 
     let cvAsText: string | null = null;
@@ -219,6 +264,9 @@ export async function POST(req: Request) {
     }
 
     const parsed = JSON.parse(textBlock.text);
+    if (parsed?.letter) {
+      parsed.letter = stripDashesFromLetter(parsed.letter);
+    }
     return NextResponse.json(parsed);
   } catch (err) {
     if (err instanceof Anthropic.APIError) {

@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/require-auth";
 
 const SYSTEM_PROMPT = `Tu es un expert en recrutement et en optimisation de CV.
 
@@ -118,9 +117,6 @@ const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
-    const guard = await requireSession(req);
-    if (guard.response) return guard.response;
-
     const formData = await req.formData();
     const cvEntry = formData.get("cv");
     const offer = formData.get("offer");

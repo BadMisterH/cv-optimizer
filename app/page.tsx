@@ -443,6 +443,8 @@ function DownloadButton({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const downloadDisabled = loading;
+
   async function handleDownload() {
     setLoading(true);
     setErr(null);
@@ -477,7 +479,7 @@ function DownloadButton({
       <button
         type="button"
         onClick={handleDownload}
-        disabled={loading}
+        disabled={downloadDisabled}
         className="group inline-flex items-center gap-3 bg-accent px-5 py-3 text-sm font-medium text-paper transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span>{loading ? "Génération…" : "Télécharger le PDF"}</span>

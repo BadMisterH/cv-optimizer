@@ -39,25 +39,54 @@ async function sendEmail(opts: {
   html: string;
   fallbackLabel: string;
 }) {
+  const defaultFrom = "CV Optimizer <onboarding@resend.dev>";
+  const configuredFrom = process.env.RESEND_FROM?.trim() || defaultFrom;
+
   if (!process.env.RESEND_API_KEY) {
+    const msg = `RESEND_API_KEY non configurée. Impossible d'envoyer ${opts.fallbackLabel}.`;
+    console.error(msg);
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(msg);
+    }
     console.log("\n========================================");
     console.log(`📧 ${opts.fallbackLabel} (Resend non configuré)`);
     console.log(`   To: ${opts.to}`);
     console.log(`   Subject: ${opts.subject}`);
+    console.log(`   HTML: ${opts.html}`);
     console.log("========================================\n");
     return;
   }
+
   const { Resend } = await import("resend");
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const result = await resend.emails.send({
-    from: process.env.RESEND_FROM ?? "CV Optimizer <onboarding@resend.dev>",
-    to: opts.to,
-    subject: opts.subject,
-    html: opts.html,
-  });
-  if (result.error) {
-    console.error(`[${opts.fallbackLabel}] Resend error:`, result.error);
-    throw new Error(result.error.message ?? "Échec envoi email");
+
+  async function trySend(fromAddress: string) {
+    return resend.emails.send({
+      from: fromAddress,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+    });
+  }
+
+  try {
+    await trySend(configuredFrom);
+  } catch (firstError) {
+    console.error(`[${opts.fallbackLabel}] Erreur Resend avec from=${configuredFrom}:`, firstError);
+    if (configuredFrom !== defaultFrom) {
+      try {
+        console.log(`[${opts.fallbackLabel}] Réessai avec from=${defaultFrom}`);
+        await trySend(defaultFrom);
+        return;
+      } catch (secondError) {
+        console.error(
+          `[${opts.fallbackLabel}] Échec du réessai Resend avec from=${defaultFrom}:`,
+          secondError
+        );
+      }
+    }
+    const message = firstError instanceof Error ? firstError.message : String(firstError);
+    throw new Error(`Échec envoi email (${opts.fallbackLabel}): ${message}`);
   }
 }
 

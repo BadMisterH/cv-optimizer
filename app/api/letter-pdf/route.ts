@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { CoverLetter } from "@/app/types";
 import { launchBrowser } from "@/lib/browser";
-import { requireSession } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -218,9 +217,6 @@ function buildHtml(letter: CoverLetter): string {
 export async function POST(req: Request) {
   let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
   try {
-    const guard = await requireSession(req);
-    if (guard.response) return guard.response;
-
     const body = await req.json();
     const letter = body?.letter as CoverLetter | undefined;
     if (!letter?.fullName) {
@@ -268,9 +264,16 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
+    console.error("[api/letter-pdf] generation failed:", err);
     const message = err instanceof Error ? err.message : "Erreur inconnue";
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeErr) {
+        console.warn("[api/letter-pdf] browser.close() failed:", closeErr);
+      }
+    }
   }
 }
