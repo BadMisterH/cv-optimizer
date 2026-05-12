@@ -171,7 +171,6 @@ export default function Page() {
       <footer className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
           <span>© {new Date().getFullYear()} · CV Optimizer</span>
-          <span>Built with Next.js · Claude Opus 4.7</span>
         </div>
       </footer>
     </main>
