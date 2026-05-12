@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/lib/auth-client";
 import { AuthBanner } from "../components/AuthBanner";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readLastCV } from "../lib/cvStore";
+import { readLastCV, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
 import type { CoverLetter, LetterResponse, OptimizedCV } from "../types";
 
 type Source = "upload" | "stored";
 
 export default function LetterPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [source, setSource] = useState<Source>("upload");
   const [storedCv, setStoredCv] = useState<{
     cv: OptimizedCV;
@@ -35,6 +39,14 @@ export default function LetterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Check free tier limit
+    const canGenerateFree = canGenerateWithoutAuth("letter");
+    if (!canGenerateFree && !session?.user) {
+      router.push("/sign-in?redirect=/lettre");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -60,6 +72,8 @@ export default function LetterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
       setResult(data);
+      // Increment generation counter
+      incrementGenerationCount("letter");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -77,7 +91,14 @@ export default function LetterPage() {
           <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
             <Logo size="md" />
             <ServiceNav />
-            <span className="hidden sm:inline">v.01</span>
+            <div className="flex items-center gap-6">
+              {!session?.user && (
+                <span className="hidden sm:inline text-ink-soft">
+                  {canGenerateWithoutAuth("letter") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                </span>
+              )}
+              <span className="hidden sm:inline">v.01</span>
+            </div>
           </div>
 
           <h1 className="font-display text-[clamp(2.75rem,9vw,7.5rem)] font-light leading-[0.93] tracking-[-0.02em] text-ink">

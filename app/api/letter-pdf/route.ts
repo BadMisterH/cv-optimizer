@@ -243,8 +243,9 @@ export async function POST(req: Request) {
 
     const pdfBytes = await page.pdf({
       format: "A4",
-      printBackground: true,
+      printBackground: false,
       scale: finalScale,
+      preferCSSPageSize: true,
       margin: {
         top: "20mm",
         right: "20mm",

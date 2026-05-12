@@ -4,12 +4,43 @@ import type { OptimizedCV } from "../types";
 
 const KEY = "cv-optimizer:last-cv";
 const PHOTO_KEY = "cv-optimizer:last-photo";
+const CV_GENERATE_COUNT_KEY = "cv-optimizer:cv-generate-count";
+const LETTER_GENERATE_COUNT_KEY = "cv-optimizer:letter-generate-count";
 
 type Stored = {
   cv: OptimizedCV;
   offer: string;
   savedAt: string;
 };
+
+// Generation counter (free tier)
+export function getGenerationCount(type: "cv" | "letter"): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const key = type === "cv" ? CV_GENERATE_COUNT_KEY : LETTER_GENERATE_COUNT_KEY;
+    const raw = localStorage.getItem(key);
+    return raw ? parseInt(raw, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function incrementGenerationCount(type: "cv" | "letter"): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const key = type === "cv" ? CV_GENERATE_COUNT_KEY : LETTER_GENERATE_COUNT_KEY;
+    const current = getGenerationCount(type);
+    const next = current + 1;
+    localStorage.setItem(key, String(next));
+    return next;
+  } catch {
+    return 0;
+  }
+}
+
+export function canGenerateWithoutAuth(type: "cv" | "letter"): boolean {
+  return getGenerationCount(type) === 0;
+}
 
 export function saveLastCV(cv: OptimizedCV, offer: string): void {
   if (typeof window === "undefined") return;

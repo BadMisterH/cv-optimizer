@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/lib/auth-client";
 import { AuthBanner } from "./components/AuthBanner";
 import { Logo } from "./components/Logo";
 import { ServiceNav } from "./components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readPhoto, saveLastCV, savePhoto } from "./lib/cvStore";
+import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "./lib/cvStore";
 import type { OptimizeResponse, OptimizedCV } from "./types";
 
 export default function Page() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [offer, setOffer] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
@@ -18,27 +22,97 @@ export default function Page() {
 
   useEffect(() => {
     const stored = readPhoto();
-    if (stored) setPhoto(stored);
+    if (!stored) return;
+
+    compressDataUrlImage(stored)
+      .then((compressed) => {
+        setPhoto(compressed);
+        if (compressed !== stored) {
+          savePhoto(compressed);
+        }
+      })
+      .catch(() => {
+        setPhoto(stored);
+      });
   }, []);
 
-  function handlePhotoChange(file: File | null) {
+  async function compressBitmap(source: HTMLImageElement | ImageBitmap): Promise<string> {
+    const maxSize = 380;
+    const width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+    const height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
+    const ratio = Math.min(maxSize / width, maxSize / height, 1);
+    const targetWidth = Math.round(width * ratio);
+    const targetHeight = Math.round(height * ratio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Impossible de compresser l'image");
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+
+    return canvas.toDataURL("image/jpeg", 0.65);
+  }
+
+  async function compressImageFile(file: File): Promise<string> {
+    const imageBitmap = await createImageBitmap(file);
+    return compressBitmap(imageBitmap);
+  }
+
+  async function compressDataUrlImage(dataUrl: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const compressed = await compressBitmap(img);
+          resolve(compressed);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error("Impossible de charger l'image stockée."));
+      img.src = dataUrl;
+    });
+  }
+
+  async function handlePhotoChange(file: File | null) {
     if (!file) {
       setPhoto(null);
       savePhoto(null);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
+
+    try {
+      const dataUrl = await compressImageFile(file);
       setPhoto(dataUrl);
       savePhoto(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Erreur lors de la compression de la photo :", err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result);
+        setPhoto(dataUrl);
+        savePhoto(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!cvFile) return;
+
+    // Check free tier limit
+    const canGenerateFree = canGenerateWithoutAuth("cv");
+    if (!canGenerateFree && !session?.user) {
+      router.push("/sign-in?redirect=/");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -54,6 +128,8 @@ export default function Page() {
       setResult(data);
       // Persist for the cover letter service
       saveLastCV(data.cv, offer);
+      // Increment generation counter
+      incrementGenerationCount("cv");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -71,7 +147,14 @@ export default function Page() {
           <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
             <Logo size="md" />
             <ServiceNav />
-            <span className="hidden sm:inline">v.01</span>
+            <div className="flex items-center gap-6">
+              {!session?.user && (
+                <span className="hidden sm:inline text-ink-soft">
+                  {canGenerateWithoutAuth("cv") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                </span>
+              )}
+              <span className="hidden sm:inline">v.01</span>
+            </div>
           </div>
 
           <h1 className="font-display text-[clamp(2.75rem,9vw,7.5rem)] font-light leading-[0.93] tracking-[-0.02em] text-ink">
@@ -84,7 +167,7 @@ export default function Page() {
             <p className="md:col-span-6 lg:col-span-5 text-lg leading-relaxed text-ink-soft">
               Téléverse ton CV en PDF et l&apos;offre que tu vises. Claude
               reformule, priorise les bonnes expériences et glisse les
-              mots-clés ATS — sans rien inventer.
+              mots-clés ATS sans rien inventer.
             </p>
             <ul className="md:col-span-6 lg:col-start-8 lg:col-span-5 grid grid-cols-2 gap-y-3 self-end font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
               <li className="flex items-baseline gap-2">

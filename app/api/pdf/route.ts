@@ -127,6 +127,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 <title>CV ${escapeHtml(cv.fullName)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4; margin: 14mm; }
   html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: #111111;
@@ -137,14 +138,14 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     print-color-adjust: exact;
   }
   body {
-    padding: 24px 28px;
+    padding: 18px 24px;
   }
   .container {
     max-width: 794px;
     margin: 0 auto;
   }
   .header {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
   }
   .top-line {
     display: flex;
@@ -187,11 +188,11 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     color: #b0aea5;
   }
   .divider {
-    margin: 18px 0;
+    margin: 12px 0;
     border-top: 1.5pt solid #111111;
   }
   .cv-section {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -201,12 +202,12 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     text-transform: uppercase;
     letter-spacing: 1.4pt;
     color: #111111;
-    margin-bottom: 10px;
-    padding-bottom: 4px;
+    margin-bottom: 7px;
+    padding-bottom: 3px;
     border-bottom: 1px solid #111111;
   }
   .item {
-    margin-bottom: 12px;
+    margin-bottom: 9px;
   }
   .item-header {
     display: flex;
@@ -226,14 +227,14 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     min-width: 120px;
   }
   .item-bullets {
-    margin-top: 6px;
+    margin-top: 5px;
     padding-left: 16px;
     color: #222222;
     font-size: 9.5pt;
-    line-height: 1.55;
+    line-height: 1.45;
   }
   .item-bullets li {
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
   .skills {
     display: flex;
@@ -316,13 +317,16 @@ export async function POST(req: Request) {
     // A4 portrait au 96dpi avec marges 14mm : surface utile ≈ 1017 px de haut
     const A4_USABLE_HEIGHT_PX = 1017;
     const naturalScale = A4_USABLE_HEIGHT_PX / contentHeight;
-    // Plancher 0.7 (lisibilité) — plafond 1.15 (étire si contenu court pour bien remplir A4)
-    const finalScale = Math.max(0.7, Math.min(1.15, naturalScale));
+    // Plancher 0.55 pour forcer une seule page même sur CV long (texte ≈ 6pt mini).
+    // Plafond 1.15 pour étirer si contenu court et bien remplir l'A4.
+    const finalScale = Math.max(0.55, Math.min(1.15, naturalScale));
 
     const pdfBytes = await page.pdf({
       format: "A4",
-      printBackground: true,
+      printBackground: false,
+      omitBackground: true,
       scale: finalScale,
+      preferCSSPageSize: true,
       margin: {
         top: "14mm",
         right: "14mm",
