@@ -255,6 +255,13 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     line-height: 1.6;
     margin-top: 6px;
   }
+  .photo {
+    width: 80px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -265,6 +272,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
           <p class="title">${escapeHtml(cv.fullName)}</p>
           ${cv.title ? `<p class="subtitle">${escapeHtml(cv.title)}</p>` : ""}
         </div>
+        ${photoDataUrl ? `<img class="photo" src="${escapeHtml(photoDataUrl)}" alt="" />` : ""}
       </div>
       ${contactHtml ? `<div class="contact">${contactHtml}</div>` : ""}
     </header>
