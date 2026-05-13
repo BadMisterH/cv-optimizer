@@ -42,21 +42,29 @@ export function AuthBanner() {
               </>
             )}
           </p>
-          {!isAdmin && (
+          <div className="flex items-center gap-2">
             <Link
-              href="/buy-credits"
-              className={`group inline-flex h-10 items-center gap-2 rounded-full px-5 font-mono text-xs uppercase tracking-[0.18em] transition ${
-                isEmpty
-                  ? "bg-ink text-paper hover:bg-accent"
-                  : "border border-rule text-ink-muted hover:border-ink hover:text-ink"
-              }`}
+              href="/account"
+              className="inline-flex h-10 items-center rounded-full px-4 font-mono text-xs uppercase tracking-[0.18em] text-ink-muted transition hover:bg-paper hover:text-ink"
             >
-              {isEmpty ? "Acheter des crédits" : "Recharger"}
-              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
+              Mon compte
             </Link>
-          )}
+            {!isAdmin && (
+              <Link
+                href="/buy-credits"
+                className={`group inline-flex h-10 items-center gap-2 rounded-full px-5 font-mono text-xs uppercase tracking-[0.18em] transition ${
+                  isEmpty
+                    ? "bg-ink text-paper hover:bg-accent"
+                    : "border border-rule text-ink-muted hover:border-ink hover:text-ink"
+                }`}
+              >
+                {isEmpty ? "Acheter des crédits" : "Recharger"}
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                  →
+                </span>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     );

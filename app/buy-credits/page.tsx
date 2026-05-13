@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
@@ -15,6 +15,14 @@ type SessionUser = {
 };
 
 export default function BuyCreditsPage() {
+  return (
+    <Suspense fallback={null}>
+      <BuyCreditsContent />
+    </Suspense>
+  );
+}
+
+function BuyCreditsContent() {
   const { data: session, isPending } = useSession();
   const searchParams = useSearchParams();
   const [loadingPack, setLoadingPack] = useState<PackKey | null>(null);

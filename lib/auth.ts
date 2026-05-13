@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { pool } from "./db";
+import { claimWelcomeBonus } from "./welcome-bonus";
 
 const googleEnabled = Boolean(
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -160,6 +161,34 @@ export const auth = betterAuth({
         defaultValue: 2,
         required: false,
         input: false, // empêche un user de set ses propres crédits à l'inscription
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Après création du user, on tente de réclamer le bonus de bienvenue.
+        // Si l'email a déjà bénéficié du bonus (compte supprimé puis recréé),
+        // on remet le solde à 0 — anti-fraude.
+        after: async (user) => {
+          const email = typeof user.email === "string" ? user.email : null;
+          if (!email) return;
+          try {
+            const granted = await claimWelcomeBonus(email);
+            if (!granted) {
+              await pool.query(
+                'UPDATE "user" SET credits = 0 WHERE id = $1',
+                [user.id]
+              );
+              console.log(
+                `[welcome-bonus] email déjà consommé pour ${user.id} → credits=0`
+              );
+            }
+          } catch (err) {
+            console.error("[welcome-bonus] échec claim:", err);
+            // On ne bloque pas l'inscription si la table est inaccessible
+          }
+        },
       },
     },
   },
