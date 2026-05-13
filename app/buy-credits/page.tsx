@@ -1,16 +1,56 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { isAdminEmail } from "@/lib/admin";
+import { PACKS, type PackKey } from "@/lib/stripe-packs";
 import { Logo } from "../components/Logo";
 
 type SessionUser = {
+  email?: string;
   credits?: number;
 };
 
 export default function BuyCreditsPage() {
-  const { data: session } = useSession();
-  const credits = (session?.user as SessionUser | undefined)?.credits ?? 0;
+  const { data: session, isPending } = useSession();
+  const searchParams = useSearchParams();
+  const [loadingPack, setLoadingPack] = useState<PackKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const user = session?.user as SessionUser | undefined;
+  const credits = user?.credits ?? 0;
+  const isAdmin = isAdminEmail(user?.email);
+
+  const success = searchParams.get("success") === "true";
+  const canceled = searchParams.get("canceled") === "true";
+
+  async function handleBuy(pack: PackKey) {
+    if (!user) {
+      window.location.href = "/sign-in?redirect=/buy-credits";
+      return;
+    }
+    setError(null);
+    setLoadingPack(pack);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Erreur checkout");
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error("URL de paiement absente.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setLoadingPack(null);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-paper">
@@ -25,8 +65,30 @@ export default function BuyCreditsPage() {
           </Link>
         </div>
 
+        {success && (
+          <div className="mb-8 border-l-2 border-success bg-success-soft px-5 py-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-success">
+              ✓ Paiement confirmé
+            </p>
+            <p className="mt-2 text-sm text-ink">
+              Tes crédits ont été ajoutés à ton compte. Tu peux retourner sur la page d'accueil pour générer.
+            </p>
+          </div>
+        )}
+
+        {canceled && (
+          <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm">
+              ● Paiement annulé
+            </p>
+            <p className="mt-2 text-sm text-ink-soft">
+              Aucun montant n'a été débité. Tu peux réessayer ci-dessous.
+            </p>
+          </div>
+        )}
+
         <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-warm">
-          ● Solde épuisé
+          {isAdmin ? "● Compte admin — accès illimité" : credits <= 0 ? "● Solde épuisé" : "● Recharger ton solde"}
         </span>
 
         <h1 className="mt-6 font-display text-[clamp(2.5rem,6vw,4.5rem)] font-light leading-[0.95] tracking-[-0.02em] text-ink">
@@ -35,51 +97,68 @@ export default function BuyCreditsPage() {
         </h1>
 
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-          Tu as épuisé tes crédits gratuits. Pour continuer à générer des CV et
-          lettres de motivation, choisis un pack de crédits ci-dessous.
+          Chaque crédit te permet de générer un CV ou une lettre de motivation.
+          Paiement sécurisé via Stripe. Pas d'abonnement.
         </p>
 
-        <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
-          Solde actuel : {credits} crédit{credits > 1 ? "s" : ""}
-        </p>
+        {!isPending && (
+          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
+            Solde actuel : {isAdmin ? "∞ (admin)" : `${credits} crédit${credits > 1 ? "s" : ""}`}
+          </p>
+        )}
+
+        {error && (
+          <p
+            role="alert"
+            className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+          >
+            ✕ {error}
+          </p>
+        )}
 
         <section className="mt-12 grid gap-4 md:grid-cols-3">
-          {[
-            { label: "Starter", credits: 5, price: "4,99 €" },
-            { label: "Standard", credits: 15, price: "11,99 €", featured: true },
-            { label: "Pro", credits: 50, price: "29,99 €" },
-          ].map((pack) => (
-            <div
-              key={pack.label}
-              className={`relative border ${pack.featured ? "border-accent bg-paper-deep" : "border-rule bg-paper"} p-6`}
-            >
-              {pack.featured && (
-                <span className="absolute -top-3 left-6 bg-accent px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-paper">
-                  Recommandé
-                </span>
-              )}
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-                {pack.label}
-              </p>
-              <p className="mt-4 font-display text-4xl font-light tracking-tight text-ink">
-                {pack.credits}
-                <span className="ml-2 text-base font-normal text-ink-muted">
-                  crédits
-                </span>
-              </p>
-              <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
-              <button
-                disabled
-                className="mt-6 w-full cursor-not-allowed bg-ink-faint px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-paper opacity-60"
+          {(Object.keys(PACKS) as PackKey[]).map((key) => {
+            const pack = PACKS[key];
+            const featured = "featured" in pack && pack.featured;
+            const isLoading = loadingPack === key;
+            return (
+              <div
+                key={key}
+                className={`relative border ${featured ? "border-accent bg-paper-deep" : "border-rule bg-paper"} p-6`}
               >
-                Bientôt disponible
-              </button>
-            </div>
-          ))}
+                {featured && (
+                  <span className="absolute -top-3 left-6 bg-accent px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-paper">
+                    Recommandé
+                  </span>
+                )}
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+                  {pack.label}
+                </p>
+                <p className="mt-4 font-display text-4xl font-light tracking-tight text-ink">
+                  {pack.credits}
+                  <span className="ml-2 text-base font-normal text-ink-muted">
+                    crédits
+                  </span>
+                </p>
+                <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
+                <button
+                  onClick={() => handleBuy(key)}
+                  disabled={isLoading || loadingPack !== null}
+                  className={`mt-6 w-full px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] transition ${
+                    featured
+                      ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
+                      : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isLoading ? "Redirection…" : "Acheter"}
+                </button>
+              </div>
+            );
+          })}
         </section>
 
         <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-          ● Stripe intégré prochainement
+          ● Paiement sécurisé par Stripe · Aucune donnée carte stockée
         </p>
       </div>
     </main>

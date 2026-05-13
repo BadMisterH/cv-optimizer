@@ -59,8 +59,9 @@ function renderSection(section: CVSection): string {
     .map((it) => {
       const heading = it.heading ? escapeHtml(it.heading) : "";
       const subheading = it.subheading ? escapeHtml(it.subheading) : "";
+      const company = it.company ? escapeHtml(it.company) : "";
       const headingRow = heading
-        ? `<div class="item-header"><span class="item-heading">${heading}</span>${subheading ? `<span class="item-meta">${subheading}</span>` : ""}</div>`
+        ? `<div class="item-header"><div><span class="item-heading">${heading}</span>${company ? `<span class="item-company">${company}</span>` : ""}</div>${subheading ? `<span class="item-meta">${subheading}</span>` : ""}</div>`
         : "";
       const bullets = it.bullets.length
         ? `<ul class="item-bullets">${it.bullets
@@ -219,6 +220,17 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     font-size: 10.2pt;
     font-weight: 700;
     color: #111111;
+  }
+  .item-company {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1f4bff;
+    margin-left: 4px;
+  }
+  .item-company::before {
+    content: " · ";
+    color: #b0aea5;
+    font-weight: 400;
   }
   .item-meta {
     font-size: 9pt;

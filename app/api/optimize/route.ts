@@ -8,7 +8,7 @@ import {
 
 const SYSTEM_PROMPT = `Tu es un expert en recrutement et en optimisation de CV.
 
-Ta mission est d'adapter un CV existant (fourni en PDF) pour qu'il corresponde parfaitement à une offre de stage donnée.
+Ta mission est d'adapter un CV existant (fourni en PDF) pour qu'il corresponde parfaitement à l'offre d'emploi donnée (peu importe le type de contrat : stage, alternance, CDD, CDI, freelance, etc. — détecte-le à partir du texte de l'offre et adapte ton vocabulaire en conséquence).
 
 Objectif :
 - Maximiser la pertinence du CV pour cette offre spécifique
@@ -24,7 +24,8 @@ Contraintes importantes :
 - Optimiser pour les ATS (mots-clés présents dans l'offre)
 
 Méthodologie :
-1. Analyse l'offre de stage et identifie :
+1. Analyse l'offre d'emploi et identifie :
+   - **Le type de contrat** (stage, alternance, CDD, CDI, freelance…) — repère-le dans le texte et ajuste l'accroche/le ton en conséquence (un CV pour CDI ne se présente pas comme un CV pour stage)
    - Les compétences clés demandées
    - Les mots-clés importants
    - Le type de profil recherché
@@ -34,7 +35,7 @@ Méthodologie :
 3. Génère une nouvelle version du CV structurée pour une mise en page A4 deux colonnes (sidebar gauche : Compétences / Langues / Formation / Centres d'intérêt — colonne principale droite : Accroche, Expérience, et optionnellement Projets). **Important : les deux colonnes doivent être à peu près équilibrées en hauteur.** La sidebar doit générer assez de contenu pour ne pas finir mi-page.
    - Titre adapté à l'offre
    - Accroche personnalisée (3 phrases, 50-65 mots) qui pose le profil, le parcours et la motivation pour l'offre
-   - Expériences : 3 expériences les plus pertinentes, **3 bullets par poste**, chaque bullet de 14-20 mots avec verbe d'action + contexte + impact concret. Dans le subheading, ajoute le secteur/contexte (ex: "2023 — 2024 · E-commerce")
+   - Expériences : 3 expériences les plus pertinentes, **3 bullets par poste**, chaque bullet de 14-20 mots avec verbe d'action + contexte + impact concret. **IMPORTANT** : pour les expériences, mets le NOM DE L'ENTREPRISE dans le champ "company" (ex: "Acme Inc.", "BNP Paribas") et UNIQUEMENT le rôle/intitulé du poste dans "heading" (ex: "Développeur Full-Stack"). Dans le subheading, ajoute le secteur/contexte (ex: "2023 — 2024 · E-commerce")
    - Formations (en sidebar) : 3 à 4 entrées récentes/pertinentes, format compact : heading = intitulé court (ex: "Ingénieur Informatique"), subheading = "établissement · années"
    - **Section "Projets" recommandée** dans la colonne principale si le CV original mentionne des réalisations (2 items, heading=nom du projet, subheading=stack/contexte, 1 bullet par projet décrivant l'enjeu)
    - Compétences : **4 sous-sections regroupées par catégorie**, 5-7 tags par sous-section, choisis pour matcher l'offre. Couvre largement : relation/commerce, qualités personnelles, outils techniques, et une 4e catégorie pertinente (ex: communication, méthodologie, langues techniques selon le profil)
@@ -51,7 +52,8 @@ Retourne le résultat dans le format JSON spécifié :
 Pour les sections du CV, utilise typiquement : "Expérience", "Formation", "Compétences", "Projets", "Langues", "Centres d'intérêt" selon ce qui est présent dans le CV original. Ne crée jamais de section qui n'existe pas dans le CV source.
 
 Pour chaque item :
-- "heading" : titre principal (ex: "Développeur Full-Stack — Acme Inc." ou "Master en Informatique")
+- "heading" : titre principal — POUR LES EXPÉRIENCES, met uniquement le rôle (ex: "Développeur Full-Stack"). POUR LES FORMATIONS, l'intitulé (ex: "Master en Informatique")
+- "company" : pour les EXPÉRIENCES, nom de l'entreprise (ex: "Acme Inc."). Pour les autres types d'items (formation, projet, compétence, langue, hobby), chaîne vide ""
 - "subheading" : informations secondaires (ex: "Sept. 2023 — Juin 2024 · Paris")
 - "bullets" : descriptions/réalisations (pour expériences/projets/formations)
 - "tags" : compétences techniques (pour la section Compétences)
@@ -93,10 +95,11 @@ const cvSchema = {
                   properties: {
                     heading: { type: "string" },
                     subheading: { type: "string" },
+                    company: { type: "string" },
                     bullets: { type: "array", items: { type: "string" } },
                     tags: { type: "array", items: { type: "string" } },
                   },
-                  required: ["heading", "subheading", "bullets", "tags"],
+                  required: ["heading", "subheading", "company", "bullets", "tags"],
                   additionalProperties: false,
                 },
               },
@@ -161,7 +164,7 @@ export async function POST(req: Request) {
 
     if (typeof offer !== "string" || !offer.trim()) {
       return NextResponse.json(
-        { error: "L'offre de stage est requise." },
+        { error: "L'offre d'emploi est requise." },
         { status: 400 }
       );
     }

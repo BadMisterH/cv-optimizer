@@ -1,6 +1,7 @@
 export type CVItem = {
   heading: string;
   subheading: string;
+  company?: string;
   bullets: string[];
   tags: string[];
 };

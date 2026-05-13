@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { AuthBanner } from "../components/AuthBanner";
+import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -265,6 +266,8 @@ export default function LetterPage() {
               </div>
             </div>
           </form>
+
+          <GenerationProgress active={loading} variant="letter" />
         </div>
       </section>
 
@@ -280,7 +283,6 @@ export default function LetterPage() {
       <footer className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
           <span>© {new Date().getFullYear()} · CV Optimizer</span>
-          <span>Built with Next.js · Claude Opus 4.7</span>
         </div>
       </footer>
     </main>

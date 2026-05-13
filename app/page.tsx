@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { AuthBanner } from "./components/AuthBanner";
+import { GenerationProgress } from "./components/GenerationProgress";
 import { Logo } from "./components/Logo";
 import { ServiceNav } from "./components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -243,7 +244,7 @@ export default function Page() {
             </div>
           </form>
 
-          {loading && <LoadingSkeleton />}
+          <GenerationProgress active={loading} variant="cv" />
         </div>
       </section>
 
@@ -427,31 +428,6 @@ function DocIcon({ className = "" }: { className?: string }) {
       <path d="M14 3v5h5" />
       <path d="M8 13h8M8 17h6" />
     </svg>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="mt-12 grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 space-y-3">
-        <div className="shimmer h-9 w-2/3 rounded-none" />
-        <div className="shimmer h-4 w-1/3" />
-        <div className="mt-6 space-y-2">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={i}
-              className="shimmer h-3"
-              style={{ width: `${60 + ((i * 13) % 35)}%` }}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="shimmer h-3 w-full" />
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -655,6 +631,12 @@ function CVPreview({
                 {item.heading && (
                   <p className="text-[15px] font-medium text-ink">
                     {item.heading}
+                    {item.company && (
+                      <>
+                        <span className="text-ink-muted mx-1">·</span>
+                        <span className="text-accent font-semibold">{item.company}</span>
+                      </>
+                    )}
                   </p>
                 )}
                 {item.subheading && (
