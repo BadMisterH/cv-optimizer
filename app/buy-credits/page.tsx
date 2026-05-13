@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import { STRIPE_ENABLED } from "@/lib/feature-flags";
 import { PACKS, type PackKey } from "@/lib/stripe-packs";
 import { Logo } from "../components/Logo";
 
@@ -27,6 +28,7 @@ export default function BuyCreditsPage() {
   const canceled = searchParams.get("canceled") === "true";
 
   async function handleBuy(pack: PackKey) {
+    if (!STRIPE_ENABLED) return;
     if (!user) {
       window.location.href = "/sign-in?redirect=/buy-credits";
       return;
@@ -65,7 +67,19 @@ export default function BuyCreditsPage() {
           </Link>
         </div>
 
-        {success && (
+        {!STRIPE_ENABLED && (
+          <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm">
+              ● Paiement par carte bientôt disponible
+            </p>
+            <p className="mt-2 text-sm text-ink-soft">
+              On finalise l'intégration Stripe. Les packs ci-dessous montrent les
+              tarifs prévus — l'achat sera activé sous peu.
+            </p>
+          </div>
+        )}
+
+        {success && STRIPE_ENABLED && (
           <div className="mb-8 border-l-2 border-success bg-success-soft px-5 py-4">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-success">
               ✓ Paiement confirmé
@@ -143,14 +157,18 @@ export default function BuyCreditsPage() {
                 <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
                 <button
                   onClick={() => handleBuy(key)}
-                  disabled={isLoading || loadingPack !== null}
+                  disabled={!STRIPE_ENABLED || isLoading || loadingPack !== null}
                   className={`mt-6 w-full px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] transition ${
                     featured
                       ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
                       : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
                   } disabled:cursor-not-allowed`}
                 >
-                  {isLoading ? "Redirection…" : "Acheter"}
+                  {!STRIPE_ENABLED
+                    ? "Bientôt disponible"
+                    : isLoading
+                      ? "Redirection…"
+                      : "Acheter"}
                 </button>
               </div>
             );

@@ -2,10 +2,17 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { PACK_PRICE_ENV, PACKS, isPackKey } from "@/lib/stripe-packs";
+import { STRIPE_ENABLED } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  if (!STRIPE_ENABLED) {
+    return NextResponse.json(
+      { error: "Le paiement n'est pas encore disponible. Réessaie plus tard." },
+      { status: 503 }
+    );
+  }
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) {
