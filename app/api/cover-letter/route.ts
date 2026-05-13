@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { OptimizedCV } from "@/app/types";
+import {
+  ANON_COOKIE_MAX_AGE,
+  checkUsageGate,
+  deductCredit,
+} from "@/lib/usage-gate";
 
 export const runtime = "nodejs";
 
@@ -165,6 +170,18 @@ function todayInFrench(): string {
 
 export async function POST(req: Request) {
   try {
+    const gate = await checkUsageGate(req, "letter");
+    if (!gate.allowed) {
+      const error =
+        gate.reason === "no_credits"
+          ? "Tu n'as plus de crédits. Achète un pack pour continuer."
+          : "Tu as déjà utilisé ton essai gratuit. Crée un compte pour continuer.";
+      return NextResponse.json(
+        { error, redirect: gate.redirect },
+        { status: 401 }
+      );
+    }
+
     const contentType = req.headers.get("content-type") ?? "";
 
     let cvAsText: string | null = null;
@@ -267,7 +284,22 @@ export async function POST(req: Request) {
     if (parsed?.letter) {
       parsed.letter = stripDashesFromLetter(parsed.letter);
     }
-    return NextResponse.json(parsed);
+
+    if (gate.isAuthenticated && !gate.isAdmin) {
+      await deductCredit(gate.userId);
+    }
+
+    const res = NextResponse.json(parsed);
+    if (!gate.isAuthenticated && gate.cookieToSet) {
+      res.cookies.set(gate.cookieToSet, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: ANON_COOKIE_MAX_AGE,
+      });
+    }
+    return res;
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       return NextResponse.json(

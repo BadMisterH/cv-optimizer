@@ -1,15 +1,6 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { Pool } from "pg";
-
-// Pool créé même sans DATABASE_URL pour ne pas casser `next build`
-// (la validation des env vars se fait au runtime via les routes).
-// Si DATABASE_URL est absent à l'exécution, pg renverra une erreur de connexion claire.
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
-  max: 10,
-});
+import { pool } from "./db";
 
 const googleEnabled = Boolean(
   process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -162,6 +153,16 @@ export const auth = betterAuth({
   baseURL: BASE_URL,
   trustedOrigins: trustedOriginsConfig,
   secret: process.env.BETTER_AUTH_SECRET,
+  user: {
+    additionalFields: {
+      credits: {
+        type: "number",
+        defaultValue: 2,
+        required: false,
+        input: false, // empêche un user de set ses propres crédits à l'inscription
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

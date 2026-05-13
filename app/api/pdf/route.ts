@@ -251,10 +251,9 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     font-size: 8.8pt;
   }
   .accroche {
-    font-size: 10pt;
+    font-size: 9.8pt;
     color: #222222;
-    line-height: 1.6;
-    margin-top: 6px;
+    line-height: 1.5;
   }
   .photo {
     width: 80px;
@@ -278,6 +277,11 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
       ${contactHtml ? `<div class="contact">${contactHtml}</div>` : ""}
     </header>
     <div class="divider"></div>
+    ${
+      cv.accroche?.trim()
+        ? `<section class="cv-section"><h2 class="section-title">À propos</h2><p class="accroche">${escapeHtml(cv.accroche.trim())}</p></section>`
+        : ""
+    }
     ${sectionsHtml}
   </div>
 </body>

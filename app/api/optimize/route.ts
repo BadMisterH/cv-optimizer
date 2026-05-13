@@ -1,5 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import {
+  ANON_COOKIE_MAX_AGE,
+  checkUsageGate,
+  deductCredit,
+} from "@/lib/usage-gate";
 
 const SYSTEM_PROMPT = `Tu es un expert en recrutement et en optimisation de CV.
 
@@ -117,6 +122,18 @@ const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
+    const gate = await checkUsageGate(req, "cv");
+    if (!gate.allowed) {
+      const error =
+        gate.reason === "no_credits"
+          ? "Tu n'as plus de crédits. Achète un pack pour continuer."
+          : "Tu as déjà utilisé ton essai gratuit. Crée un compte pour continuer.";
+      return NextResponse.json(
+        { error, redirect: gate.redirect },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const cvEntry = formData.get("cv");
     const offer = formData.get("offer");
@@ -204,7 +221,22 @@ export async function POST(req: Request) {
     }
 
     const parsed = JSON.parse(textBlock.text);
-    return NextResponse.json(parsed);
+
+    if (gate.isAuthenticated && !gate.isAdmin) {
+      await deductCredit(gate.userId);
+    }
+
+    const res = NextResponse.json(parsed);
+    if (!gate.isAuthenticated && gate.cookieToSet) {
+      res.cookies.set(gate.cookieToSet, "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: ANON_COOKIE_MAX_AGE,
+      });
+    }
+    return res;
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       return NextResponse.json(
