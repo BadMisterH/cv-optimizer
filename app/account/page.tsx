@@ -21,6 +21,7 @@ export default function AccountPage() {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
     if (!isPending && !session?.user) {
@@ -112,52 +113,76 @@ export default function AccountPage() {
           </dl>
         </section>
 
-        <section className="mt-8 border-l-2 border-danger bg-paper-deep p-6 sm:p-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.22em] text-danger">
-            ● Zone de danger
-          </h2>
-
-          <h3 className="mt-4 font-display text-2xl font-medium tracking-tight text-ink">
-            Supprimer mon compte
-          </h3>
-          <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-            Cette action est <strong>irréversible</strong>. Tes données de profil et
-            ton historique sont supprimés définitivement. Tu pourras te réinscrire
-            plus tard, mais tu ne pourras plus bénéficier des crédits de bienvenue.
-          </p>
-
-          <label className="mt-6 block">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-              Tape <span className="text-danger">{CONFIRM_WORD}</span> pour confirmer
-            </span>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              disabled={deleting}
-              autoComplete="off"
-              className="mt-2 w-full max-w-xs border border-rule bg-paper px-4 py-3 font-mono text-sm tracking-[0.04em] text-ink outline-none transition focus:border-danger disabled:opacity-50"
-              placeholder={CONFIRM_WORD}
-            />
-          </label>
-
-          {error && (
-            <p
-              role="alert"
-              className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+        <div className="mt-16 border-t border-rule pt-8">
+          {!showDelete ? (
+            <button
+              type="button"
+              onClick={() => setShowDelete(true)}
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted transition hover:text-danger"
             >
-              ✕ {error}
-            </p>
-          )}
+              Supprimer mon compte →
+            </button>
+          ) : (
+            <div className="max-w-xl">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+                  Suppression du compte
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDelete(false);
+                    setConfirmText("");
+                    setError(null);
+                  }}
+                  disabled={deleting}
+                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint hover:text-ink disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+              </div>
 
-          <button
-            onClick={handleDelete}
-            disabled={!canDelete}
-            className="mt-6 inline-flex items-center gap-3 bg-danger px-6 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
-          >
-            {deleting ? "Suppression en cours…" : "Supprimer définitivement"}
-          </button>
-        </section>
+              <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
+                Action <span className="text-danger">irréversible</span>. Profil
+                et historique supprimés. Tu pourras te réinscrire, mais sans les
+                crédits de bienvenue.
+              </p>
+
+              <label className="mt-5 block">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                  Tape <span className="text-danger">{CONFIRM_WORD}</span> pour confirmer
+                </span>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  disabled={deleting}
+                  autoComplete="off"
+                  autoFocus
+                  className="mt-2 w-full max-w-xs border border-rule bg-paper px-3 py-2 font-mono text-sm tracking-[0.04em] text-ink outline-none transition focus:border-danger disabled:opacity-50"
+                  placeholder={CONFIRM_WORD}
+                />
+              </label>
+
+              {error && (
+                <p
+                  role="alert"
+                  className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+                >
+                  ✕ {error}
+                </p>
+              )}
+
+              <button
+                onClick={handleDelete}
+                disabled={!canDelete}
+                className="mt-5 inline-flex items-center gap-2 border border-danger px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-danger transition hover:bg-danger hover:text-paper disabled:cursor-not-allowed disabled:border-ink-faint disabled:text-ink-faint disabled:hover:bg-transparent"
+              >
+                {deleting ? "Suppression…" : "Confirmer la suppression"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
