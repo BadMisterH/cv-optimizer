@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { useSession } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import { PRICING_PUBLIC } from "@/lib/feature-flags";
 import { Logo } from "./components/Logo";
+import { UserMenu } from "./components/UserMenu";
 import { StructuredData } from "./components/StructuredData";
 
 const FAQ_ITEMS = [
@@ -118,12 +119,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
           {isLogged ? (
             <>
               <CreditChip user={user} />
-              <Link
-                href="/account"
-                className="inline-flex h-10 items-center px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:text-ink"
-              >
-                Mon compte
-              </Link>
+              <UserMenu />
             </>
           ) : (
             <Link
@@ -224,13 +220,26 @@ function LandingHeader({ user }: { user: HeaderUser }) {
             </nav>
             <div className="mt-5 flex flex-col gap-2">
               {isLogged ? (
-                <Link
-                  href="/account"
-                  onClick={() => setOpen(false)}
-                  className="inline-flex h-12 items-center justify-center border border-rule font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
-                >
-                  Mon compte
-                </Link>
+                <>
+                  <Link
+                    href="/account"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex h-12 items-center justify-center border border-rule font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+                  >
+                    Mon compte
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setOpen(false);
+                      await signOut();
+                      window.location.href = "/";
+                    }}
+                    className="inline-flex h-12 items-center justify-center font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:text-danger"
+                  >
+                    Se déconnecter ↗
+                  </button>
+                </>
               ) : (
                 <Link
                   href="/sign-in"

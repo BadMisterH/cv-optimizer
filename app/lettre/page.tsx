@@ -28,6 +28,11 @@ export default function LetterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LetterResponse | null>(null);
+  // Hydration-safe : null avant mount, lit localStorage après
+  const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
+  useEffect(() => {
+    setCanGenerateFree(canGenerateWithoutAuth("letter"));
+  }, []);
 
   useEffect(() => {
     const stored = readLastCV();
@@ -42,8 +47,8 @@ export default function LetterPage() {
     e.preventDefault();
 
     // Check free tier limit
-    const canGenerateFree = canGenerateWithoutAuth("letter");
-    if (!canGenerateFree && !session?.user) {
+    const stillFree = canGenerateFree ?? canGenerateWithoutAuth("letter");
+    if (!stillFree && !session?.user) {
       router.push("/sign-in?redirect=/lettre");
       return;
     }
@@ -93,9 +98,9 @@ export default function LetterPage() {
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
-              {!session?.user && (
+              {!session?.user && canGenerateFree !== null && (
                 <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateWithoutAuth("letter") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                  {canGenerateFree ? "1 gratuit restant" : "Connectez-vous pour continuer"}
                 </span>
               )}
               <span className="hidden sm:inline">v.01</span>

@@ -8,6 +8,7 @@ import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { CVEditor } from "../components/editor/CVEditor";
+import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
 import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
@@ -22,6 +23,11 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
+  // Hydration-safe : null tant que pas monté, lit localStorage en useEffect
+  const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
+  useEffect(() => {
+    setCanGenerateFree(canGenerateWithoutAuth("cv"));
+  }, []);
 
   useEffect(() => {
     const stored = readPhoto();
@@ -109,9 +115,9 @@ export default function Page() {
     e.preventDefault();
     if (!cvFile) return;
 
-    // Check free tier limit
-    const canGenerateFree = canGenerateWithoutAuth("cv");
-    if (!canGenerateFree && !session?.user) {
+    // Check free tier limit (lit le state, qui a été initialisé en useEffect après mount)
+    const stillFree = canGenerateFree ?? canGenerateWithoutAuth("cv");
+    if (!stillFree && !session?.user) {
       router.push("/sign-in?redirect=/optimiser");
       return;
     }
@@ -151,9 +157,9 @@ export default function Page() {
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
-              {!session?.user && (
+              {!session?.user && canGenerateFree !== null && (
                 <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateWithoutAuth("cv") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                  {canGenerateFree ? "1 gratuit restant" : "Connectez-vous pour continuer"}
                 </span>
               )}
               <span className="hidden sm:inline">v.01</span>
@@ -515,26 +521,40 @@ function Result({
           </article>
 
           <aside className="lg:col-span-4">
-            <div className="border-l-2 border-warm pl-6">
-              <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
-                Modifications · {data.modifications.length}
-              </h3>
-              <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
-                Ce que Claude a changé
-              </p>
-              <ol className="mt-6 space-y-5">
-                {data.modifications.map((m, i) => (
-                  <li key={i} className="flex gap-4">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[12px] font-medium tracking-[0.04em] text-warm">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
-                      {m}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            {mode === "edit" ? (
+              <div className="sticky top-4">
+                <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.22em] text-accent">
+                  ● Aperçu PDF en direct
+                </p>
+                <LivePreview
+                  cv={editorState.cv}
+                  photo={photo}
+                  accent={editorState.accent}
+                  template={editorState.template}
+                />
+              </div>
+            ) : (
+              <div className="border-l-2 border-warm pl-6">
+                <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
+                  Modifications · {data.modifications.length}
+                </h3>
+                <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
+                  Ce que Claude a changé
+                </p>
+                <ol className="mt-6 space-y-5">
+                  {data.modifications.map((m, i) => (
+                    <li key={i} className="flex gap-4">
+                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[12px] font-medium tracking-[0.04em] text-warm">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
+                        {m}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </aside>
         </div>
       </div>
