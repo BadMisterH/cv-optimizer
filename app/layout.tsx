@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_LOCALE, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const display = Bricolage_Grotesque({
@@ -22,9 +23,60 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CV Optimizer — Adapte ton CV à chaque offre",
-  description:
-    "Téléverse ton CV en PDF et l'offre visée. Claude reformule, priorise et adapte — sans inventer.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Adapte ton CV à chaque offre d'emploi`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_AUTHOR }],
+  creator: SITE_AUTHOR,
+  publisher: SITE_AUTHOR,
+  applicationName: SITE_NAME,
+  generator: "Next.js",
+  category: "career",
+  formatDetection: {
+    email: false,
+    telephone: false,
+    address: false,
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: SITE_LOCALE,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Adapte ton CV à chaque offre d'emploi`,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: "/CV-optimize-logo.png",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — Logo`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — Adapte ton CV à chaque offre`,
+    description: SITE_DESCRIPTION,
+    images: ["/CV-optimize-logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

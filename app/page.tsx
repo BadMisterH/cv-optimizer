@@ -6,6 +6,34 @@ import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import { PRICING_PUBLIC } from "@/lib/feature-flags";
 import { Logo } from "./components/Logo";
+import { StructuredData } from "./components/StructuredData";
+
+const FAQ_ITEMS = [
+  {
+    q: "Est-ce que mes données sont sauvegardées sur vos serveurs ?",
+    a: "Non. Le CV et l'offre transitent vers Claude le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
+  },
+  {
+    q: "Combien de temps prend une génération ?",
+    a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
+  },
+  {
+    q: "Est-ce que Claude invente des expériences ?",
+    a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
+  },
+  {
+    q: "Quels formats de CV sont acceptés ?",
+    a: "PDF uniquement, jusqu'à 25 Mo. Les CV générés depuis Word, Canva, Notion ou LinkedIn fonctionnent tous tant qu'ils sont exportés en PDF.",
+  },
+  {
+    q: "Que se passe-t-il si je supprime mon compte ?",
+    a: "Ton profil et ton historique sont effacés. Ton email reste tracé de manière anonyme (hash SHA-256) pour éviter qu'une même adresse reçoive plusieurs fois les crédits de bienvenue.",
+  },
+  {
+    q: "Le PDF est-il vraiment compatible ATS ?",
+    a: "Oui. Texte sélectionnable, structure A4 deux colonnes, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
+  },
+] as const;
 
 const NAV_LINKS_BASE = [
   { href: "#comment", label: "Comment" },
@@ -259,6 +287,7 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen">
+      <StructuredData faq={FAQ_ITEMS.map((i) => ({ q: i.q, a: i.a }))} />
       <LandingHeader user={(session?.user as HeaderUser) ?? null} />
 
       {/* ============ HERO ============ */}
@@ -954,32 +983,7 @@ export default function Landing() {
           </div>
 
           <div className="border-t border-rule">
-            {[
-              {
-                q: "Est-ce que mes données sont sauvegardées sur vos serveurs ?",
-                a: "Non. Le CV et l'offre transitent vers Claude le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
-              },
-              {
-                q: "Combien de temps prend une génération ?",
-                a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
-              },
-              {
-                q: "Est-ce que Claude invente des expériences ?",
-                a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
-              },
-              {
-                q: "Quels formats de CV sont acceptés ?",
-                a: "PDF uniquement, jusqu'à 25 Mo. Les CV générés depuis Word, Canva, Notion ou LinkedIn fonctionnent tous tant qu'ils sont exportés en PDF.",
-              },
-              {
-                q: "Que se passe-t-il si je supprime mon compte ?",
-                a: "Ton profil et ton historique sont effacés. Ton email reste tracé de manière anonyme (hash SHA-256) pour éviter qu'une même adresse reçoive plusieurs fois les crédits de bienvenue.",
-              },
-              {
-                q: "Le PDF est-il vraiment compatible ATS ?",
-                a: "Oui. Texte sélectionnable, structure A4 deux colonnes, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
-              },
-            ].map((item, idx) => (
+            {FAQ_ITEMS.map((item, idx) => (
               <details
                 key={idx}
                 className="group border-b border-rule"
@@ -1053,25 +1057,46 @@ export default function Landing() {
       {/* ============ FOOTER ============ */}
       <footer className="bg-paper">
         <div className="mx-auto max-w-7xl px-6 py-10">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-            <span>© {new Date().getFullYear()} · CV Optimizer</span>
-            <span className="flex gap-5">
-              <Link href="/optimiser" className="hover:text-ink">
-                Optimiser
+          <div className="flex flex-col gap-6 border-b border-rule pb-8 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <Logo size="sm" />
+              <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-ink-soft">
+                Ton CV adapté à chaque offre. Pas d&apos;invention, pas de magie — juste du contexte bien placé.
+              </p>
+            </div>
+            <nav aria-label="Pied de page" className="grid grid-cols-2 gap-x-10 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted sm:grid-cols-3">
+              <Link href="/optimiser" className="hover:text-ink transition">
+                Optimiser CV
               </Link>
-              <Link href="/lettre" className="hover:text-ink">
+              <Link href="/lettre" className="hover:text-ink transition">
                 Lettre
               </Link>
               {isLogged ? (
-                <Link href="/account" className="hover:text-ink">
+                <Link href="/account" className="hover:text-ink transition">
                   Mon compte
                 </Link>
               ) : (
-                <Link href="/sign-in" className="hover:text-ink">
+                <Link href="/sign-in" className="hover:text-ink transition">
                   Se connecter
                 </Link>
               )}
-            </span>
+              <Link href="/cgu" className="hover:text-ink transition">
+                CGU
+              </Link>
+              <Link href="/rgpd" className="hover:text-ink transition">
+                RGPD
+              </Link>
+              <a
+                href="mailto:contact@cv-optimizer.fr"
+                className="hover:text-ink transition"
+              >
+                Contact
+              </a>
+            </nav>
+          </div>
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+            <span>© {new Date().getFullYear()} · CV Optimizer · Tous droits réservés</span>
+            <span className="text-ink-faint">v.01</span>
           </div>
         </div>
       </footer>
