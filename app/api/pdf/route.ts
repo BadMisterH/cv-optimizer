@@ -117,9 +117,20 @@ function buildContactHtml(contact: OptimizedCV["contact"]): string {
   return parts.join('<span class="sep"> · </span>');
 }
 
-function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
+type Template = "classic" | "sidebar-left" | "sidebar-right" | "single";
+
+function buildHtml(
+  cv: OptimizedCV,
+  photoDataUrl?: string,
+  accentColor: string = "#1f4bff",
+  template: Template = "classic"
+): string {
   const contactHtml = buildContactHtml(cv.contact);
   const sectionsHtml = cv.sections.map(renderSection).join("");
+  const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(accentColor) ? accentColor : "#1f4bff";
+  // Template variations : pour l'instant tous utilisent le layout classique 1-col.
+  // Les variantes sidebar/single ajustent les marges + position du contenu.
+  const containerClass = `container template-${template}`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -129,6 +140,10 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @page { size: A4; margin: 14mm; }
+  :root {
+    --accent: ${safeAccent};
+    --accent-soft: ${safeAccent}1a;
+  }
   html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: #111111;
@@ -170,7 +185,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
   .subtitle {
     font-size: 11pt;
     font-weight: 600;
-    color: #1f4bff;
+    color: var(--accent);
     margin-top: 4px;
   }
   .contact {
@@ -224,7 +239,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
   .item-company {
     font-size: 10pt;
     font-weight: 700;
-    color: #1f4bff;
+    color: var(--accent);
     margin-left: 4px;
   }
   .item-company::before {
@@ -256,8 +271,8 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
   }
   .skills span {
     display: inline-flex;
-    background: #f0f5ff;
-    color: #1f4bff;
+    background: var(--accent-soft);
+    color: var(--accent);
     padding: 4px 8px;
     border-radius: 999px;
     font-size: 8.8pt;
@@ -266,6 +281,40 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
     font-size: 9.8pt;
     color: #222222;
     line-height: 1.5;
+  }
+  /* === Variations de template === */
+  .template-sidebar-left .header,
+  .template-sidebar-right .header {
+    border-left: 4pt solid var(--accent);
+    padding-left: 12px;
+  }
+  .template-sidebar-right .header {
+    border-left: none;
+    border-right: 4pt solid var(--accent);
+    padding-left: 0;
+    padding-right: 12px;
+    text-align: right;
+  }
+  .template-sidebar-right .top-line {
+    flex-direction: row-reverse;
+  }
+  .template-sidebar-right .contact {
+    justify-content: flex-end;
+  }
+  .template-single .section-title {
+    text-align: center;
+    border-bottom: 1.5pt solid var(--accent);
+  }
+  .template-single .header {
+    text-align: center;
+  }
+  .template-single .top-line {
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+  }
+  .template-single .contact {
+    justify-content: center;
   }
   .photo {
     width: 80px;
@@ -277,7 +326,7 @@ function buildHtml(cv: OptimizedCV, photoDataUrl?: string): string {
 </style>
 </head>
 <body>
-  <div class="container">
+  <div class="${containerClass}">
     <header class="header">
       <div class="top-line">
         <div>
@@ -313,7 +362,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "CV invalide" }, { status: 400 });
     }
 
-    const html = buildHtml(cv, photoDataUrl);
+    const accentColor =
+      typeof body?.accentColor === "string" ? body.accentColor : undefined;
+    const template =
+      typeof body?.template === "string" &&
+      ["classic", "sidebar-left", "sidebar-right", "single"].includes(body.template)
+        ? (body.template as Template)
+        : "classic";
+
+    const html = buildHtml(cv, photoDataUrl, accentColor, template);
 
     browser = await launchBrowser();
     const page = await browser.newPage();

@@ -7,8 +7,10 @@ import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
+import { CVEditor } from "../components/editor/CVEditor";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
+import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
 import type { OptimizeResponse, OptimizedCV } from "../types";
 
 export default function Page() {
@@ -438,10 +440,20 @@ function Result({
   data: OptimizeResponse;
   photo: string | null;
 }) {
+  // L'éditeur maintient son propre state (initialisé depuis data.cv).
+  // Result le mirroir pour que DownloadButton puisse PDF la version éditée.
+  const [editorState, setEditorState] = useState<EditorState>({
+    cv: data.cv,
+    accent: "blue",
+    template: "classic",
+  });
+  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const currentCV = mode === "edit" ? editorState.cv : data.cv;
+
   return (
     <section className="rise border-b border-rule bg-paper-deep">
       <div className="mx-auto max-w-7xl px-6 py-14">
-        <header className="mb-10 flex items-baseline justify-between border-b border-rule pb-5">
+        <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-5">
           <div className="flex items-baseline gap-4">
             <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
               03
@@ -453,13 +465,52 @@ function Result({
               ✓ Optimisé
             </span>
           </div>
-          <DownloadButton cv={data.cv} photo={photo} />
+
+          <div className="flex items-center gap-3">
+            {/* Toggle mode */}
+            <div className="inline-flex items-center gap-1 rounded-full border border-rule bg-card p-0.5">
+              <button
+                type="button"
+                onClick={() => setMode("preview")}
+                aria-pressed={mode === "preview"}
+                className={`px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] transition ${
+                  mode === "preview"
+                    ? "bg-ink text-paper rounded-full"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Aperçu
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("edit")}
+                aria-pressed={mode === "edit"}
+                className={`px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] transition ${
+                  mode === "edit"
+                    ? "bg-ink text-paper rounded-full"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                ✎ Éditer
+              </button>
+            </div>
+            <DownloadButton
+              cv={currentCV}
+              photo={photo}
+              accent={editorState.accent}
+              template={editorState.template}
+            />
+          </div>
         </header>
 
         <div className="grid gap-10 lg:grid-cols-12">
           <article className="lg:col-span-8">
             <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
-              <CVPreview cv={data.cv} photo={photo} />
+              {mode === "edit" ? (
+                <CVEditor cv={data.cv} photo={photo} onChange={setEditorState} />
+              ) : (
+                <CVPreview cv={editorState.cv} photo={photo} />
+              )}
             </div>
           </article>
 
@@ -494,9 +545,13 @@ function Result({
 function DownloadButton({
   cv,
   photo,
+  accent = "blue",
+  template = "classic",
 }: {
   cv: OptimizedCV;
   photo: string | null;
+  accent?: AccentKey;
+  template?: TemplateKey;
 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -510,7 +565,7 @@ function DownloadButton({
       const res = await fetchWithAuth("/api/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cv, photo }),
+        body: JSON.stringify({ cv, photo, accentColor: ACCENT_HEX[accent], template }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
