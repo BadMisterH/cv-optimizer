@@ -98,11 +98,11 @@ export function GenerationProgress({
       className="mt-10 border border-rule bg-paper-deep p-6 sm:p-8"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule pb-4">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink">
+        <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink">
           <span className="inline-block h-2 w-2 animate-pulse bg-accent" />{" "}
           {variant === "cv" ? "Optimisation du CV" : "Rédaction de la lettre"} en cours
         </p>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+        <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
           {remainingSec > 0
             ? `~${remainingSec}s restantes`
             : "Encore quelques secondes…"}

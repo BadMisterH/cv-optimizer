@@ -89,7 +89,7 @@ export default function LetterPage() {
       {/* HERO */}
       <section className="hero-bg border-b border-rule">
         <div className="mx-auto max-w-7xl px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
-          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
@@ -113,7 +113,7 @@ export default function LetterPage() {
               l&apos;offre. Mêmes expériences citées, même ton, mots-clés
               alignés — pas de générique.
             </p>
-            <ul className="md:col-span-6 lg:col-start-8 lg:col-span-5 grid grid-cols-2 gap-y-3 self-end font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+            <ul className="md:col-span-6 lg:col-start-8 lg:col-span-5 grid grid-cols-2 gap-y-3 self-end font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
               <li className="flex items-baseline gap-2">
                 <span className="text-warm">●</span> CV in
               </li>
@@ -137,7 +137,7 @@ export default function LetterPage() {
           <form onSubmit={handleSubmit} className="grid gap-12 md:grid-cols-2 md:gap-x-10">
             <div>
               <div className="mb-4 flex items-baseline gap-4 border-b border-rule pb-3">
-                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-warm">
+                <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
                   01
                 </span>
                 <span className="font-display text-xl font-medium tracking-tight text-ink">
@@ -177,7 +177,7 @@ export default function LetterPage() {
                   >
                     {cvFile ? (
                       <>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-success">
+                        <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-success">
                           ✓ Fichier prêt
                         </span>
                         <span className="mt-3 font-display text-xl font-medium tracking-tight text-ink">
@@ -185,7 +185,7 @@ export default function LetterPage() {
                             ? `${cvFile.name.slice(0, 35)}…`
                             : cvFile.name}
                         </span>
-                        <span className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+                        <span className="mt-2 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                           {(cvFile.size / 1024).toFixed(0)} Ko · clique pour changer
                         </span>
                       </>
@@ -194,7 +194,7 @@ export default function LetterPage() {
                         <span className="font-display text-xl font-medium tracking-tight text-ink">
                           Dépose ton CV ici
                         </span>
-                        <span className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
+                        <span className="mt-2 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-muted">
                           PDF · max 25 Mo
                         </span>
                       </>
@@ -213,7 +213,7 @@ export default function LetterPage() {
 
             <div>
               <div className="mb-4 flex items-baseline gap-4 border-b border-rule pb-3">
-                <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-warm">
+                <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
                   02
                 </span>
                 <span className="font-display text-xl font-medium tracking-tight text-ink">
@@ -228,13 +228,13 @@ export default function LetterPage() {
                 className="w-full resize-none border border-rule bg-card px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint shadow-[0_1px_0_0_rgba(15,15,16,0.04)] outline-none transition focus:border-warm focus:shadow-[0_0_0_4px_var(--color-warm-soft)]"
                 required
               />
-              <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+              <p className="mt-3 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                 {offer.trim() ? `${offer.length} caractères` : "En attente du texte"}
               </p>
             </div>
 
             <div className="md:col-span-2 flex flex-col gap-6 border-t border-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+              <div className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 {(source === "stored" || cvFile) && offer.trim()
                   ? "Prêt à rédiger →"
                   : "Renseigne CV + offre"}
@@ -243,7 +243,7 @@ export default function LetterPage() {
                 {error && (
                   <p
                     role="alert"
-                    className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+                    className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
                   >
                     ✕ {error}
                   </p>
@@ -281,7 +281,7 @@ export default function LetterPage() {
       )}
 
       <footer className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
+        <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-muted">
           <span>© {new Date().getFullYear()} · CV Optimizer</span>
         </div>
       </footer>
@@ -323,12 +323,12 @@ function SourceOption({
             {label}
           </span>
           {badge && (
-            <span className="rounded-full bg-success-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-success">
+            <span className="rounded-full bg-success-soft px-2 py-0.5 font-mono text-[12px] uppercase tracking-[0.16em] text-success">
               {badge}
             </span>
           )}
         </span>
-        <span className="mt-0.5 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+        <span className="mt-0.5 block font-mono text-[13px] uppercase tracking-[0.14em] text-ink-muted">
           {sub}
         </span>
       </span>
@@ -356,17 +356,17 @@ function LetterResult({
       <div className="mx-auto max-w-7xl px-6 py-14">
         <header className="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-rule pb-5">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-warm">
+            <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
               03
             </span>
             <span className="font-display text-xl font-medium tracking-tight text-ink">
               Lettre rédigée
             </span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-success">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.18em] text-success">
               ✓ Personnalisée
             </span>
             {isEdited && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-warm-soft px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-warm">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-warm-soft px-2.5 py-0.5 font-mono text-[12px] uppercase tracking-[0.18em] text-warm">
                 ✎ Modifiée
               </span>
             )}
@@ -376,7 +376,7 @@ function LetterResult({
               <button
                 type="button"
                 onClick={handleReset}
-                className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+                className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
                 title="Annuler tes modifications et revenir à la version IA"
               >
                 ↺ Réinitialiser
@@ -410,7 +410,7 @@ function LetterResult({
 
           <aside className="lg:col-span-4">
             <div className="border-l-2 border-warm pl-6">
-              <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warm">
+              <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
                 Choix éditoriaux · {data.notes.length}
               </h3>
               <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
@@ -419,7 +419,7 @@ function LetterResult({
               <ol className="mt-6 space-y-5">
                 {data.notes.map((n, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[10px] font-medium tracking-[0.04em] text-warm">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[12px] font-medium tracking-[0.04em] text-warm">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
@@ -429,7 +429,7 @@ function LetterResult({
                 ))}
               </ol>
               {editing && (
-                <p className="mt-8 rounded-sm bg-paper-deep p-4 font-mono text-[11px] leading-relaxed text-ink-muted">
+                <p className="mt-8 rounded-sm bg-paper-deep p-4 font-mono text-[13px] leading-relaxed text-ink-muted">
                   💡 Astuce : modifie librement les paragraphes, l&apos;objet,
                   la formule de politesse… Le PDF généré reprendra ta version
                   finale.
@@ -551,7 +551,7 @@ function LetterEditor({
         <div className="space-y-4">
           {letter.paragraphs.map((p, i) => (
             <div key={i} className="relative">
-              <div className="mb-1.5 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+              <div className="mb-1.5 flex items-baseline justify-between font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
                 <span>Paragraphe {String(i + 1).padStart(2, "0")}</span>
                 {letter.paragraphs.length > 1 && (
                   <button
@@ -574,7 +574,7 @@ function LetterEditor({
             <button
               type="button"
               onClick={addParagraph}
-              className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm underline-offset-4 hover:underline"
+              className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm underline-offset-4 hover:underline"
             >
               + Ajouter un paragraphe
             </button>
@@ -609,7 +609,7 @@ function FieldGroup({
 }) {
   return (
     <div>
-      <p className="mb-3 border-b border-rule pb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-warm">
+      <p className="mb-3 border-b border-rule pb-2 font-mono text-[13px] uppercase tracking-[0.2em] text-warm">
         {label}
       </p>
       <div className="space-y-3">{children}</div>
@@ -631,7 +631,7 @@ function EditInput({
   return (
     <label className="block">
       {label && (
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+        <span className="mb-1.5 block font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
           {label}
         </span>
       )}
@@ -660,7 +660,7 @@ function AutoTextarea({
   return (
     <label className="block">
       {label && (
-        <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+        <span className="mb-1.5 block font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
           {label}
         </span>
       )}
@@ -726,7 +726,7 @@ function DownloadLetterButton({ letter }: { letter: CoverLetter }) {
       {err && (
         <p
           role="alert"
-          className="font-mono text-[10px] uppercase tracking-[0.16em] text-danger"
+          className="font-mono text-[12px] uppercase tracking-[0.16em] text-danger"
         >
           ✕ {err}
         </p>

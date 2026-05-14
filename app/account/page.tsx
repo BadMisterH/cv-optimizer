@@ -33,7 +33,7 @@ export default function AccountPage() {
     return (
       <main className="min-h-screen bg-paper">
         <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+          <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
             Chargement…
           </p>
         </div>
@@ -69,13 +69,13 @@ export default function AccountPage() {
           <Logo size="md" />
           <Link
             href="/"
-            className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+            className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
           >
             ← Retour
           </Link>
         </div>
 
-        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
+        <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-ink-muted">
           ● Mon compte
         </span>
 
@@ -84,26 +84,26 @@ export default function AccountPage() {
         </h1>
 
         <section className="mt-12 border border-rule bg-paper-deep p-6 sm:p-8">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+          <h2 className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
             Profil
           </h2>
           <dl className="mt-4 space-y-3">
             {user.name && (
               <div className="flex flex-wrap items-baseline gap-3">
-                <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+                <dt className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                   Nom
                 </dt>
                 <dd className="text-base text-ink">{user.name}</dd>
               </div>
             )}
             <div className="flex flex-wrap items-baseline gap-3">
-              <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+              <dt className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                 Email
               </dt>
               <dd className="text-base text-ink">{user.email}</dd>
             </div>
             <div className="flex flex-wrap items-baseline gap-3">
-              <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+              <dt className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                 Crédits
               </dt>
               <dd className="text-base text-ink">
@@ -118,14 +118,14 @@ export default function AccountPage() {
             <button
               type="button"
               onClick={() => setShowDelete(true)}
-              className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted transition hover:text-danger"
+              className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted transition hover:text-danger"
             >
               Supprimer mon compte →
             </button>
           ) : (
             <div className="max-w-xl">
               <div className="flex items-baseline justify-between gap-3">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+                <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
                   Suppression du compte
                 </p>
                 <button
@@ -136,7 +136,7 @@ export default function AccountPage() {
                     setError(null);
                   }}
                   disabled={deleting}
-                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint hover:text-ink disabled:opacity-50"
+                  className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint hover:text-ink disabled:opacity-50"
                 >
                   Annuler
                 </button>
@@ -149,7 +149,7 @@ export default function AccountPage() {
               </p>
 
               <label className="mt-5 block">
-                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
                   Tape <span className="text-danger">{CONFIRM_WORD}</span> pour confirmer
                 </span>
                 <input
@@ -167,7 +167,7 @@ export default function AccountPage() {
               {error && (
                 <p
                   role="alert"
-                  className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+                  className="mt-3 font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
                 >
                   ✕ {error}
                 </p>
@@ -176,7 +176,7 @@ export default function AccountPage() {
               <button
                 onClick={handleDelete}
                 disabled={!canDelete}
-                className="mt-5 inline-flex items-center gap-2 border border-danger px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-danger transition hover:bg-danger hover:text-paper disabled:cursor-not-allowed disabled:border-ink-faint disabled:text-ink-faint disabled:hover:bg-transparent"
+                className="mt-5 inline-flex items-center gap-2 border border-danger px-4 py-2 font-mono text-[13px] uppercase tracking-[0.18em] text-danger transition hover:bg-danger hover:text-paper disabled:cursor-not-allowed disabled:border-ink-faint disabled:text-ink-faint disabled:hover:bg-transparent"
               >
                 {deleting ? "Suppression…" : "Confirmer la suppression"}
               </button>

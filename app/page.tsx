@@ -1,679 +1,1080 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useSession } from "@/lib/auth-client";
-import { AuthBanner } from "./components/AuthBanner";
-import { GenerationProgress } from "./components/GenerationProgress";
+import { isAdminEmail } from "@/lib/admin";
+import { PRICING_PUBLIC } from "@/lib/feature-flags";
 import { Logo } from "./components/Logo";
-import { ServiceNav } from "./components/ServiceNav";
-import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "./lib/cvStore";
-import type { OptimizeResponse, OptimizedCV } from "./types";
 
-export default function Page() {
-  const router = useRouter();
+const NAV_LINKS_BASE = [
+  { href: "#comment", label: "Comment" },
+  { href: "#pourquoi", label: "Pourquoi" },
+  { href: "#tarifs", label: "Tarifs", requiresPricing: true },
+  { href: "#faq", label: "FAQ" },
+] as const;
+
+const NAV_LINKS = NAV_LINKS_BASE.filter(
+  (link) => !("requiresPricing" in link) || PRICING_PUBLIC
+);
+
+type HeaderUser = {
+  name?: string;
+  email?: string;
+  credits?: number;
+} | null;
+
+function CreditChip({ user }: { user: HeaderUser }) {
+  if (!user) return null;
+  const isAdmin = isAdminEmail(user.email);
+  const credits = user.credits ?? 0;
+  const isEmpty = !isAdmin && credits <= 0;
+
+  return (
+    <Link
+      href={isEmpty ? "/buy-credits" : "/account"}
+      className="group inline-flex items-center gap-2 border border-rule px-3 py-2 font-mono text-[12px] uppercase tracking-[0.18em] transition hover:border-ink"
+      aria-label={isAdmin ? "Compte admin" : `${credits} crédit${credits > 1 ? "s" : ""} restant${credits > 1 ? "s" : ""}`}
+    >
+      <span
+        className={
+          isEmpty
+            ? "text-danger"
+            : isAdmin
+              ? "text-accent"
+              : "text-success"
+        }
+        aria-hidden
+      >
+        ●
+      </span>
+      {isAdmin ? (
+        <span className="text-accent">∞ admin</span>
+      ) : (
+        <span className={isEmpty ? "text-danger" : "text-ink"}>
+          {credits} crédit{credits > 1 ? "s" : ""}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function LandingHeader({ user }: { user: HeaderUser }) {
+  const [open, setOpen] = useState(false);
+  const isLogged = !!user;
+  const isAdmin = isAdminEmail(user?.email);
+  const credits = user?.credits ?? 0;
+  const isEmpty = isLogged && !isAdmin && credits <= 0;
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3.5">
+        <Logo size="sm" />
+
+        <nav
+          aria-label="Sections"
+          className="hidden items-center gap-7 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted lg:flex"
+        >
+          {NAV_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="relative py-1 transition hover:text-ink after:absolute after:left-0 after:bottom-0 after:h-px after:w-0 after:bg-ink after:transition-all hover:after:w-full"
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          {isLogged ? (
+            <>
+              <CreditChip user={user} />
+              <Link
+                href="/account"
+                className="inline-flex h-10 items-center px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:text-ink"
+              >
+                Mon compte
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="inline-flex h-10 items-center px-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:text-ink"
+            >
+              Se connecter
+            </Link>
+          )}
+          <Link
+            href="/optimiser"
+            className="group inline-flex h-10 items-center gap-2 bg-ink px-5 font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
+          >
+            Optimiser
+            <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={open}
+          className="relative inline-flex h-10 w-10 items-center justify-center border border-rule transition hover:border-ink lg:hidden"
+        >
+          <span aria-hidden className="relative block h-3 w-4">
+            <span
+              className={`absolute left-0 top-0 h-px w-full bg-ink transition ${
+                open ? "translate-y-[5px] rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`absolute left-0 top-1/2 -translate-y-1/2 h-px w-full bg-ink transition ${
+                open ? "opacity-0" : ""
+              }`}
+            />
+            <span
+              className={`absolute left-0 bottom-0 h-px w-full bg-ink transition ${
+                open ? "-translate-y-[6px] -rotate-45" : ""
+              }`}
+            />
+          </span>
+        </button>
+      </div>
+
+      {open && (
+        <div className="border-t border-rule bg-paper lg:hidden">
+          <div className="mx-auto max-w-7xl px-6 py-6">
+            {isLogged && (
+              <div className="mb-5 flex items-baseline justify-between gap-3 border border-rule bg-paper-deep px-4 py-3">
+                <span className="flex items-baseline gap-2 font-mono text-[13px] uppercase tracking-[0.22em]">
+                  <span
+                    className={
+                      isEmpty
+                        ? "text-danger"
+                        : isAdmin
+                          ? "text-accent"
+                          : "text-success"
+                    }
+                    aria-hidden
+                  >
+                    ●
+                  </span>
+                  <span className="text-ink-muted">{user?.name ?? user?.email ?? "Connecté"}</span>
+                  <span className="text-ink-faint">·</span>
+                  {isAdmin ? (
+                    <span className="text-accent">∞ admin</span>
+                  ) : (
+                    <span className={isEmpty ? "text-danger" : "text-ink"}>
+                      {credits} crédit{credits > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </span>
+                {!isAdmin && (
+                  <Link
+                    href={isEmpty ? "/buy-credits" : "/account"}
+                    onClick={() => setOpen(false)}
+                    className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted hover:text-ink"
+                  >
+                    {isEmpty ? "Recharger →" : "Gérer →"}
+                  </Link>
+                )}
+              </div>
+            )}
+            <nav aria-label="Sections (mobile)" className="flex flex-col gap-1">
+              {NAV_LINKS.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="border-b border-rule py-3 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted transition hover:text-ink"
+                >
+                  {l.label}
+                </a>
+              ))}
+            </nav>
+            <div className="mt-5 flex flex-col gap-2">
+              {isLogged ? (
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-12 items-center justify-center border border-rule font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+                >
+                  Mon compte
+                </Link>
+              ) : (
+                <Link
+                  href="/sign-in"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-12 items-center justify-center border border-rule font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+                >
+                  Se connecter
+                </Link>
+              )}
+              <Link
+                href="/optimiser"
+                onClick={() => setOpen(false)}
+                className="group inline-flex h-12 items-center justify-center gap-2 bg-ink font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
+              >
+                Optimiser mon CV
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                  →
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+export default function Landing() {
   const { data: session } = useSession();
-  const [cvFile, setCvFile] = useState<File | null>(null);
-  const [offer, setOffer] = useState("");
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<OptimizeResponse | null>(null);
+  const isLogged = Boolean(session?.user);
+  const ctaHref = "/optimiser";
+  const ctaSecondaryHref = isLogged ? "/lettre" : "/sign-up";
 
-  useEffect(() => {
-    const stored = readPhoto();
-    if (!stored) return;
-
-    compressDataUrlImage(stored)
-      .then((compressed) => {
-        setPhoto(compressed);
-        if (compressed !== stored) {
-          savePhoto(compressed);
-        }
-      })
-      .catch(() => {
-        setPhoto(stored);
-      });
-  }, []);
-
-  async function compressBitmap(source: HTMLImageElement | ImageBitmap): Promise<string> {
-    const maxSize = 380;
-    const width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
-    const height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
-    const ratio = Math.min(maxSize / width, maxSize / height, 1);
-    const targetWidth = Math.round(width * ratio);
-    const targetHeight = Math.round(height * ratio);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Impossible de compresser l'image");
-    }
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
-
-    return canvas.toDataURL("image/jpeg", 0.65);
+  // Tilt souris sur le CV
+  const tiltRef = useRef<HTMLDivElement>(null);
+  function handleTiltMove(e: ReactMouseEvent<HTMLDivElement>) {
+    const el = tiltRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    // base: rx=4, ry=-6 ; on permet ±5° en X et ±5° en Y autour de cette base
+    const ry = -6 + (x - 0.5) * 10;
+    const rx = 4 - (y - 0.5) * 10;
+    el.style.setProperty("--rx", rx.toFixed(2));
+    el.style.setProperty("--ry", ry.toFixed(2));
   }
-
-  async function compressImageFile(file: File): Promise<string> {
-    const imageBitmap = await createImageBitmap(file);
-    return compressBitmap(imageBitmap);
-  }
-
-  async function compressDataUrlImage(dataUrl: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          const compressed = await compressBitmap(img);
-          resolve(compressed);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.onerror = () => reject(new Error("Impossible de charger l'image stockée."));
-      img.src = dataUrl;
-    });
-  }
-
-  async function handlePhotoChange(file: File | null) {
-    if (!file) {
-      setPhoto(null);
-      savePhoto(null);
-      return;
-    }
-
-    try {
-      const dataUrl = await compressImageFile(file);
-      setPhoto(dataUrl);
-      savePhoto(dataUrl);
-    } catch (err) {
-      console.error("Erreur lors de la compression de la photo :", err);
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = String(reader.result);
-        setPhoto(dataUrl);
-        savePhoto(dataUrl);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!cvFile) return;
-
-    // Check free tier limit
-    const canGenerateFree = canGenerateWithoutAuth("cv");
-    if (!canGenerateFree && !session?.user) {
-      router.push("/sign-in?redirect=/");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const body = new FormData();
-      body.append("cv", cvFile);
-      body.append("offer", offer);
-
-      const res = await fetchWithAuth("/api/optimize", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
-      setResult(data);
-      // Persist for the cover letter service
-      saveLastCV(data.cv, offer);
-      // Increment generation counter
-      incrementGenerationCount("cv");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
+  function handleTiltLeave() {
+    const el = tiltRef.current;
+    if (!el) return;
+    el.style.setProperty("--rx", "4");
+    el.style.setProperty("--ry", "-6");
   }
 
   return (
     <main className="min-h-screen">
-      <AuthBanner />
+      <LandingHeader user={(session?.user as HeaderUser) ?? null} />
 
-      {/* HERO */}
+      {/* ============ HERO ============ */}
       <section className="hero-bg border-b border-rule">
-        <div className="mx-auto max-w-7xl px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
-          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-            <Logo size="md" />
-            <ServiceNav />
-            <div className="flex items-center gap-6">
-              {!session?.user && (
-                <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateWithoutAuth("cv") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+        <div className="mx-auto max-w-7xl px-6 pt-12 pb-20 lg:pt-16 lg:pb-32">
+
+          <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
+            <div className="lg:col-span-8">
+              <p className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-warm">●</span> ATS-friendly
                 </span>
-              )}
-              <span className="hidden sm:inline">v.01</span>
-            </div>
-          </div>
-
-          <h1 className="font-display text-[clamp(2.75rem,9vw,7.5rem)] font-light leading-[0.93] tracking-[-0.02em] text-ink">
-            Adapte ton CV à{" "}
-            <span className="italic font-normal text-accent">chaque</span>{" "}
-            offre de poste.
-          </h1>
-
-          <div className="mt-10 grid gap-6 md:grid-cols-12">
-            <p className="md:col-span-6 lg:col-span-5 text-lg leading-relaxed text-ink-soft">
-              Téléverse ton CV en PDF et l&apos;offre que tu vises. Claude
-              reformule, priorise les bonnes expériences et glisse les
-              mots-clés ATS sans rien inventer.
-            </p>
-            <ul className="md:col-span-6 lg:col-start-8 lg:col-span-5 grid grid-cols-2 gap-y-3 self-end font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-              <li className="flex items-baseline gap-2">
-                <span className="text-accent">●</span> PDF in
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-warm">●</span> JSON structuré
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-success">●</span> ATS friendly
-              </li>
-              <li className="flex items-baseline gap-2">
-                <span className="text-accent">●</span> PDF out
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* FORM */}
-      <section className="border-b border-rule">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <form onSubmit={handleSubmit} className="grid gap-12 md:grid-cols-2 md:gap-x-10">
-            <Field number="01" label="Ton CV (PDF)">
-              <DropZone file={cvFile} onChange={setCvFile} />
-            </Field>
-
-            <Field number="02" label="L'offre d'emploi">
-              <textarea
-                value={offer}
-                onChange={(e) => setOffer(e.target.value)}
-                placeholder="Colle ici l'intitulé, les missions, le profil recherché…"
-                rows={11}
-                className="w-full resize-none border border-rule bg-card px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint shadow-[0_1px_0_0_rgba(15,15,16,0.04)] outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
-                required
-              />
-              <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-                {offer.trim() ? `${offer.length} caractères` : "En attente du texte"}
+                <span className="hidden h-3 w-px bg-rule sm:inline-block" />
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-accent">●</span> 30 secondes
+                </span>
+                <span className="hidden h-3 w-px bg-rule sm:inline-block" />
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-success">●</span> Une page A4
+                </span>
               </p>
-            </Field>
 
-            <PhotoField photo={photo} onChange={handlePhotoChange} />
+              <h1 className="font-display text-[clamp(2.75rem,8.5vw,7rem)] font-light leading-[0.92] tracking-tight text-ink">
+                Adapte ton CV à{" "}
+                <span className="italic font-normal text-accent">chaque</span>{" "}
+                offre.
+                <br />
+                Sans rien <span className="italic font-normal text-warm">inventer</span>.
+              </h1>
 
-            <div className="md:col-span-2 flex flex-col gap-6 border-t border-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-                {cvFile && offer.trim()
-                  ? "Prêt à optimiser →"
-                  : "Complète les deux champs pour démarrer"}
-              </div>
-              <div className="flex items-center gap-5">
-                {error && (
-                  <p
-                    role="alert"
-                    className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
-                  >
-                    ✕ {error}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={loading || !cvFile || !offer.trim()}
-                  className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
+              <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft">
+                Téléverse ton CV, colle l&apos;offre. Claude reformule, priorise
+                les bonnes expériences et glisse les mots-clés. Tu récupères un
+                PDF prêt à envoyer.
+              </p>
+
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Link
+                  href={ctaHref}
+                  className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
                 >
-                  <span>{loading ? "Optimisation en cours…" : "Optimiser mon CV"}</span>
-                  <span
-                    aria-hidden
-                    className="transition-transform group-hover:translate-x-1"
-                  >
+                  <span>Optimiser mon CV</span>
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">
                     →
                   </span>
-                </button>
+                </Link>
+                <a
+                  href="#comment"
+                  className="group inline-flex items-center justify-center gap-3 border border-rule px-7 py-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+                >
+                  Voir comment ça marche
+                  <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
+                    ↓
+                  </span>
+                </a>
               </div>
-            </div>
-          </form>
 
-          <GenerationProgress active={loading} variant="cv" />
+              <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-faint">
+                ● 2 crédits offerts à l&apos;inscription · Pas de carte requise
+              </p>
+            </div>
+
+            {/* Hero visual : CV 3D flottant avec cartes stratifiées en perspective */}
+            <aside className="lg:col-span-4 lg:self-end">
+              <div className="cv-stage relative">
+                {/* Déco : grille de points en haut à gauche */}
+                <div
+                  aria-hidden
+                  className="absolute -left-4 -top-6 hidden grid-cols-5 gap-1.5 sm:grid"
+                  style={{ gridTemplateRows: "repeat(5, 1fr)" }}
+                >
+                  {Array.from({ length: 25 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className="h-1 w-1 rounded-full bg-ink-faint"
+                      style={{ opacity: 0.15 + ((i * 37) % 60) / 100 }}
+                    />
+                  ))}
+                </div>
+
+                {/* Déco : loupe line-art (ATS scanning) en bas à gauche */}
+                <svg
+                  aria-hidden
+                  viewBox="0 0 48 48"
+                  className="absolute -bottom-8 -left-6 h-14 w-14 text-warm cv-pulse"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="20" cy="20" r="13" />
+                  <line x1="29.5" y1="29.5" x2="42" y2="42" strokeLinecap="round" />
+                </svg>
+
+                {/* Déco : "+" scintillants */}
+                <span
+                  aria-hidden
+                  className="absolute right-8 -top-4 font-mono text-lg text-accent cv-pulse"
+                  style={{ animationDelay: "-1.2s" }}
+                >
+                  +
+                </span>
+                <span
+                  aria-hidden
+                  className="absolute -right-4 top-1/3 font-mono text-lg text-warm cv-pulse"
+                  style={{ animationDelay: "-0.6s" }}
+                >
+                  +
+                </span>
+
+                {/* Carte arrière #2 (rotation statique outer, float inner) */}
+                <div
+                  aria-hidden
+                  className="absolute right-0 top-0 -z-10 hidden h-full w-full origin-bottom-left sm:block"
+                  style={{
+                    transform: "rotateY(-12deg) rotateX(6deg) translateX(28px) translateY(28px)",
+                  }}
+                >
+                  <div className="cv-float-back h-full border border-rule bg-paper-deep shadow-[0_20px_40px_-30px_rgba(15,15,16,0.25)]">
+                    <div className="border-b border-rule p-3">
+                      <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-faint">
+                        Offre · Marketing
+                      </p>
+                    </div>
+                    <div className="space-y-1.5 p-3">
+                      {[80, 65, 75, 50].map((w, i) => (
+                        <div key={i} className="h-1.5 bg-rule" style={{ width: `${w}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Carte arrière #1 (rotation statique outer, float inner) */}
+                <div
+                  aria-hidden
+                  className="absolute right-0 top-0 -z-10 hidden h-full w-full origin-bottom-left sm:block"
+                  style={{
+                    transform: "rotateY(-9deg) rotateX(5deg) translateX(14px) translateY(14px)",
+                  }}
+                >
+                  <div className="cv-float-slow h-full border border-rule bg-card shadow-[0_24px_50px_-30px_rgba(15,15,16,0.3)]">
+                    <div className="border-b border-rule p-3">
+                      <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-faint">
+                        Offre · Growth
+                      </p>
+                    </div>
+                    <div className="space-y-1.5 p-3">
+                      {[85, 70, 60, 78, 45].map((w, i) => (
+                        <div key={i} className="h-1.5 bg-rule" style={{ width: `${w}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Carte avant : tilt souris (outer) + float (middle) + carte (inner) */}
+                <div
+                  ref={tiltRef}
+                  onMouseMove={handleTiltMove}
+                  onMouseLeave={handleTiltLeave}
+                  className="cv-tilt origin-bottom-left"
+                >
+                <div className="cv-float">
+                <div className="relative origin-bottom-left overflow-hidden border border-rule bg-card shadow-[0_40px_90px_-30px_rgba(15,15,16,0.4),0_8px_20px_-12px_rgba(15,15,16,0.2)]">
+                  {/* Tag ATS en coin */}
+                  <span className="absolute right-0 top-0 z-10 bg-success px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-paper">
+                    ✓ ATS
+                  </span>
+
+                  <div className="p-5">
+                    {/* Header avec photo placeholder + nom */}
+                    <div className="flex items-start gap-3">
+                      <div className="relative h-12 w-10 shrink-0 overflow-hidden bg-paper-deep">
+                        {/* Silhouette stylisée */}
+                        <svg
+                          viewBox="0 0 40 48"
+                          className="absolute inset-0 h-full w-full text-ink-faint"
+                          fill="currentColor"
+                          aria-hidden
+                        >
+                          <circle cx="20" cy="18" r="7" />
+                          <path d="M6 48c0-8 6-14 14-14s14 6 14 14H6Z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-muted">
+                          Curriculum Vitæ
+                        </p>
+                        <p className="mt-1 truncate font-display text-lg font-bold leading-tight tracking-tight text-ink">
+                          Badr Aitoufel
+                        </p>
+                        <p className="mt-0.5 font-mono text-[12px] font-semibold tracking-[0.04em] text-accent">
+                          Développeur Full-Stack
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Contact */}
+                    <p className="mt-2.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
+                      badr@example.com · Paris · linkedin.com/in/badr
+                    </p>
+
+                    {/* À propos */}
+                    <div className="mt-4 border-t border-rule pt-3">
+                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
+                        À propos
+                      </p>
+                      <p className="mt-1.5 text-[10.5px] leading-snug text-ink-soft">
+                        3 ans en{" "}
+                        <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
+                          React/TypeScript
+                        </mark>
+                        , spécialisé{" "}
+                        <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
+                          accessibilité
+                        </mark>{" "}
+                        et perfs Core Web Vitals.
+                      </p>
+                    </div>
+
+                    {/* Expérience */}
+                    <div className="mt-4 border-t border-rule pt-3">
+                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
+                        Expérience
+                      </p>
+                      <div className="mt-2.5 space-y-3">
+                        <div>
+                          <p className="text-[11.5px] font-bold leading-tight text-ink">
+                            Frontend Engineer{" "}
+                            <span className="text-ink-muted">·</span>{" "}
+                            <span className="text-accent">Acme Inc.</span>
+                          </p>
+                          <p className="mt-0.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
+                            2023 — 2024 · E-commerce
+                          </p>
+                          <ul className="mt-1 space-y-0.5 text-[10.5px] leading-snug text-ink-soft">
+                            <li className="flex gap-1.5">
+                              <span
+                                aria-hidden
+                                className="mt-1.75 inline-block h-px w-1.5 shrink-0 bg-ink"
+                              />
+                              <span>
+                                Refonte composants UI{" "}
+                                <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
+                                  React
+                                </mark>{" "}
+                                · −30 % bundle
+                              </span>
+                            </li>
+                            <li className="flex gap-1.5">
+                              <span
+                                aria-hidden
+                                className="mt-1.75 inline-block h-px w-1.5 shrink-0 bg-ink"
+                              />
+                              <span>
+                                Audit{" "}
+                                <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
+                                  accessibilité
+                                </mark>{" "}
+                                AA · LCP &lt; 1.8s
+                              </span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div>
+                          <p className="text-[11.5px] font-bold leading-tight text-ink">
+                            Développeur Full-Stack{" "}
+                            <span className="text-ink-muted">·</span>{" "}
+                            <span className="text-accent">BlueBird</span>
+                          </p>
+                          <p className="mt-0.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
+                            2021 — 2023 · SaaS B2B
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Compétences */}
+                    <div className="mt-4 border-t border-rule pt-3">
+                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
+                        Compétences techniques
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {[
+                          "React",
+                          "TypeScript",
+                          "Next.js",
+                          "A11y",
+                          "Tests",
+                          "Node",
+                          "PostgreSQL",
+                        ].map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-accent-soft px-1.5 py-0.5 font-mono text-[8.5px] tracking-[0.04em] text-accent"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fade-out bas pour suggérer "il y a plus" */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-card via-card/80 to-transparent"
+                  />
+                </div>
+                </div>
+                </div>
+
+                {/* Caption */}
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+                    ↪ exemple de rendu
+                  </p>
+                  <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
+                    1 PDF · 1 page
+                  </p>
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
       </section>
 
-      {/* RESULT */}
-      {result && <Result data={result} photo={photo} />}
-
-      {/* FOOTER */}
-      <footer className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
-          <span>© {new Date().getFullYear()} · CV Optimizer</span>
-        </div>
-      </footer>
-    </main>
-  );
-}
-
-function PhotoField({
-  photo,
-  onChange,
-}: {
-  photo: string | null;
-  onChange: (file: File | null) => void;
-}) {
-  return (
-    <div className="md:col-span-2 flex items-center gap-5 border-t border-rule pt-6">
-      <label
-        htmlFor="cv-photo"
-        className="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-rule bg-card transition hover:border-ink"
-      >
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photo}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-muted">
-            +
-          </span>
-        )}
-      </label>
-      <input
-        id="cv-photo"
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-        className="hidden"
-      />
-      <div className="flex-1">
-        <p className="font-display text-sm font-medium text-ink">
-          Photo de profil <span className="text-ink-faint">(optionnelle)</span>
-        </p>
-        <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-          {photo ? "Sauvegardée localement · sera intégrée au PDF" : "JPG/PNG · certains ATS la filtrent"}
-        </p>
-      </div>
-      {photo && (
-        <button
-          type="button"
-          onClick={() => onChange(null)}
-          className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted underline-offset-4 hover:text-danger hover:underline"
-        >
-          Retirer
-        </button>
-      )}
-    </div>
-  );
-}
-
-function Field({
-  number,
-  label,
-  children,
-}: {
-  number: string;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-4 flex items-baseline gap-4 border-b border-rule pb-3">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-accent">
-          {number}
-        </span>
-        <span className="font-display text-xl font-medium tracking-tight text-ink">
-          {label}
-        </span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DropZone({
-  file,
-  onChange,
-}: {
-  file: File | null;
-  onChange: (file: File | null) => void;
-}) {
-  const [dragging, setDragging] = useState(false);
-
-  function handleDrop(e: React.DragEvent<HTMLLabelElement>) {
-    e.preventDefault();
-    setDragging(false);
-    const dropped = e.dataTransfer.files?.[0];
-    if (dropped && dropped.type === "application/pdf") onChange(dropped);
-  }
-
-  return (
-    <>
-      <label
-        htmlFor="cv-file"
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        className={`flex h-[244px] cursor-pointer flex-col items-center justify-center border border-dashed px-6 text-center transition ${
-          dragging
-            ? "border-accent bg-accent-soft"
-            : file
-            ? "border-success bg-success-soft/40"
-            : "border-rule bg-card hover:border-ink"
-        }`}
-      >
-        {file ? (
-          <>
-            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-success">
-              ✓ Fichier prêt
-            </span>
-            <span
-              className="mt-3 font-display text-2xl font-medium tracking-tight text-ink"
-              title={file.name}
-            >
-              {file.name.length > 38 ? `${file.name.slice(0, 35)}…` : file.name}
-            </span>
-            <span className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-              {(file.size / 1024).toFixed(0)} Ko · clique pour remplacer
-            </span>
-          </>
-        ) : (
-          <>
-            <DocIcon className="h-9 w-9 text-ink" />
-            <span className="mt-4 font-display text-xl font-medium tracking-tight text-ink">
-              Dépose ton CV ici
-            </span>
-            <span className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-muted">
-              PDF · max 25 Mo · ou clique pour parcourir
-            </span>
-          </>
-        )}
-      </label>
-      <input
-        id="cv-file"
-        type="file"
-        accept="application/pdf"
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-        className="hidden"
-        required
-      />
-    </>
-  );
-}
-
-function DocIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden
-      className={className}
-    >
-      <path d="M5 3h9l5 5v13H5z" />
-      <path d="M14 3v5h5" />
-      <path d="M8 13h8M8 17h6" />
-    </svg>
-  );
-}
-
-function Result({
-  data,
-  photo,
-}: {
-  data: OptimizeResponse;
-  photo: string | null;
-}) {
-  return (
-    <section className="rise border-b border-rule bg-paper-deep">
-      <div className="mx-auto max-w-7xl px-6 py-14">
-        <header className="mb-10 flex items-baseline justify-between border-b border-rule pb-5">
-          <div className="flex items-baseline gap-4">
-            <span className="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-warm">
-              03
-            </span>
-            <span className="font-display text-xl font-medium tracking-tight text-ink">
-              Résultat
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-success">
-              ✓ Optimisé
-            </span>
-          </div>
-          <DownloadButton cv={data.cv} photo={photo} />
-        </header>
-
-        <div className="grid gap-10 lg:grid-cols-12">
-          <article className="lg:col-span-8">
-            <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
-              <CVPreview cv={data.cv} photo={photo} />
-            </div>
-          </article>
-
-          <aside className="lg:col-span-4">
-            <div className="border-l-2 border-warm pl-6">
-              <h3 className="font-mono text-[11px] uppercase tracking-[0.22em] text-warm">
-                Modifications · {data.modifications.length}
-              </h3>
-              <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
-                Ce que Claude a changé
+      {/* ============ COMMENT ÇA MARCHE ============ */}
+      <section id="comment" className="border-b border-rule bg-paper">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mb-14 flex flex-wrap items-baseline justify-between gap-4">
+            <div>
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                ● Comment ça marche
               </p>
-              <ol className="mt-6 space-y-5">
-                {data.modifications.map((m, i) => (
-                  <li key={i} className="flex gap-4">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[10px] font-medium tracking-[0.04em] text-warm">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
-                      {m}
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <h2 className="mt-3 max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                Trois étapes. <span className="italic font-normal">Pas plus.</span>
+              </h2>
             </div>
-          </aside>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function DownloadButton({
-  cv,
-  photo,
-}: {
-  cv: OptimizedCV;
-  photo: string | null;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const downloadDisabled = loading;
-
-  async function handleDownload() {
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await fetchWithAuth("/api/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cv, photo }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Erreur lors de la génération");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `CV-${cv.fullName.replace(/\s+/g, "-") || "optimise"}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-end gap-2">
-      <button
-        type="button"
-        onClick={handleDownload}
-        disabled={downloadDisabled}
-        className="group inline-flex items-center gap-3 bg-accent px-5 py-3 text-sm font-medium text-paper transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <span>{loading ? "Génération…" : "Télécharger le PDF"}</span>
-        <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
-          ↓
-        </span>
-      </button>
-      {err && (
-        <p role="alert" className="font-mono text-[10px] uppercase tracking-[0.16em] text-danger">
-          ✕ {err}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CVPreview({
-  cv,
-  photo,
-}: {
-  cv: OptimizedCV;
-  photo: string | null;
-}) {
-  const contactValues = [
-    cv.contact.email,
-    cv.contact.phone,
-    cv.contact.location,
-    cv.contact.linkedin,
-    cv.contact.github,
-    cv.contact.portfolio,
-  ].filter((v) => v && v.trim().length > 0);
-
-  return (
-    <article className="space-y-7">
-      <header className="flex items-start gap-5 border-b border-ink pb-5">
-        <div className="flex-1 min-w-0">
-          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
-            Curriculum Vitæ
-          </span>
-          {cv.title && (
-            <h3 className="mt-2 font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink">
-              {cv.title}
-            </h3>
-          )}
-          <p className="mt-2 text-sm font-medium text-ink-soft">{cv.fullName}</p>
-          {contactValues.length > 0 && (
-            <p className="mt-4 font-mono text-[11px] tracking-[0.04em] text-ink-muted">
-              {contactValues.join("  ·  ")}
+            <p className="max-w-sm text-[15px] leading-relaxed text-ink-soft">
+              Pas de compte obligatoire pour tester — 1 essai gratuit, puis 2
+              crédits offerts à l&apos;inscription.
             </p>
-          )}
-        </div>
-        {photo && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photo}
-            alt=""
-            className="h-24 w-20 shrink-0 rounded-sm object-cover"
-          />
-        )}
-      </header>
-
-      {cv.accroche && (
-        <div>
-          <div className="mb-3 flex items-baseline gap-3 border-b border-rule pb-1">
-            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent">
-              00
-            </span>
-            <h4 className="font-display text-sm font-medium uppercase tracking-[0.16em] text-ink">
-              À propos
-            </h4>
           </div>
-          <p className="text-[15px] leading-relaxed text-ink-soft">
-            {cv.accroche}
-          </p>
-        </div>
-      )}
 
-      {cv.sections.map((section, sIdx) => (
-        <div key={sIdx}>
-          <div className="mb-3 flex items-baseline gap-3 border-b border-rule pb-1">
-            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent">
-              {String(sIdx + 1).padStart(2, "0")}
-            </span>
-            <h4 className="font-display text-sm font-medium uppercase tracking-[0.16em] text-ink">
-              {section.title}
-            </h4>
+          <ol className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+            {[
+              {
+                num: "01",
+                title: "Téléverse",
+                desc: "PDF de ton CV actuel. Aucune mise en page exigée — Claude lit tout.",
+                meta: "PDF · jusqu'à 25 Mo",
+              },
+              {
+                num: "02",
+                title: "Colle l'offre",
+                desc: "N'importe quel type de contrat : stage, alternance, CDD, CDI, freelance. Détection auto du ton.",
+                meta: "Copier · coller",
+              },
+              {
+                num: "03",
+                title: "Télécharge",
+                desc: "PDF A4 deux colonnes, ATS-friendly, en moins de 30 secondes. Lettre alignée optionnelle.",
+                meta: "PDF · 1 page",
+              },
+            ].map((step) => (
+              <li
+                key={step.num}
+                className="group bg-paper p-8 transition hover:bg-paper-deep lg:p-10"
+              >
+                <p className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-accent">
+                  {step.num}
+                </p>
+                <h3 className="mt-6 font-display text-3xl font-medium tracking-tight text-ink">
+                  {step.title}
+                </h3>
+                <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+                  {step.desc}
+                </p>
+                <p className="mt-6 border-t border-rule pt-4 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
+                  {step.meta}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ============ POURQUOI ÇA MARCHE (features) ============ */}
+      <section id="pourquoi" className="border-b border-rule bg-paper-deep">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mb-14 grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                ● Pourquoi ça marche
+              </p>
+              <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                Les CV{" "}
+                <span className="italic font-normal text-warm">génériques</span>{" "}
+                finissent à la poubelle.
+              </h2>
+            </div>
+            <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
+              75 % des CV sont filtrés par un ATS avant qu&apos;un humain les lise.
+              On résout ça en gardant ton parcours intact.
+            </p>
           </div>
-          <div className="space-y-4">
-            {section.items.map((item, iIdx) => (
-              <div key={iIdx}>
-                {item.heading && (
-                  <p className="text-[15px] font-medium text-ink">
-                    {item.heading}
-                    {item.company && (
-                      <>
-                        <span className="text-ink-muted mx-1">·</span>
-                        <span className="text-accent font-semibold">{item.company}</span>
-                      </>
-                    )}
-                  </p>
-                )}
-                {item.subheading && (
-                  <p className="mt-0.5 font-mono text-[11px] tracking-[0.04em] text-ink-muted">
-                    {item.subheading}
-                  </p>
-                )}
-                {item.bullets.length > 0 && (
-                  <ul className="mt-2 space-y-1">
-                    {item.bullets.map((b, bIdx) => (
-                      <li
-                        key={bIdx}
-                        className="flex gap-3 text-[14px] leading-relaxed text-ink-soft"
-                      >
-                        <span aria-hidden className="mt-2 inline-block h-px w-3 shrink-0 bg-ink" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {item.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {item.tags.map((t, tIdx) => (
+
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+            {[
+              {
+                num: "01",
+                title: "Anti-invention",
+                desc: "Claude ne fabrique rien : ni expériences, ni compétences. Tout sort de ton CV original, reformulé pour matcher l'offre.",
+              },
+              {
+                num: "02",
+                title: "Mots-clés ATS",
+                desc: "Les bons termes de l'offre sont placés naturellement dans tes bullets et tes compétences. Pas de bourrage.",
+              },
+              {
+                num: "03",
+                title: "Une page, point",
+                desc: "Layout A4 deux colonnes. Auto-scaling intelligent (0.55× à 1.15×) pour tenir sur une page peu importe la densité.",
+              },
+              {
+                num: "04",
+                title: "Lettre alignée",
+                desc: "Génère en un clic une lettre de motivation qui cite les mêmes expériences que ton CV optimisé. Ton humain, zéro cliché.",
+              },
+            ].map((feat) => (
+              <div
+                key={feat.num}
+                className="bg-paper p-8 transition hover:bg-card lg:p-10"
+              >
+                <div className="flex items-baseline gap-4">
+                  <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
+                    {feat.num}
+                  </span>
+                  <h3 className="font-display text-2xl font-medium tracking-tight text-ink">
+                    {feat.title}
+                  </h3>
+                </div>
+                <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">
+                  {feat.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ DÉMO / AVANT-APRÈS ============ */}
+      <section className="border-b border-rule bg-paper">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mb-14">
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+              ● Avant / Après
+            </p>
+            <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+              Le même candidat, deux <span className="italic font-normal text-accent">offres différentes</span>.
+            </h2>
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+            {[
+              {
+                tag: "Stage — Marketing",
+                heading: "Stagiaire Marketing Digital",
+                bullets: [
+                  "Animé 5 campagnes Instagram (+18 % engagement)",
+                  "Rédigé 30 articles SEO (top 3 Google sur 4 mots-clés)",
+                  "Reporting hebdo Looker Studio",
+                ],
+                tone: "warm",
+              },
+              {
+                tag: "CDI — Growth",
+                heading: "Growth Marketer",
+                bullets: [
+                  "Piloté l'acquisition paid (3 canaux, CAC ÷ 2 en 6 mois)",
+                  "Structuré le funnel et le tracking GA4/Mixpanel",
+                  "Recruté et formé 2 stagiaires marketing",
+                ],
+                tone: "accent",
+              },
+            ].map((variant, i) => (
+              <article
+                key={i}
+                className="relative border border-rule bg-card p-8 transition hover:shadow-[0_24px_60px_-30px_rgba(15,15,16,0.18)] lg:p-10"
+              >
+                <p
+                  className={`font-mono text-[12px] uppercase tracking-[0.22em] ${
+                    variant.tone === "warm" ? "text-warm" : "text-accent"
+                  }`}
+                >
+                  ● {variant.tag}
+                </p>
+                <p className="mt-6 font-display text-xl font-medium tracking-tight text-ink">
+                  {variant.heading}{" "}
+                  <span className="text-ink-muted">·</span>{" "}
+                  <span
+                    className={
+                      variant.tone === "warm"
+                        ? "text-warm font-semibold"
+                        : "text-accent font-semibold"
+                    }
+                  >
+                    Acme Corp.
+                  </span>
+                </p>
+                <p className="mt-1 font-mono text-[13px] tracking-[0.04em] text-ink-muted">
+                  2022 — 2024 · Paris
+                </p>
+                <ul className="mt-5 space-y-2.5">
+                  {variant.bullets.map((b, idx) => (
+                    <li
+                      key={idx}
+                      className="flex gap-3 text-[14px] leading-relaxed text-ink-soft"
+                    >
                       <span
-                        key={tIdx}
-                        className="rounded-sm border border-accent/15 bg-accent-soft px-2 py-0.5 font-mono text-[11px] tracking-[0.02em] text-accent-hover"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                        aria-hidden
+                        className="mt-2 inline-block h-px w-3 shrink-0 bg-ink"
+                      />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-8 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+                  ↪ Même candidat · réécrit pour l&apos;offre
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ POUR QUI ============ */}
+      <section className="border-b border-rule bg-paper-deep">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mb-14 flex flex-wrap items-baseline justify-between gap-6">
+            <h2 className="max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+              Pour ceux qui postulent <span className="italic font-normal">vraiment</span>.
+            </h2>
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+              ● Cas d&apos;usage
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                k: "Étudiants",
+                v: "Stages, alternances. Ton humble qui met en avant le potentiel.",
+              },
+              {
+                k: "Jeunes diplômés",
+                v: "Premier CDI. Compétences école + projets = ATS-ready.",
+              },
+              {
+                k: "Reconversion",
+                v: "Mise en valeur des compétences transférables, pas du gap.",
+              },
+              {
+                k: "Freelances",
+                v: "Cibler chaque mission. Vocabulaire client, pas corporate.",
+              },
+            ].map((c, idx) => (
+              <div
+                key={c.k}
+                className="border border-rule bg-paper p-6 transition hover:border-ink"
+              >
+                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+                  {String(idx + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-4 font-display text-xl font-medium tracking-tight text-ink">
+                  {c.k}
+                </h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+                  {c.v}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ TARIFICATION ============ */}
+      {PRICING_PUBLIC && (
+      <section id="tarifs" className="border-b border-rule bg-paper">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="mb-14">
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+              ● Tarification
+            </p>
+            <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+              Commence <span className="italic font-normal text-success">gratuitement</span>.
+            </h2>
+            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+              1 essai gratuit par service sans compte, puis 2 crédits offerts
+              à l&apos;inscription. Pas d&apos;abonnement, pas de carte requise
+              pour démarrer.
+            </p>
+          </div>
+
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+            {[
+              {
+                tier: "Découverte",
+                price: "Gratuit",
+                meta: "Sans compte",
+                features: [
+                  "1 CV optimisé offert",
+                  "1 lettre de motivation offerte",
+                  "PDF téléchargeable",
+                ],
+              },
+              {
+                tier: "Inscription",
+                price: "2 crédits",
+                meta: "Offerts à la création",
+                features: [
+                  "2 générations au choix",
+                  "Historique de ton dernier CV",
+                  "Sauvegarde locale photo",
+                ],
+                featured: true,
+              },
+              {
+                tier: "Packs",
+                price: "Dès 4,99 €",
+                meta: "Sans abonnement",
+                features: [
+                  "5, 15 ou 50 crédits",
+                  "Crédits sans expiration",
+                  "Paiement sécurisé Stripe",
+                ],
+                disabled: true,
+              },
+            ].map((p) => (
+              <div
+                key={p.tier}
+                className={`relative bg-paper p-8 lg:p-10 ${
+                  p.featured ? "lg:scale-[1.02]" : ""
+                }`}
+              >
+                {p.featured && (
+                  <span className="absolute right-6 top-6 bg-warm px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-paper">
+                    Recommandé
+                  </span>
+                )}
+                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
+                  {p.tier}
+                </p>
+                <p className="mt-6 font-display text-4xl font-light tracking-tight text-ink">
+                  {p.price}
+                </p>
+                <p className="mt-1 font-mono text-[13px] tracking-[0.04em] text-ink-muted">
+                  {p.meta}
+                </p>
+                <ul className="mt-6 space-y-2.5 border-t border-rule pt-5">
+                  {p.features.map((f) => (
+                    <li
+                      key={f}
+                      className="flex gap-3 text-[13px] leading-snug text-ink-soft"
+                    >
+                      <span aria-hidden className="mt-1.5 inline-block h-px w-2.5 shrink-0 bg-ink" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                {p.disabled && (
+                  <p className="mt-6 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+                    ● Bientôt disponible
+                  </p>
                 )}
               </div>
             ))}
           </div>
         </div>
-      ))}
-    </article>
+      </section>
+      )}
+
+      {/* ============ FAQ ============ */}
+      <section id="faq" className="border-b border-rule bg-paper-deep">
+        <div className="mx-auto max-w-5xl px-6 py-20 lg:py-28">
+          <div className="mb-12">
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+              ● FAQ
+            </p>
+            <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+              Les questions qu&apos;on nous pose <span className="italic font-normal">souvent</span>.
+            </h2>
+          </div>
+
+          <div className="border-t border-rule">
+            {[
+              {
+                q: "Est-ce que mes données sont sauvegardées sur vos serveurs ?",
+                a: "Non. Le CV et l'offre transitent vers Claude le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
+              },
+              {
+                q: "Combien de temps prend une génération ?",
+                a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
+              },
+              {
+                q: "Est-ce que Claude invente des expériences ?",
+                a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
+              },
+              {
+                q: "Quels formats de CV sont acceptés ?",
+                a: "PDF uniquement, jusqu'à 25 Mo. Les CV générés depuis Word, Canva, Notion ou LinkedIn fonctionnent tous tant qu'ils sont exportés en PDF.",
+              },
+              {
+                q: "Que se passe-t-il si je supprime mon compte ?",
+                a: "Ton profil et ton historique sont effacés. Ton email reste tracé de manière anonyme (hash SHA-256) pour éviter qu'une même adresse reçoive plusieurs fois les crédits de bienvenue.",
+              },
+              {
+                q: "Le PDF est-il vraiment compatible ATS ?",
+                a: "Oui. Texte sélectionnable, structure A4 deux colonnes, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
+              },
+            ].map((item, idx) => (
+              <details
+                key={idx}
+                className="group border-b border-rule"
+              >
+                <summary className="flex cursor-pointer items-baseline justify-between gap-4 py-6 transition hover:text-ink list-none">
+                  <span className="flex items-baseline gap-4">
+                    <span className="font-mono text-[12px] font-medium uppercase tracking-[0.22em] text-ink-faint">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-display text-lg font-medium tracking-tight text-ink">
+                      {item.q}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className="font-mono text-base text-ink-muted transition-transform group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="pb-6 pl-12 pr-8 text-[14px] leading-relaxed text-ink-soft">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ CTA FINALE ============ */}
+      <section className="bg-ink text-paper">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-8">
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
+                ● Prêt à postuler intelligemment ?
+              </p>
+              <h2 className="mt-4 font-display text-[clamp(2.5rem,6vw,5rem)] font-light leading-[0.95] tracking-[-0.02em] text-paper">
+                Ton prochain entretien.
+                <br />
+                <span className="italic font-normal text-warm">À une optimisation près.</span>
+              </h2>
+            </div>
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              <Link
+                href={ctaHref}
+                className="group inline-flex w-full items-center justify-between gap-3 bg-paper px-7 py-5 text-base font-medium tracking-tight text-ink transition hover:bg-warm hover:text-paper"
+              >
+                <span>Optimiser mon CV</span>
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
+              <Link
+                href={ctaSecondaryHref}
+                className="group inline-flex w-full items-center justify-between gap-3 border border-paper/30 px-7 py-5 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint transition hover:border-paper hover:text-paper"
+              >
+                {isLogged ? "Générer une lettre" : "Créer un compte gratuit"}
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+                ● 2 crédits offerts · Sans carte
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FOOTER ============ */}
+      <footer className="bg-paper">
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+            <span>© {new Date().getFullYear()} · CV Optimizer</span>
+            <span className="flex gap-5">
+              <Link href="/optimiser" className="hover:text-ink">
+                Optimiser
+              </Link>
+              <Link href="/lettre" className="hover:text-ink">
+                Lettre
+              </Link>
+              {isLogged ? (
+                <Link href="/account" className="hover:text-ink">
+                  Mon compte
+                </Link>
+              ) : (
+                <Link href="/sign-in" className="hover:text-ink">
+                  Se connecter
+                </Link>
+              )}
+            </span>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
 }

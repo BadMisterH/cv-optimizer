@@ -6,7 +6,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
 const services = [
-  { href: "/", label: "CV" },
+  { href: "/optimiser", label: "CV" },
   { href: "/lettre", label: "Lettre" },
 ];
 

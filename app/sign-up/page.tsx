@@ -63,7 +63,7 @@ function SignUpForm() {
               <strong className="text-ink">{email}</strong>. Clique dessus pour
               activer ton compte (lien valable 1h).
             </p>
-            <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <p className="mt-3 font-mono text-[13px] uppercase tracking-[0.16em] text-ink-muted">
               Pense à vérifier les spams. Tu seras connecté automatiquement après confirmation.
             </p>
           </div>
@@ -78,7 +78,7 @@ function SignUpForm() {
             callbackURL={redirectTo}
             label="S'inscrire avec Google"
           />
-          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
+          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
             <span className="h-px flex-1 bg-rule" />
             ou avec email
             <span className="h-px flex-1 bg-rule" />
@@ -87,7 +87,7 @@ function SignUpForm() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Prénom <span className="text-ink-faint">(optionnel)</span>
             </label>
             <input
@@ -100,7 +100,7 @@ function SignUpForm() {
           </div>
 
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Email
             </label>
             <input
@@ -114,7 +114,7 @@ function SignUpForm() {
           </div>
 
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Mot de passe <span className="text-ink-faint">(min. 8 caractères)</span>
             </label>
             <input
@@ -129,7 +129,7 @@ function SignUpForm() {
           </div>
 
           {error && (
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger">
+            <p className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
               ✕ {error}
             </p>
           )}
@@ -146,7 +146,7 @@ function SignUpForm() {
           </button>
         </form>
 
-        <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+        <p className="mt-8 font-mono text-[13px] uppercase tracking-[0.16em] text-ink-muted">
           Déjà un compte ?{" "}
           <Link
             href={`/sign-in${redirectTo !== "/" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}

@@ -52,14 +52,14 @@ function SignInForm() {
         </p>
 
         {justReset && (
-          <div className="mt-6 border-l-2 border-success bg-success-soft/40 p-4 font-mono text-[11px] uppercase tracking-[0.16em] text-success">
+          <div className="mt-6 border-l-2 border-success bg-success-soft/40 p-4 font-mono text-[13px] uppercase tracking-[0.16em] text-success">
             ✓ Mot de passe mis à jour — connecte-toi avec le nouveau
           </div>
         )}
 
         <div className="mt-10 space-y-4">
           <GoogleButton callbackURL={redirectTo} />
-          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
+          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
             <span className="h-px flex-1 bg-rule" />
             ou avec email
             <span className="h-px flex-1 bg-rule" />
@@ -68,7 +68,7 @@ function SignInForm() {
 
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Email
             </label>
             <input
@@ -83,12 +83,12 @@ function SignInForm() {
 
           <div>
             <div className="mb-2 flex items-baseline justify-between">
-              <label className="block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+              <label className="block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 Mot de passe
               </label>
               <Link
                 href="/forgot-password"
-                className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted hover:text-accent"
+                className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted hover:text-accent"
               >
                 Oublié ?
               </Link>
@@ -105,7 +105,7 @@ function SignInForm() {
           </div>
 
           {error && (
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger">
+            <p className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
               ✕ {error}
             </p>
           )}
@@ -122,7 +122,7 @@ function SignInForm() {
           </button>
         </form>
 
-        <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+        <p className="mt-8 font-mono text-[13px] uppercase tracking-[0.16em] text-ink-muted">
           Pas de compte ?{" "}
           <Link
             href={`/sign-up${redirectTo !== "/" ? `?redirect=${encodeURIComponent(redirectTo)}` : ""}`}

@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
         <Logo size="md" className="mb-6 self-start" />
         <Link
           href="/sign-in"
-          className="mb-10 self-start font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+          className="mb-10 self-start font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
         >
           ← Retour à la connexion
         </Link>
@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
               Si un compte est associé à <strong>{email}</strong>, tu vas recevoir un lien pour réinitialiser ton mot de passe (valable 1h).
             </p>
-            <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <p className="mt-3 font-mono text-[13px] uppercase tracking-[0.16em] text-ink-muted">
               Pense à vérifier les spams.
             </p>
           </div>
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
 
             <form onSubmit={onSubmit} className="mt-10 space-y-5">
               <div>
-                <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+                <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                   Email
                 </label>
                 <input
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {error && (
-                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger">
+                <p className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
                   ✕ {error}
                 </p>
               )}

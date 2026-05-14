@@ -69,7 +69,7 @@ function BuyCreditsContent() {
           <Logo size="md" />
           <Link
             href="/"
-            className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+            className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
           >
             ← Retour
           </Link>
@@ -77,7 +77,7 @@ function BuyCreditsContent() {
 
         {!STRIPE_ENABLED && (
           <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm">
+            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
               ● Paiement par carte bientôt disponible
             </p>
             <p className="mt-2 text-sm text-ink-soft">
@@ -89,7 +89,7 @@ function BuyCreditsContent() {
 
         {success && STRIPE_ENABLED && (
           <div className="mb-8 border-l-2 border-success bg-success-soft px-5 py-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-success">
+            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-success">
               ✓ Paiement confirmé
             </p>
             <p className="mt-2 text-sm text-ink">
@@ -100,7 +100,7 @@ function BuyCreditsContent() {
 
         {canceled && (
           <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm">
+            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
               ● Paiement annulé
             </p>
             <p className="mt-2 text-sm text-ink-soft">
@@ -109,7 +109,7 @@ function BuyCreditsContent() {
           </div>
         )}
 
-        <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-warm">
+        <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-warm">
           {isAdmin ? "● Compte admin — accès illimité" : credits <= 0 ? "● Solde épuisé" : "● Recharger ton solde"}
         </span>
 
@@ -132,7 +132,7 @@ function BuyCreditsContent() {
         {error && (
           <p
             role="alert"
-            className="mt-4 font-mono text-[11px] uppercase tracking-[0.16em] text-danger"
+            className="mt-4 font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
           >
             ✕ {error}
           </p>
@@ -149,11 +149,11 @@ function BuyCreditsContent() {
                 className={`relative border ${featured ? "border-accent bg-paper-deep" : "border-rule bg-paper"} p-6`}
               >
                 {featured && (
-                  <span className="absolute -top-3 left-6 bg-accent px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-paper">
+                  <span className="absolute -top-3 left-6 bg-accent px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] text-paper">
                     Recommandé
                   </span>
                 )}
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+                <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                   {pack.label}
                 </p>
                 <p className="mt-4 font-display text-4xl font-light tracking-tight text-ink">
@@ -166,7 +166,7 @@ function BuyCreditsContent() {
                 <button
                   onClick={() => handleBuy(key)}
                   disabled={!STRIPE_ENABLED || isLoading || loadingPack !== null}
-                  className={`mt-6 w-full px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] transition ${
+                  className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
                     featured
                       ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
                       : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
@@ -183,7 +183,7 @@ function BuyCreditsContent() {
           })}
         </section>
 
-        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+        <p className="mt-10 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
           ● Paiement sécurisé par Stripe · Aucune donnée carte stockée
         </p>
       </div>

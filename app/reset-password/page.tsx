@@ -61,7 +61,7 @@ function ResetPasswordForm() {
           </p>
           <Link
             href="/forgot-password"
-            className="mt-8 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-accent hover:underline"
+            className="mt-8 inline-flex items-center gap-2 font-mono text-[13px] uppercase tracking-[0.2em] text-accent hover:underline"
           >
             Demander un nouveau lien →
           </Link>
@@ -76,7 +76,7 @@ function ResetPasswordForm() {
         <Logo size="md" className="mb-6 self-start" />
         <Link
           href="/sign-in"
-          className="mb-10 self-start font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+          className="mb-10 self-start font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
         >
           ← Connexion
         </Link>
@@ -90,7 +90,7 @@ function ResetPasswordForm() {
 
         <form onSubmit={onSubmit} className="mt-10 space-y-5">
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Nouveau mot de passe
             </label>
             <input
@@ -106,7 +106,7 @@ function ResetPasswordForm() {
           </div>
 
           <div>
-            <label className="mb-2 block font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+            <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               Confirme
             </label>
             <input
@@ -122,7 +122,7 @@ function ResetPasswordForm() {
           </div>
 
           {error && (
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-danger">
+            <p className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
               ✕ {error}
             </p>
           )}

@@ -55,7 +55,7 @@ export function UserMenu() {
         >
           {initial}
         </span>
-        <span className="hidden md:inline font-mono text-[11px] uppercase tracking-[0.18em] text-ink">
+        <span className="hidden md:inline font-mono text-[13px] uppercase tracking-[0.18em] text-ink">
           {display.length > 14 ? `${display.slice(0, 12)}…` : display}
         </span>
         <ChevronDown
@@ -69,7 +69,7 @@ export function UserMenu() {
           className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 origin-top-right border border-rule bg-card shadow-[0_18px_44px_-22px_rgba(15,15,16,0.28)]"
         >
           <div className="border-b border-rule px-5 py-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+            <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink-muted">
               Connecté
             </p>
             <p className="mt-1.5 truncate font-display text-base font-medium text-ink">
@@ -84,7 +84,7 @@ export function UserMenu() {
             onClick={handleSignOut}
             disabled={signingOut}
             role="menuitem"
-            className="group flex w-full items-center justify-between px-5 py-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink transition hover:bg-paper-deep hover:text-danger disabled:opacity-50"
+            className="group flex w-full items-center justify-between px-5 py-4 font-mono text-[13px] uppercase tracking-[0.2em] text-ink transition hover:bg-paper-deep hover:text-danger disabled:opacity-50"
           >
             <span>{signingOut ? "Déconnexion…" : "Se déconnecter"}</span>
             <span
