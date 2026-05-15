@@ -509,23 +509,16 @@ function Result({
           </div>
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-12">
-          <article className="lg:col-span-8">
-            <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
-              {mode === "edit" ? (
+        {mode === "edit" ? (
+          /* Mode édition : split 6/6 — éditeur à gauche, preview live à droite */
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
+            <article>
+              <div className="bg-card px-8 py-10 sm:px-10 sm:py-12 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
                 <CVEditor cv={data.cv} photo={photo} onChange={setEditorState} />
-              ) : (
-                <CVPreview cv={editorState.cv} photo={photo} />
-              )}
-            </div>
-          </article>
-
-          <aside className="lg:col-span-4">
-            {mode === "edit" ? (
+              </div>
+            </article>
+            <aside>
               <div className="sticky top-4">
-                <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.22em] text-accent">
-                  ● Aperçu PDF en direct
-                </p>
                 <LivePreview
                   cv={editorState.cv}
                   photo={photo}
@@ -533,7 +526,17 @@ function Result({
                   template={editorState.template}
                 />
               </div>
-            ) : (
+            </aside>
+          </div>
+        ) : (
+          /* Mode aperçu : layout 8/4 avec liste des modifications */
+          <div className="grid gap-10 lg:grid-cols-12">
+            <article className="lg:col-span-8">
+              <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
+                <CVPreview cv={editorState.cv} photo={photo} />
+              </div>
+            </article>
+            <aside className="lg:col-span-4">
               <div className="border-l-2 border-warm pl-6">
                 <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
                   Modifications · {data.modifications.length}
@@ -554,9 +557,9 @@ function Result({
                   ))}
                 </ol>
               </div>
-            )}
-          </aside>
-        </div>
+            </aside>
+          </div>
+        )}
       </div>
     </section>
   );
