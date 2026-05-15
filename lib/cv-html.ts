@@ -225,7 +225,7 @@ export function buildHtml(
     --container-pad-x: 26px;
     --header-mb: 14px;
     --header-title-fs: 22pt;
-    --header-subtitle-fs: 11.5pt;
+    --header-subtitle-fs: 15pt;
     --photo-w: 78px;
     --photo-h: 96px;
     --sidebar-w: 200px;
@@ -245,6 +245,7 @@ export function buildHtml(
     --container-pad-y: 18px;
     --header-mb: 11px;
     --header-title-fs: 21pt;
+    --header-subtitle-fs: 14.5pt;
     --photo-w: 72px;
     --photo-h: 90px;
     --layout-gap: 18px;
@@ -262,7 +263,7 @@ export function buildHtml(
     --container-pad-y: 15px;
     --header-mb: 9px;
     --header-title-fs: 20pt;
-    --header-subtitle-fs: 11pt;
+    --header-subtitle-fs: 13.5pt;
     --photo-w: 66px;
     --photo-h: 82px;
     --sidebar-w: 190px;
@@ -284,7 +285,7 @@ export function buildHtml(
     --container-pad-y: 12px;
     --header-mb: 7px;
     --header-title-fs: 19pt;
-    --header-subtitle-fs: 10.5pt;
+    --header-subtitle-fs: 12.5pt;
     --photo-w: 60px;
     --photo-h: 74px;
     --sidebar-w: 180px;
@@ -307,7 +308,7 @@ export function buildHtml(
     --container-pad-x: 22px;
     --header-mb: 6px;
     --header-title-fs: 18pt;
-    --header-subtitle-fs: 10pt;
+    --header-subtitle-fs: 11.5pt;
     --photo-w: 56px;
     --photo-h: 70px;
     --sidebar-w: 170px;
