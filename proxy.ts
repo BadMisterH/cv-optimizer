@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
- * Middleware Next.js — appliqué AVANT toute route /api/* matchée.
- * Rate-limite par IP les endpoints coûteux/sensibles. Les webhooks Stripe
- * sont exclus (Stripe doit pouvoir retry).
+ * Proxy Next.js 16 (anciennement Middleware) — appliqué AVANT toute route
+ * /api/* matchée. Rate-limite par IP les endpoints coûteux/sensibles.
+ * Les webhooks Stripe sont exclus (Stripe doit pouvoir retry).
  */
 
 type LimitConfig = { limit: number; windowMs: number };
@@ -42,7 +42,7 @@ const RATE_LIMITS: Array<{ test: (path: string) => boolean; config: LimitConfig 
   },
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   // Stripe webhook : pas de rate limit (Stripe doit pouvoir retry)
