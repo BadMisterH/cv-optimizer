@@ -9,18 +9,18 @@ export const PACKS = {
     price: "4,99 €",
     amountCents: 499,
   },
-  standard: {
-    label: "Standard",
+  pro: {
+    label: "Pro",
     credits: 15,
     price: "11,99 €",
     amountCents: 1199,
     featured: true,
   },
-  pro: {
-    label: "Pro",
+  premium: {
+    label: "Premium",
     credits: 50,
-    price: "29,99 €",
-    amountCents: 2999,
+    price: "19,99 €",
+    amountCents: 1999,
   },
 } as const;
 
@@ -36,6 +36,6 @@ export function isPackKey(value: string): value is PackKey {
  */
 export const PACK_PRICE_ENV: Record<PackKey, string> = {
   starter: "STRIPE_PRICE_STARTER",
-  standard: "STRIPE_PRICE_STANDARD",
   pro: "STRIPE_PRICE_PRO",
+  premium: "STRIPE_PRICE_PREMIUM",
 };
