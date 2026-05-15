@@ -209,12 +209,118 @@ export function buildHtml(
     --ink-faint: #a09d94;
     --rule: #e8e6df;
     --paper: #ffffff;
+    /* Densité par défaut (niveau 0 — spacieux). Puppeteer peut basculer
+       sur .density-1..4 pour comprimer si le contenu dépasse A4. */
+    --base-fs: 10.5pt;
+    --base-lh: 1.5;
+    --section-gap: 14px;
+    --section-title-fs: 8.2pt;
+    --section-title-mb: 8px;
+    --item-gap: 9px;
+    --item-fs: 10.5pt;
+    --item-bullets-fs: 9.5pt;
+    --item-bullets-lh: 1.4;
+    --item-bullets-mb: 2px;
+    --container-pad-y: 22px;
+    --container-pad-x: 26px;
+    --header-mb: 14px;
+    --header-title-fs: 22pt;
+    --header-subtitle-fs: 11.5pt;
+    --photo-w: 78px;
+    --photo-h: 96px;
+    --sidebar-w: 200px;
+    --layout-gap: 22px;
+    --tag-fs: 8.4pt;
+    --tag-pad: 2.5px 7px;
   }
+
+  /* === Niveaux de densité (Puppeteer applique la classe sur <body>) === */
+  body.density-1 {
+    --base-fs: 10.3pt;
+    --section-gap: 11px;
+    --item-gap: 7px;
+    --item-fs: 10.3pt;
+    --item-bullets-fs: 9.3pt;
+    --item-bullets-lh: 1.35;
+    --container-pad-y: 18px;
+    --header-mb: 11px;
+    --header-title-fs: 21pt;
+    --photo-w: 72px;
+    --photo-h: 90px;
+    --layout-gap: 18px;
+  }
+  body.density-2 {
+    --base-fs: 10pt;
+    --base-lh: 1.45;
+    --section-gap: 9px;
+    --section-title-mb: 6px;
+    --item-gap: 6px;
+    --item-fs: 10pt;
+    --item-bullets-fs: 9pt;
+    --item-bullets-lh: 1.3;
+    --item-bullets-mb: 1.5px;
+    --container-pad-y: 15px;
+    --header-mb: 9px;
+    --header-title-fs: 20pt;
+    --header-subtitle-fs: 11pt;
+    --photo-w: 66px;
+    --photo-h: 82px;
+    --sidebar-w: 190px;
+    --layout-gap: 16px;
+    --tag-fs: 8.1pt;
+    --tag-pad: 2px 6px;
+  }
+  body.density-3 {
+    --base-fs: 9.6pt;
+    --base-lh: 1.4;
+    --section-gap: 7px;
+    --section-title-fs: 8pt;
+    --section-title-mb: 5px;
+    --item-gap: 5px;
+    --item-fs: 9.7pt;
+    --item-bullets-fs: 8.7pt;
+    --item-bullets-lh: 1.25;
+    --item-bullets-mb: 1px;
+    --container-pad-y: 12px;
+    --header-mb: 7px;
+    --header-title-fs: 19pt;
+    --header-subtitle-fs: 10.5pt;
+    --photo-w: 60px;
+    --photo-h: 74px;
+    --sidebar-w: 180px;
+    --layout-gap: 14px;
+    --tag-fs: 7.9pt;
+    --tag-pad: 1.5px 5.5px;
+  }
+  body.density-4 {
+    --base-fs: 9.3pt;
+    --base-lh: 1.35;
+    --section-gap: 6px;
+    --section-title-fs: 7.8pt;
+    --section-title-mb: 4px;
+    --item-gap: 4px;
+    --item-fs: 9.4pt;
+    --item-bullets-fs: 8.4pt;
+    --item-bullets-lh: 1.2;
+    --item-bullets-mb: 0.5px;
+    --container-pad-y: 9px;
+    --container-pad-x: 22px;
+    --header-mb: 6px;
+    --header-title-fs: 18pt;
+    --header-subtitle-fs: 10pt;
+    --photo-w: 56px;
+    --photo-h: 70px;
+    --sidebar-w: 170px;
+    --layout-gap: 12px;
+    --tag-fs: 7.7pt;
+    --tag-pad: 1px 5px;
+  }
+
   html, body {
     font-family: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
     color: var(--ink);
-    font-size: 10.5pt;
-    line-height: 1.5;
+    font-size: var(--base-fs);
+    line-height: var(--base-lh);
     background: var(--paper);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -226,12 +332,12 @@ export function buildHtml(
   .container {
     max-width: 794px;
     margin: 0 auto;
-    padding: 22px 26px;
+    padding: var(--container-pad-y) var(--container-pad-x);
   }
 
   /* ========== HEADER ========== */
   .header {
-    margin-bottom: 14px;
+    margin-bottom: var(--header-mb);
   }
   .top-line {
     display: flex;
@@ -245,7 +351,7 @@ export function buildHtml(
     min-width: 0;
   }
   .title {
-    font-size: 22pt;
+    font-size: var(--header-title-fs);
     font-weight: 700;
     letter-spacing: -0.6pt;
     color: var(--ink);
@@ -253,7 +359,7 @@ export function buildHtml(
     margin-bottom: 4px;
   }
   .subtitle {
-    font-size: 11.5pt;
+    font-size: var(--header-subtitle-fs);
     font-weight: 600;
     color: var(--accent);
     letter-spacing: -0.1pt;
@@ -276,8 +382,8 @@ export function buildHtml(
     color: var(--ink-faint);
   }
   .photo {
-    width: 78px;
-    height: 96px;
+    width: var(--photo-w);
+    height: var(--photo-h);
     object-fit: cover;
     border-radius: 2px;
     flex-shrink: 0;
@@ -290,14 +396,14 @@ export function buildHtml(
   }
   .cv-layout {
     display: grid;
-    gap: 22px;
+    gap: var(--layout-gap);
     margin-top: 4px;
   }
   .template-sidebar-left .cv-layout {
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: var(--sidebar-w) 1fr;
   }
   .template-sidebar-right .cv-layout {
-    grid-template-columns: 1fr 200px;
+    grid-template-columns: 1fr var(--sidebar-w);
   }
   .cv-sidebar .photo {
     display: block;
@@ -327,17 +433,17 @@ export function buildHtml(
 
   /* ========== SECTIONS ========== */
   .cv-section {
-    margin-bottom: 14px;
+    margin-bottom: var(--section-gap);
     break-inside: avoid;
     page-break-inside: avoid;
   }
   .section-title {
-    font-size: 8.2pt;
+    font-size: var(--section-title-fs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2pt;
     color: var(--ink);
-    margin-bottom: 8px;
+    margin-bottom: var(--section-title-mb);
     padding-bottom: 4px;
     border-bottom: 0.8pt solid var(--ink);
     position: relative;
@@ -355,7 +461,7 @@ export function buildHtml(
 
   /* Items */
   .item {
-    margin-bottom: 9px;
+    margin-bottom: var(--item-gap);
   }
   .item:last-child {
     margin-bottom: 0;
@@ -368,13 +474,13 @@ export function buildHtml(
     margin-bottom: 1px;
   }
   .item-heading {
-    font-size: 10.5pt;
+    font-size: var(--item-fs);
     font-weight: 700;
     color: var(--ink);
     letter-spacing: -0.1pt;
   }
   .item-company {
-    font-size: 10.5pt;
+    font-size: var(--item-fs);
     font-weight: 700;
     color: var(--accent);
     margin-left: 4px;
@@ -398,14 +504,14 @@ export function buildHtml(
     margin-top: 3px;
     padding-left: 14px;
     color: var(--ink-soft);
-    font-size: 9.5pt;
-    line-height: 1.4;
+    font-size: var(--item-bullets-fs);
+    line-height: var(--item-bullets-lh);
     list-style: none;
   }
   .item-bullets li {
     position: relative;
     padding-left: 4px;
-    margin-bottom: 2px;
+    margin-bottom: var(--item-bullets-mb);
   }
   .item-bullets li::before {
     content: "";
@@ -454,9 +560,9 @@ export function buildHtml(
     align-items: center;
     background: var(--accent-soft);
     color: var(--accent);
-    padding: 2.5px 7px;
+    padding: var(--tag-pad);
     border-radius: 3px;
-    font-size: 8.4pt;
+    font-size: var(--tag-fs);
     font-weight: 500;
     letter-spacing: 0.1pt;
   }

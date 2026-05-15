@@ -36,20 +36,47 @@ export async function POST(req: Request) {
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    // Mesure la hauteur réelle du contenu rendu
-    const contentHeight = await page.evaluate(() => {
-      return Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight
-      );
-    });
-
-    // A4 portrait au 96dpi avec marges 14mm : surface utile ≈ 1017 px de haut
+    // Stratégie single-page : on essaie d'abord les densités CSS croissantes
+    // (préserve la qualité typographique). Si même à density-4 ça déborde,
+    // on applique le scale Puppeteer en dernier recours.
     const A4_USABLE_HEIGHT_PX = 1017;
+
+    async function measureHeight(): Promise<number> {
+      return page.evaluate(() =>
+        Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight
+        )
+      );
+    }
+
+    async function applyDensity(level: number): Promise<void> {
+      await page.evaluate((d) => {
+        document.body.className = d > 0 ? `density-${d}` : "";
+      }, level);
+    }
+
+    // Recherche linéaire de la densité minimale qui rentre
+    let bestDensity = 0;
+    let contentHeight = await measureHeight();
+    for (let d = 0; d <= 4; d++) {
+      await applyDensity(d);
+      contentHeight = await measureHeight();
+      if (contentHeight <= A4_USABLE_HEIGHT_PX) {
+        bestDensity = d;
+        break;
+      }
+      bestDensity = d; // fallback : on garde le dernier essayé
+    }
+
+    // Si encore overflow à density-4 → on scale (plancher 0.5, dernier recours)
     const naturalScale = A4_USABLE_HEIGHT_PX / contentHeight;
-    // Plancher 0.55 pour forcer une seule page même sur CV long (texte ≈ 6pt mini).
-    // Plafond 1.15 pour étirer si contenu court et bien remplir l'A4.
-    const finalScale = Math.max(0.55, Math.min(1.15, naturalScale));
+    // Plafond 1.15 pour étirer un CV court et remplir l'A4
+    const finalScale = Math.max(0.5, Math.min(1.15, naturalScale));
+
+    console.log(
+      `[api/pdf] densité=${bestDensity}, hauteur=${contentHeight}px, scale=${finalScale.toFixed(2)}`
+    );
 
     const pdfBytes = await page.pdf({
       format: "A4",
@@ -57,6 +84,9 @@ export async function POST(req: Request) {
       omitBackground: true,
       scale: finalScale,
       preferCSSPageSize: true,
+      // Force single-page output : si malgré densité+scale le contenu déborde
+      // (très rare), on coupe à la page 1. Mieux qu'un PDF 2 pages bancal.
+      pageRanges: "1",
       margin: {
         top: "14mm",
         right: "14mm",
