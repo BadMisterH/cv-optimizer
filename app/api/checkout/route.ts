@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { PACK_PRICE_ENV, PACKS, isPackKey } from "@/lib/stripe-packs";
-import { STRIPE_ENABLED } from "@/lib/feature-flags";
+import { STRIPE_ENABLED, isStripeConfigured } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 
@@ -10,6 +10,17 @@ export async function POST(req: Request) {
   if (!STRIPE_ENABLED) {
     return NextResponse.json(
       { error: "Le paiement n'est pas encore disponible. Réessaie plus tard." },
+      { status: 503 }
+    );
+  }
+  // Garde-fou : si une env var manque, on évite le crash de la SDK Stripe
+  if (!isStripeConfigured()) {
+    console.error("[api/checkout] env Stripe incomplet — vérifier les variables sur Vercel");
+    return NextResponse.json(
+      {
+        error:
+          "Le paiement est temporairement indisponible (configuration en cours). Réessaie dans quelques minutes ou contacte-nous à contact@cv-optimizer.fr.",
+      },
       { status: 503 }
     );
   }
