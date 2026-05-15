@@ -165,14 +165,14 @@ function BuyCreditsContent() {
                 <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
                 <button
                   onClick={() => handleBuy(key)}
-                  disabled={!STRIPE_ENABLED || isLoading || loadingPack !== null}
+                  disabled={STRIPE_ENABLED || isLoading || loadingPack !== null}
                   className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
                     featured
                       ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
                       : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
                   } disabled:cursor-not-allowed`}
                 >
-                  {!STRIPE_ENABLED
+                  {STRIPE_ENABLED
                     ? "Bientôt disponible"
                     : isLoading
                       ? "Redirection…"
