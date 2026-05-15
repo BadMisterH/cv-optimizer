@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
@@ -67,12 +66,25 @@ export default function AccountPage() {
       <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
         <div className="mb-12 flex items-center justify-between">
           <Logo size="md" />
-          <Link
-            href="/"
-            className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+          <button
+            type="button"
+            onClick={() => {
+              // Retour intelligent : historique navigateur si dispo, sinon fallback /optimiser
+              if (
+                typeof window !== "undefined" &&
+                window.history.length > 1 &&
+                document.referrer &&
+                new URL(document.referrer).origin === window.location.origin
+              ) {
+                router.back();
+              } else {
+                router.push("/optimiser");
+              }
+            }}
+            className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink transition"
           >
             ← Retour
-          </Link>
+          </button>
         </div>
 
         <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-ink-muted">

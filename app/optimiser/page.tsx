@@ -7,8 +7,11 @@ import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
+import { CVEditor } from "../components/editor/CVEditor";
+import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
+import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
 import type { OptimizeResponse, OptimizedCV } from "../types";
 
 export default function Page() {
@@ -20,6 +23,11 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
+  // Hydration-safe : null tant que pas monté, lit localStorage en useEffect
+  const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
+  useEffect(() => {
+    setCanGenerateFree(canGenerateWithoutAuth("cv"));
+  }, []);
 
   useEffect(() => {
     const stored = readPhoto();
@@ -107,9 +115,9 @@ export default function Page() {
     e.preventDefault();
     if (!cvFile) return;
 
-    // Check free tier limit
-    const canGenerateFree = canGenerateWithoutAuth("cv");
-    if (!canGenerateFree && !session?.user) {
+    // Check free tier limit (lit le state, qui a été initialisé en useEffect après mount)
+    const stillFree = canGenerateFree ?? canGenerateWithoutAuth("cv");
+    if (!stillFree && !session?.user) {
       router.push("/sign-in?redirect=/optimiser");
       return;
     }
@@ -149,9 +157,9 @@ export default function Page() {
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
-              {!session?.user && (
+              {!session?.user && canGenerateFree !== null && (
                 <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateWithoutAuth("cv") ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                  {canGenerateFree ? "1 gratuit restant" : "Connectez-vous pour continuer"}
                 </span>
               )}
               <span className="hidden sm:inline">v.01</span>
@@ -438,10 +446,20 @@ function Result({
   data: OptimizeResponse;
   photo: string | null;
 }) {
+  // L'éditeur maintient son propre state (initialisé depuis data.cv).
+  // Result le mirroir pour que DownloadButton puisse PDF la version éditée.
+  const [editorState, setEditorState] = useState<EditorState>({
+    cv: data.cv,
+    accent: "blue",
+    template: "classic",
+  });
+  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const currentCV = mode === "edit" ? editorState.cv : data.cv;
+
   return (
     <section className="rise border-b border-rule bg-paper-deep">
       <div className="mx-auto max-w-7xl px-6 py-14">
-        <header className="mb-10 flex items-baseline justify-between border-b border-rule pb-5">
+        <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-5">
           <div className="flex items-baseline gap-4">
             <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
               03
@@ -453,39 +471,95 @@ function Result({
               ✓ Optimisé
             </span>
           </div>
-          <DownloadButton cv={data.cv} photo={photo} />
+
+          <div className="flex items-center gap-3">
+            {/* Toggle mode */}
+            <div className="inline-flex items-center gap-1 rounded-full border border-rule bg-card p-0.5">
+              <button
+                type="button"
+                onClick={() => setMode("preview")}
+                aria-pressed={mode === "preview"}
+                className={`px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] transition ${
+                  mode === "preview"
+                    ? "bg-ink text-paper rounded-full"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Aperçu
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("edit")}
+                aria-pressed={mode === "edit"}
+                className={`px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] transition ${
+                  mode === "edit"
+                    ? "bg-ink text-paper rounded-full"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                ✎ Éditer
+              </button>
+            </div>
+            <DownloadButton
+              cv={currentCV}
+              photo={photo}
+              accent={editorState.accent}
+              template={editorState.template}
+            />
+          </div>
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-12">
-          <article className="lg:col-span-8">
-            <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
-              <CVPreview cv={data.cv} photo={photo} />
-            </div>
-          </article>
-
-          <aside className="lg:col-span-4">
-            <div className="border-l-2 border-warm pl-6">
-              <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
-                Modifications · {data.modifications.length}
-              </h3>
-              <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
-                Ce que Claude a changé
-              </p>
-              <ol className="mt-6 space-y-5">
-                {data.modifications.map((m, i) => (
-                  <li key={i} className="flex gap-4">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[12px] font-medium tracking-[0.04em] text-warm">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
-                      {m}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </aside>
-        </div>
+        {mode === "edit" ? (
+          /* Mode édition : split 6/6 — éditeur à gauche, preview live à droite */
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
+            <article>
+              <div className="bg-card px-8 py-10 sm:px-10 sm:py-12 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
+                <CVEditor cv={data.cv} photo={photo} onChange={setEditorState} />
+              </div>
+            </article>
+            <aside>
+              <div className="sticky top-4">
+                <LivePreview
+                  cv={editorState.cv}
+                  photo={photo}
+                  accent={editorState.accent}
+                  template={editorState.template}
+                />
+              </div>
+            </aside>
+          </div>
+        ) : (
+          /* Mode aperçu : layout 8/4 avec liste des modifications */
+          <div className="grid gap-10 lg:grid-cols-12">
+            <article className="lg:col-span-8">
+              <div className="bg-card px-8 py-10 sm:px-12 sm:py-14 shadow-[0_1px_0_0_rgba(15,15,16,0.05),0_24px_60px_-30px_rgba(15,15,16,0.18)]">
+                <CVPreview cv={editorState.cv} photo={photo} />
+              </div>
+            </article>
+            <aside className="lg:col-span-4">
+              <div className="border-l-2 border-warm pl-6">
+                <h3 className="font-mono text-[13px] uppercase tracking-[0.22em] text-warm">
+                  Modifications · {data.modifications.length}
+                </h3>
+                <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
+                  Ce que Claude a changé
+                </p>
+                <ol className="mt-6 space-y-5">
+                  {data.modifications.map((m, i) => (
+                    <li key={i} className="flex gap-4">
+                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warm-soft font-mono text-[12px] font-medium tracking-[0.04em] text-warm">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 text-[15px] leading-relaxed text-ink-soft">
+                        {m}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </aside>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -494,9 +568,13 @@ function Result({
 function DownloadButton({
   cv,
   photo,
+  accent = "blue",
+  template = "classic",
 }: {
   cv: OptimizedCV;
   photo: string | null;
+  accent?: AccentKey;
+  template?: TemplateKey;
 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -510,7 +588,7 @@ function DownloadButton({
       const res = await fetchWithAuth("/api/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cv, photo }),
+        body: JSON.stringify({ cv, photo, accentColor: ACCENT_HEX[accent], template }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
