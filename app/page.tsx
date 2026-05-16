@@ -97,7 +97,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3.5">
+      <div className="mx-auto flex max-w-[90rem] items-center justify-between gap-4 px-6 py-3.5">
         <Logo size="sm" />
 
         <nav
@@ -169,7 +169,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
 
       {open && (
         <div className="border-t border-rule bg-paper lg:hidden">
-          <div className="mx-auto max-w-7xl px-6 py-6">
+          <div className="mx-auto max-w-[90rem] px-6 py-6">
             {isLogged && (
               <div className="mb-5 flex items-baseline justify-between gap-3 border border-rule bg-paper-deep px-4 py-3">
                 <span className="flex items-baseline gap-2 font-mono text-[13px] uppercase tracking-[0.22em]">
@@ -301,7 +301,7 @@ export default function Landing() {
 
       {/* ============ HERO ============ */}
       <section className="hero-bg border-b border-rule">
-        <div className="mx-auto max-w-7xl px-6 pt-12 pb-20 lg:pt-16 lg:pb-32">
+        <div className="mx-auto max-w-[90rem] px-6 pt-12 pb-20 lg:pt-16 lg:pb-32">
 
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
             <div className="lg:col-span-8">
@@ -625,7 +625,7 @@ export default function Landing() {
 
       {/* ============ COMMENT ÇA MARCHE ============ */}
       <section id="comment" className="border-b border-rule bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="mb-14 flex flex-wrap items-baseline justify-between gap-4">
             <div>
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
@@ -686,7 +686,7 @@ export default function Landing() {
 
       {/* ============ POURQUOI ÇA MARCHE (features) ============ */}
       <section id="pourquoi" className="border-b border-rule bg-paper-deep">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="mb-14 grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
@@ -750,7 +750,7 @@ export default function Landing() {
 
       {/* ============ DÉMO / AVANT-APRÈS ============ */}
       <section className="border-b border-rule bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="mb-14">
             <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               ● Avant / Après
@@ -835,7 +835,7 @@ export default function Landing() {
 
       {/* ============ POUR QUI ============ */}
       <section className="border-b border-rule bg-paper-deep">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="mb-14 flex flex-wrap items-baseline justify-between gap-6">
             <h2 className="max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
               Pour ceux qui postulent <span className="italic font-normal">vraiment</span>.
@@ -886,7 +886,7 @@ export default function Landing() {
       {/* ============ TARIFICATION ============ */}
       {PRICING_PUBLIC && (
       <section id="tarifs" className="border-b border-rule bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="mb-14">
             <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
               ● Tarification
@@ -1024,7 +1024,7 @@ export default function Landing() {
 
       {/* ============ CTA FINALE ============ */}
       <section className="bg-ink text-paper">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="mx-auto max-w-[90rem] px-6 py-20 lg:py-28">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-8">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
@@ -1065,7 +1065,7 @@ export default function Landing() {
 
       {/* ============ FOOTER ============ */}
       <footer className="bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mx-auto max-w-[90rem] px-6 py-10">
           <div className="flex flex-col gap-6 border-b border-rule pb-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <Logo size="sm" />

@@ -21,7 +21,6 @@ export function Logo({ size = "md", href = "/", className = "" }: LogoProps) {
       src={logo}
       alt="CV Optimizer"
       priority
-      placeholder="blur"
       height={HEIGHT[size]}
       sizes="(max-width: 640px) 160px, 220px"
       className={`${HEIGHT_CLASS[size]} w-auto select-none`}

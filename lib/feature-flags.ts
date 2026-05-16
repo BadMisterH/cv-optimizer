@@ -7,12 +7,12 @@
  * de crash, et l'UI affiche l'erreur. Une fois les env vars renseignées
  * sur Vercel, le paiement fonctionne sans redéploiement.
  */
-export const STRIPE_ENABLED = true;
+export const STRIPE_ENABLED = false;
 
 /**
  * Visibilité publique du pricing sur la landing (lien "Tarifs" + section).
  */
-export const PRICING_PUBLIC = true;
+export const PRICING_PUBLIC = false;
 
 /**
  * Server-side check : tous les env vars Stripe nécessaires sont-ils présents ?
@@ -24,7 +24,7 @@ export function isStripeConfigured(): boolean {
     process.env.STRIPE_SECRET_KEY &&
       process.env.STRIPE_WEBHOOK_SECRET &&
       process.env.STRIPE_PRICE_STARTER &&
-      process.env.STRIPE_PRICE_STANDARD &&
-      process.env.STRIPE_PRICE_PRO
+      process.env.STRIPE_PRICE_PRO &&
+      process.env.STRIPE_PRICE_PREMIUM
   );
 }

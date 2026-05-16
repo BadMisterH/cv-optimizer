@@ -52,6 +52,13 @@ function BuyCreditsContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Erreur checkout");
       if (data?.url) {
+        // Garde une trace du pack acheté pour personnaliser le message de succès
+        try {
+          sessionStorage.setItem(
+            "cv-optimizer:pending-purchase",
+            JSON.stringify({ pack, label: PACKS[pack].label, credits: PACKS[pack].credits, price: PACKS[pack].price })
+          );
+        } catch {}
         window.location.href = data.url;
         return;
       }
@@ -62,6 +69,107 @@ function BuyCreditsContent() {
     }
   }
 
+  // Récupère le détail du pack acheté (côté client) après retour de Stripe
+  type PendingPurchase = { pack: PackKey; label: string; credits: number; price: string };
+  const [purchased, setPurchased] = useState<PendingPurchase | null>(null);
+  if (success && purchased === null && typeof window !== "undefined") {
+    try {
+      const raw = sessionStorage.getItem("cv-optimizer:pending-purchase");
+      if (raw) {
+        setPurchased(JSON.parse(raw));
+        sessionStorage.removeItem("cv-optimizer:pending-purchase");
+      }
+    } catch {}
+  }
+
+  // ========== VUE SUCCÈS DÉDIÉE ==========
+  if (success && STRIPE_ENABLED) {
+    return (
+      <main className="min-h-screen bg-paper">
+        <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
+          <div className="mb-12 flex items-center justify-between">
+            <Logo size="md" />
+            <Link
+              href="/optimiser"
+              className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
+            >
+              → Optimiser un CV
+            </Link>
+          </div>
+
+          {/* Bandeau de succès */}
+          <div className="border-l-2 border-success bg-success-soft px-6 py-5">
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-success">
+              ✓ Paiement confirmé
+            </p>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink">
+              Ton paiement a été traité avec succès. Merci !
+            </p>
+          </div>
+
+          {/* Carte de récap */}
+          <section className="mt-10 border border-rule bg-card p-8 sm:p-10">
+            <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-success">
+              ● Crédits ajoutés
+            </span>
+            <h1 className="mt-4 font-display text-[clamp(2.5rem,6vw,4.5rem)] font-light leading-[0.95] tracking-tight text-ink">
+              {purchased ? (
+                <>
+                  + {purchased.credits}{" "}
+                  <span className="italic font-normal text-accent">crédits</span>
+                </>
+              ) : (
+                <>
+                  Crédits <span className="italic font-normal text-accent">ajoutés</span>
+                </>
+              )}
+            </h1>
+            {purchased && (
+              <p className="mt-4 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
+                Pack {purchased.label} · {purchased.price}
+              </p>
+            )}
+            <div className="mt-8 flex items-baseline justify-between border-t border-rule pt-6">
+              <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                Nouveau solde
+              </span>
+              <span className="font-display text-3xl font-medium tracking-tight text-ink">
+                {isAdmin ? "∞" : credits}
+                <span className="ml-2 text-base font-normal text-ink-muted">
+                  crédit{credits > 1 ? "s" : ""}
+                </span>
+              </span>
+            </div>
+          </section>
+
+          {/* CTAs */}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/optimiser"
+              className="group inline-flex flex-1 items-center justify-center gap-2 bg-ink px-6 py-4 font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
+            >
+              Générer un CV maintenant
+              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
+            </Link>
+            <Link
+              href="/lettre"
+              className="inline-flex items-center justify-center border border-rule px-6 py-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+            >
+              Rédiger une lettre
+            </Link>
+          </div>
+
+          <p className="mt-10 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
+            ● Un reçu Stripe t&apos;a été envoyé par email
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // ========== VUE NORMALE (pricing) ==========
   return (
     <main className="min-h-screen bg-paper">
       <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
@@ -83,17 +191,6 @@ function BuyCreditsContent() {
             <p className="mt-2 text-sm text-ink-soft">
               On finalise l'intégration Stripe. Les packs ci-dessous montrent les
               tarifs prévus — l'achat sera activé sous peu.
-            </p>
-          </div>
-        )}
-
-        {success && STRIPE_ENABLED && (
-          <div className="mb-8 border-l-2 border-success bg-success-soft px-5 py-4">
-            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-success">
-              ✓ Paiement confirmé
-            </p>
-            <p className="mt-2 text-sm text-ink">
-              Tes crédits ont été ajoutés à ton compte. Tu peux retourner sur la page d'accueil pour générer.
             </p>
           </div>
         )}

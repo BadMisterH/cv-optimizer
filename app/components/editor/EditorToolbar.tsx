@@ -77,27 +77,57 @@ export function EditorToolbar({ accent, template, dispatch, onReset }: Props) {
   }, [accent, template]);
 
   return (
-    <div className="sticky top-0 z-30 -mx-8 -mt-10 mb-6 border-b border-rule bg-paper/95 px-8 py-3 backdrop-blur sm:-mx-12 sm:-mt-14 sm:px-12">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        {/* Statut édition + auto-save */}
-        <div className="flex items-center gap-2 border-r border-rule pr-6">
+    <div className="sticky top-0 z-30 -mx-8 -mt-10 mb-6 border-b border-rule bg-paper/95 backdrop-blur sm:-mx-12 sm:-mt-14">
+      {/* ============ ROW 1 — Statut + Reset ============ */}
+      <div className="flex items-center justify-between gap-3 px-8 py-2.5 sm:px-12">
+        <div className="flex items-center gap-2">
           <span
             aria-hidden
-            className={`h-1.5 w-1.5 rounded-full transition ${
+            className={`h-1.5 w-1.5 rounded-full transition-transform duration-200 ${
               savedPulse ? "bg-success scale-150" : "bg-success/60"
             }`}
           />
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-            {savedPulse ? "Sauvegardé" : "Mode édition"}
+            {savedPulse ? "Sauvegardé" : "Mode édition · auto-save"}
           </span>
         </div>
 
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              confirm(
+                "Réinitialiser le CV à la version générée ? Toutes tes modifications seront perdues."
+              )
+            ) {
+              onReset();
+            }
+          }}
+          title="Réinitialiser le CV"
+          className="group inline-flex h-8 items-center gap-2 border border-rule px-2.5 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-danger hover:text-danger"
+        >
+          <svg
+            viewBox="0 0 14 14"
+            className="h-3.5 w-3.5 transition-transform group-hover:-rotate-180"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden
+          >
+            <path d="M2 7a5 5 0 1 0 1.5-3.5" strokeLinecap="round" />
+            <path d="M2 2v3h3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="hidden sm:inline">Réinitialiser</span>
+        </button>
+      </div>
+
+      {/* ============ ROW 2 — Couleur + Template ============ */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-rule px-8 py-2.5 sm:px-12">
         {/* Palette de couleurs */}
-        <fieldset className="flex items-center gap-2.5">
-          <legend className="sr-only">Couleur d&apos;accent</legend>
-          <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
-            Aa
-          </span>
+        <fieldset className="flex items-center gap-2">
+          <legend className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-ink-faint">
+            Couleur
+          </legend>
           <div role="radiogroup" aria-label="Couleur d'accent" className="flex items-center gap-1.5">
             {ACCENT_ORDER.map((key) => {
               const active = accent === key;
@@ -134,12 +164,14 @@ export function EditorToolbar({ accent, template, dispatch, onReset }: Props) {
           </div>
         </fieldset>
 
-        {/* Sélecteur de template avec icônes */}
-        <fieldset className="flex items-center gap-2.5">
-          <legend className="sr-only">Disposition</legend>
-          <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
-            ▤
-          </span>
+        {/* Séparateur vertical (md+) */}
+        <span aria-hidden className="hidden h-4 w-px bg-rule md:block" />
+
+        {/* Sélecteur de template */}
+        <fieldset className="flex items-center gap-2">
+          <legend className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-ink-faint">
+            Layout
+          </legend>
           <div
             role="radiogroup"
             aria-label="Disposition"
@@ -155,14 +187,15 @@ export function EditorToolbar({ accent, template, dispatch, onReset }: Props) {
                   aria-checked={active}
                   onClick={() => dispatch({ type: "SET_TEMPLATE", template: key })}
                   title={TEMPLATE_LABEL[key]}
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
+                  aria-label={TEMPLATE_LABEL[key]}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink lg:px-2.5 ${
                     active
                       ? "bg-ink text-paper"
                       : "text-ink-muted hover:bg-paper-deep hover:text-ink"
                   }`}
                 >
                   <TemplateIcon template={key} active={active} />
-                  <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] md:inline">
+                  <span className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] lg:inline">
                     {TEMPLATE_LABEL[key]}
                   </span>
                 </button>
@@ -170,38 +203,6 @@ export function EditorToolbar({ accent, template, dispatch, onReset }: Props) {
             })}
           </div>
         </fieldset>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Reset (icon-only sur mobile, icon + label sur desktop) */}
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              confirm(
-                "Réinitialiser le CV à la version générée ? Toutes tes modifications seront perdues."
-              )
-            ) {
-              onReset();
-            }
-          }}
-          title="Réinitialiser le CV"
-          className="group inline-flex h-8 items-center gap-2 border border-rule px-2.5 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-danger hover:text-danger"
-        >
-          <svg
-            viewBox="0 0 14 14"
-            className="h-3.5 w-3.5 transition-transform group-hover:-rotate-180"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            aria-hidden
-          >
-            <path d="M2 7a5 5 0 1 0 1.5-3.5" strokeLinecap="round" />
-            <path d="M2 2v3h3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="hidden sm:inline">Réinitialiser</span>
-        </button>
       </div>
     </div>
   );

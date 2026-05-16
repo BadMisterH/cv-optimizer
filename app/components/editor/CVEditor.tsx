@@ -14,6 +14,7 @@ import {
   clearDraft,
 } from "@/app/lib/editorState";
 import { EditableText } from "./EditableText";
+import { EditorHelpHint } from "./EditorHelpHint";
 import { EditorToolbar } from "./EditorToolbar";
 import { SectionBlock } from "./SectionBlock";
 
@@ -87,15 +88,7 @@ export function CVEditor({ cv, photo, onChange }: Props) {
         onReset={handleReset}
       />
 
-      {/* Helper pédagogique */}
-      <div className="border-l-2 border-accent bg-accent-soft/40 px-4 py-3">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">
-          ● Mode édition
-        </p>
-        <p className="mt-1 text-[13px] text-ink-soft">
-          Clique n'importe quel texte pour le modifier. Survole une section ou un item pour révéler la poignée de drag (à gauche). Les changements sont sauvegardés automatiquement.
-        </p>
-      </div>
+      <EditorHelpHint />
 
       {/* Header CV */}
       <header className="flex items-start gap-5 border-b border-ink pb-5">

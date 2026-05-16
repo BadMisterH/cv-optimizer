@@ -84,7 +84,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: checkoutSession.url });
   } catch (err) {
     console.error("[api/checkout] failed:", err);
-    const message = err instanceof Error ? err.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    // Mapping des erreurs Stripe vers des messages utilisateurs lisibles.
+    // On ne leak jamais le détail technique au client (request_log_url etc.).
+    const e = err as { type?: string; raw?: { message?: string }; message?: string };
+    const rawMsg = e?.raw?.message ?? e?.message ?? "";
+
+    let userMessage = "Une erreur est survenue lors de la création du paiement. Réessaie dans un instant.";
+    let status = 500;
+
+    if (rawMsg.includes("cannot currently make live charges")) {
+      userMessage =
+        "Le paiement n'est pas encore activé. On revient très vite — réessaie dans quelques instants.";
+      status = 503;
+    } else if (e?.type === "StripeInvalidRequestError") {
+      userMessage = "Le paiement est temporairement indisponible. Réessaie plus tard.";
+      status = 503;
+    } else if (e?.type === "StripeAuthenticationError") {
+      userMessage = "Le service de paiement est mal configuré. Contacte-nous à contact@cv-optimizer.fr.";
+      status = 503;
+    } else if (e?.type === "StripeConnectionError" || e?.type === "StripeAPIError") {
+      userMessage = "Service de paiement injoignable. Réessaie dans un instant.";
+      status = 502;
+    }
+
+    return NextResponse.json({ error: userMessage }, { status });
   }
 }

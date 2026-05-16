@@ -154,13 +154,8 @@ export const auth = betterAuth({
   baseURL: BASE_URL,
   trustedOrigins: trustedOriginsConfig,
   secret: process.env.BETTER_AUTH_SECRET,
-  // Rate limit interne de better-auth (en plus de notre middleware)
-  // Storage = memory en dev, à passer en "database" si on veut persister
-  rateLimit: {
-    enabled: true,
-    window: 60, // 60 secondes
-    max: 30, // 30 requêtes par IP par fenêtre, tous endpoints auth confondus
-  },
+  // Rate limit interne de better-auth désactivé — on s'appuie sur proxy.ts
+  // (plus de contrôle, et évite un conflit d'init constaté en dev avec Next 16).
   user: {
     additionalFields: {
       credits: {
