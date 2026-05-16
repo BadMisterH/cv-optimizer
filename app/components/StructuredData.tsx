@@ -2,14 +2,12 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
  * Données structurées schema.org pour la landing.
- * Cumule Organization, WebSite, SoftwareApplication et FAQPage
+ * Cumule Organization, WebSite, SoftwareApplication, FAQPage et HowTo
  * dans un seul @graph pour limiter la duplication.
  *
- * SÉCURITÉ : utilise dangerouslySetInnerHTML car c'est la méthode officielle
- * Next.js / React pour injecter du JSON-LD. Le contenu est ENTIÈREMENT généré
- * côté serveur depuis des constantes et le tableau `faq` typé. Aucune entrée
- * utilisateur n'est jamais interpolée. JSON.stringify échappe automatiquement
- * tous les caractères spéciaux. Risque XSS : nul.
+ * SÉCURITÉ : dangerouslySetInnerHTML utilisé pour JSON-LD (méthode officielle
+ * Next.js). Contenu généré exclusivement depuis constantes serveur + props
+ * typés. Aucune entrée user. JSON.stringify échappe les caractères spéciaux.
  */
 type FAQItem = { q: string; a: string };
 
@@ -22,7 +20,12 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
         "@id": `${SITE_URL}#organization`,
         name: SITE_NAME,
         url: SITE_URL,
-        logo: `${SITE_URL}/CV-optimize-logo.png`,
+        logo: {
+          "@type": "ImageObject",
+          url: `${SITE_URL}/CV-optimize-logo.png`,
+          width: 512,
+          height: 512,
+        },
         sameAs: [],
       },
       {
@@ -33,12 +36,21 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
         description: SITE_DESCRIPTION,
         publisher: { "@id": `${SITE_URL}#organization` },
         inLanguage: "fr-FR",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${SITE_URL}/?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
       },
       {
         "@type": "SoftwareApplication",
         "@id": `${SITE_URL}#app`,
         name: SITE_NAME,
         applicationCategory: "BusinessApplication",
+        applicationSubCategory: "Career",
         operatingSystem: "Web",
         url: SITE_URL,
         description: SITE_DESCRIPTION,
@@ -47,8 +59,52 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
           "@type": "Offer",
           price: "0",
           priceCurrency: "EUR",
-          description: "2 crédits offerts à l'inscription",
+          description: "2 crédits offerts à l'inscription, sans carte bancaire",
+          availability: "https://schema.org/InStock",
         },
+        featureList: [
+          "Optimisation de CV pour les ATS",
+          "Adaptation à chaque offre d'emploi",
+          "Lettre de motivation personnalisée",
+          "Export PDF sur une page A4",
+          "Génération en moins de 30 secondes",
+        ],
+      },
+      {
+        "@type": "HowTo",
+        "@id": `${SITE_URL}#how-to`,
+        name: "Comment optimiser ton CV à une offre d'emploi avec CV Optimizer",
+        description:
+          "3 étapes pour adapter ton CV à chaque candidature et booster ton taux de réponse.",
+        totalTime: "PT30S",
+        estimatedCost: {
+          "@type": "MonetaryAmount",
+          currency: "EUR",
+          value: "0",
+        },
+        step: [
+          {
+            "@type": "HowToStep",
+            position: 1,
+            name: "Téléverse ton CV",
+            text: "Téléverse ton CV au format PDF (jusqu'à 25 Mo). Format Word, Canva, Notion ou LinkedIn exporté en PDF accepté.",
+            url: `${SITE_URL}/optimiser#comment`,
+          },
+          {
+            "@type": "HowToStep",
+            position: 2,
+            name: "Colle l'offre d'emploi",
+            text: "Copie le texte complet de l'offre d'emploi visée (intitulé, missions, profil recherché). Peu importe le type de contrat : stage, alternance, CDD, CDI, freelance.",
+            url: `${SITE_URL}/optimiser#comment`,
+          },
+          {
+            "@type": "HowToStep",
+            position: 3,
+            name: "Récupère ton CV optimisé en PDF",
+            text: "Claude reformule, priorise les bonnes expériences et place les mots-clés ATS. Tu récupères un PDF prêt à envoyer en moins de 30 secondes.",
+            url: `${SITE_URL}/optimiser#comment`,
+          },
+        ],
       },
       {
         "@type": "FAQPage",

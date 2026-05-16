@@ -8,7 +8,7 @@ export const SITE_URL =
 export const SITE_NAME = "CV Optimizer";
 
 export const SITE_DESCRIPTION =
-  "Adapte ton CV à chaque offre d'emploi en 30 secondes. Claude reformule, priorise les bonnes expériences et glisse les mots-clés ATS — sans rien inventer. CV ATS-friendly sur une page A4, lettre de motivation alignée. 2 crédits offerts à l'inscription.";
+  "Adapte ton CV à chaque offre d'emploi en 30 secondes. Reformulation des expériences pertinentes, mots-clés ATS bien placés, sans rien inventer dans ton parcours. CV sur une page A4 prête à envoyer, lettre de motivation alignée. 2 crédits offerts à l'inscription.";
 
 export const SITE_KEYWORDS = [
   "optimisation CV",

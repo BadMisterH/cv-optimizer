@@ -1,8 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_LOCALE, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfaf6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0f10" },
+  ],
+  colorScheme: "light",
+};
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -81,6 +92,12 @@ export const metadata: Metadata = {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
+  },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: "default",
   },
 };
 
