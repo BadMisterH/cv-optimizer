@@ -7,6 +7,7 @@ import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
+import { ATSScore } from "../components/ATSScore";
 import { CVEditor } from "../components/editor/CVEditor";
 import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -508,6 +509,13 @@ function Result({
             />
           </div>
         </header>
+
+        {/* Score ATS — visible dans les 2 modes (preview + édition) */}
+        {data.atsScore && (
+          <div className="mb-10">
+            <ATSScore score={data.atsScore} />
+          </div>
+        )}
 
         {mode === "edit" ? (
           /* Mode édition : split 6/6 — éditeur à gauche, preview live à droite */

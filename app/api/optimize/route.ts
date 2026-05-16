@@ -48,6 +48,13 @@ Méthodologie :
 Retourne le résultat dans le format JSON spécifié :
 - "cv" : objet structuré avec nom, titre, accroche, contact, et sections (chaque section a un titre et des items avec heading/subheading/bullets/tags)
 - "modifications" : liste à puces des changements effectués par rapport au CV original (ce qui a été reformulé, ajouté, mis en avant, retiré)
+- "atsScore" : score ATS estimé du CV OPTIMISÉ par rapport à l'offre. Calcule honnêtement, sois critique. Décompose en :
+   - "overall" (0-100) : score global. Calcule comme moyenne pondérée : keywords ×0.5 + skills ×0.25 + structure ×0.25. Arrondis à l'entier. Un CV qui matche très bien l'offre = 85-95. Un CV moyen = 60-75. Évite 100 (réserve pour cas parfait extrêmement rare). Évite < 50 sauf si vraiment mauvais.
+   - "keywords" (0-100) : % des mots-clés importants de l'offre présents dans le CV (exact match ou variations proches). Identifie les 10-15 mots-clés critiques de l'offre (technos, compétences, soft skills, certifications, méthodologies) et compte la proportion qui apparaît dans le CV.
+   - "skills" (0-100) : densité et pertinence des compétences. Si la section Compétences couvre bien le périmètre de l'offre avec des tags variés et précis → 85-95. Si vague ou incomplète → 50-70.
+   - "structure" (0-100) : qualité structurelle : bullets avec verbes d'action, format clair, sections appropriées, longueur adaptée. Le CV que TU viens de générer doit scorer 90+ ici.
+   - "tips" : 2 à 4 suggestions COURTES et ACTIONNABLES (max 15 mots chacune) pour passer le score à 95+. Exemples : "Ajoute une certification AWS visible en haut", "Quantifie la 2e expérience avec un chiffre". Pas de blabla générique.
+   - "missingKeywords" : liste de 3-8 mots-clés/compétences importants de l'offre qui MANQUENT (ou sont sous-représentés) dans le CV. Ces termes doivent être réels et exacts, pas inventés. Si tout est couvert, retourne un tableau vide [].
 
 Pour les sections du CV, utilise typiquement : "Expérience", "Formation", "Compétences", "Projets", "Langues", "Centres d'intérêt" selon ce qui est présent dans le CV original. Ne crée jamais de section qui n'existe pas dans le CV source.
 
@@ -116,8 +123,27 @@ const cvSchema = {
       type: "array",
       items: { type: "string" },
     },
+    atsScore: {
+      type: "object",
+      properties: {
+        overall: { type: "integer" },
+        keywords: { type: "integer" },
+        skills: { type: "integer" },
+        structure: { type: "integer" },
+        tips: {
+          type: "array",
+          items: { type: "string" },
+        },
+        missingKeywords: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+      required: ["overall", "keywords", "skills", "structure", "tips", "missingKeywords"],
+      additionalProperties: false,
+    },
   },
-  required: ["cv", "modifications"],
+  required: ["cv", "modifications", "atsScore"],
   additionalProperties: false,
 };
 
