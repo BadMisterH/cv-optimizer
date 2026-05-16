@@ -27,7 +27,7 @@ export function AuthBanner() {
 
     return (
       <div className="border-b border-rule bg-paper-deep">
-        <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-3 px-6 py-3">
+        <div className="mx-auto flex max-w-360 flex-wrap items-center justify-between gap-3 px-6 py-3">
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
             <span className={isEmpty ? "text-danger" : "text-success"}>●</span>{" "}
             {user.name ?? user.email ?? "Connecté"} ·{" "}
@@ -38,7 +38,7 @@ export function AuthBanner() {
                 <span className={isEmpty ? "text-danger" : "text-ink"}>
                   {credits} crédit{credits > 1 ? "s" : ""}
                 </span>{" "}
-                {isEmpty ? "— solde épuisé" : "restant" + (credits > 1 ? "s" : "")}
+                {isEmpty ? "· solde épuisé" : "restant" + (credits > 1 ? "s" : "")}
               </>
             )}
           </p>
@@ -73,7 +73,7 @@ export function AuthBanner() {
   // Utilisateur anonyme → bannière d'inscription
   return (
     <div className="border-b border-rule bg-paper-deep">
-      <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-3 px-6 py-3">
+      <div className="mx-auto flex max-w-360 flex-wrap items-center justify-between gap-3 px-6 py-3">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
           <span className="text-warm">●</span> 1 essai gratuit par service · Crée un compte pour 2 crédits offerts
         </p>

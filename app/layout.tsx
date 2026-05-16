@@ -36,7 +36,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Adapte ton CV à chaque offre d'emploi`,
+    default: `${SITE_NAME} · Adapte ton CV à chaque offre d'emploi`,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -60,20 +60,20 @@ export const metadata: Metadata = {
     locale: SITE_LOCALE,
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — Adapte ton CV à chaque offre d'emploi`,
+    title: `${SITE_NAME} · Adapte ton CV à chaque offre d'emploi`,
     description: SITE_DESCRIPTION,
     images: [
       {
         url: "/CV-optimize-logo.png",
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — Logo`,
+        alt: `${SITE_NAME} · Logo`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Adapte ton CV à chaque offre`,
+    title: `${SITE_NAME} · Adapte ton CV à chaque offre`,
     description: SITE_DESCRIPTION,
     images: ["/CV-optimize-logo.png"],
   },

@@ -93,7 +93,7 @@ export default function LetterPage() {
 
       {/* HERO */}
       <section className="hero-bg border-b border-rule">
-        <div className="mx-auto max-w-[90rem] px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
+        <div className="mx-auto max-w-360 px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
           <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
             <Logo size="md" />
             <ServiceNav />
@@ -116,7 +116,7 @@ export default function LetterPage() {
             <p className="md:col-span-6 lg:col-span-5 text-lg leading-relaxed text-ink-soft">
               Claude rédige une lettre personnalisée à partir de ton CV et de
               l&apos;offre. Mêmes expériences citées, même ton, mots-clés
-              alignés — pas de générique.
+              alignés. Pas de générique.
             </p>
             <ul className="md:col-span-6 lg:col-start-8 lg:col-span-5 grid grid-cols-2 gap-y-3 self-end font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
               <li className="flex items-baseline gap-2">
@@ -138,7 +138,7 @@ export default function LetterPage() {
 
       {/* FORM */}
       <section className="border-b border-rule">
-        <div className="mx-auto max-w-[90rem] px-6 py-14">
+        <div className="mx-auto max-w-360 px-6 py-14">
           <form onSubmit={handleSubmit} className="grid gap-12 md:grid-cols-2 md:gap-x-10">
             <div>
               <div className="mb-4 flex items-baseline gap-4 border-b border-rule pb-3">
@@ -285,7 +285,7 @@ export default function LetterPage() {
         />
       )}
 
-      <footer className="mx-auto max-w-[90rem] px-6 py-10">
+      <footer className="mx-auto max-w-360 px-6 py-10">
         <div className="flex flex-wrap items-baseline justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-muted">
           <span>© {new Date().getFullYear()} · CV Optimizer</span>
         </div>
@@ -358,7 +358,7 @@ function LetterResult({
 
   return (
     <section className="rise border-b border-rule bg-paper-deep">
-      <div className="mx-auto max-w-[90rem] px-6 py-14">
+      <div className="mx-auto max-w-360 px-6 py-14">
         <header className="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-rule pb-5">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
@@ -752,7 +752,7 @@ function LetterPreview({ letter }: { letter: CoverLetter }) {
         {(letter.recipient.role || letter.recipient.company) && (
           <p className="mt-1 text-sm text-ink-soft">
             Candidature
-            {letter.recipient.role ? ` — ${letter.recipient.role}` : ""}
+            {letter.recipient.role ? `, ${letter.recipient.role}` : ""}
             {letter.recipient.company ? ` · ${letter.recipient.company}` : ""}
           </p>
         )}
