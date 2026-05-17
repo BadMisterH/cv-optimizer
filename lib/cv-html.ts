@@ -339,13 +339,23 @@ export function buildHtml(
   /* ========== HEADER ========== */
   .header {
     margin-bottom: var(--header-mb);
+    position: relative;
+  }
+  /* Accent rule au-dessus du nom — détail éditorial */
+  .header::before {
+    content: "";
+    display: block;
+    width: 28pt;
+    height: 1.4pt;
+    background: var(--accent);
+    margin-bottom: 8px;
   }
   .top-line {
     display: flex;
     flex-wrap: nowrap;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
+    gap: 18px;
   }
   .title-block {
     flex: 1;
@@ -354,26 +364,29 @@ export function buildHtml(
   .title {
     font-size: var(--header-title-fs);
     font-weight: 700;
-    letter-spacing: -0.6pt;
+    letter-spacing: -0.7pt;
     color: var(--ink);
-    line-height: 1.05;
-    margin-bottom: 4px;
+    line-height: 1;
+    margin-bottom: 5px;
   }
   .subtitle {
     font-size: var(--header-subtitle-fs);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--accent);
-    letter-spacing: -0.1pt;
-    margin-top: 2px;
+    letter-spacing: 0.1pt;
+    margin-top: 3px;
+    text-transform: uppercase;
+    /* Tracking large pour effet éditorial */
+    letter-spacing: 1pt;
   }
   .contact {
     font-size: 8.5pt;
     color: var(--ink-muted);
-    margin-top: 10px;
+    margin-top: 12px;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    line-height: 1.5;
+    gap: 0 8px;
+    line-height: 1.6;
   }
   .contact .link {
     color: var(--ink-soft);
@@ -381,14 +394,18 @@ export function buildHtml(
   }
   .contact .sep {
     color: var(--ink-faint);
+    margin: 0 1px;
   }
   .photo {
     width: var(--photo-w);
     height: var(--photo-h);
     object-fit: cover;
-    border-radius: 2px;
+    border-radius: 1px;
     flex-shrink: 0;
-    box-shadow: 0 0 0 1pt var(--rule);
+    /* Cadre fin + ombre douce */
+    box-shadow:
+      0 0 0 1pt var(--ink),
+      4pt 4pt 0 var(--accent-soft);
   }
 
   /* ========== LAYOUT ========== */
@@ -442,22 +459,23 @@ export function buildHtml(
     font-size: var(--section-title-fs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 2pt;
+    letter-spacing: 2.2pt;
     color: var(--ink);
     margin-bottom: var(--section-title-mb);
-    padding-bottom: 4px;
-    border-bottom: 0.8pt solid var(--ink);
-    position: relative;
+    padding-bottom: 5px;
+    border-bottom: 0.5pt solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 7px;
   }
-  /* Petit accent à gauche du titre de section */
+  /* Carré accent avant le titre (remplace l'underline décoratif) */
   .section-title::before {
     content: "";
-    position: absolute;
-    left: 0;
-    bottom: -0.8pt;
-    width: 24px;
-    height: 0.8pt;
+    display: inline-block;
+    width: 5pt;
+    height: 5pt;
     background: var(--accent);
+    flex-shrink: 0;
   }
 
   /* Items */
@@ -478,32 +496,37 @@ export function buildHtml(
     font-size: var(--item-fs);
     font-weight: 700;
     color: var(--ink);
-    letter-spacing: -0.1pt;
+    letter-spacing: -0.15pt;
   }
   .item-company {
     font-size: var(--item-fs);
     font-weight: 700;
     color: var(--accent);
-    margin-left: 4px;
+    margin-left: 5px;
+    letter-spacing: -0.1pt;
   }
   .item-company::before {
-    content: " · ";
+    content: "·";
     color: var(--ink-faint);
     font-weight: 400;
+    margin-right: 5px;
+    margin-left: -1px;
   }
   .item-meta {
-    font-size: 8.5pt;
+    font-size: 8.3pt;
     color: var(--ink-muted);
     text-align: right;
     white-space: nowrap;
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2pt;
+    text-transform: uppercase;
   }
 
-  /* Bullets */
+  /* Bullets : marqueur accent en losange creux pour finesse premium */
   .item-bullets {
-    margin-top: 3px;
-    padding-left: 14px;
+    margin-top: 4px;
+    padding-left: 12px;
     color: var(--ink-soft);
     font-size: var(--item-bullets-fs);
     line-height: var(--item-bullets-lh);
@@ -517,11 +540,13 @@ export function buildHtml(
   .item-bullets li::before {
     content: "";
     position: absolute;
-    left: -10px;
-    top: 0.55em;
-    width: 5px;
-    height: 0.75pt;
-    background: var(--ink);
+    left: -9px;
+    top: 0.52em;
+    width: 3.5pt;
+    height: 3.5pt;
+    background: var(--accent);
+    border-radius: 0.5pt;
+    transform: rotate(45deg);
   }
 
   /* ========== COMPÉTENCES (sous-catégories) ========== */
@@ -549,35 +574,45 @@ export function buildHtml(
     background: var(--rule);
   }
 
-  /* Tags */
+  /* Tags : chip outlined raffinés, look "label" pas "bouton" */
   .skills {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 5px;
-    margin-top: 4px;
+    margin-top: 5px;
   }
   .skills span {
     display: inline-flex;
     align-items: center;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: transparent;
+    color: var(--ink-soft);
     padding: var(--tag-pad);
-    border-radius: 3px;
+    border: 0.5pt solid var(--accent);
+    border-radius: 999px;
     font-size: var(--tag-fs);
     font-weight: 500;
-    letter-spacing: 0.1pt;
+    letter-spacing: 0.15pt;
+    line-height: 1;
   }
 
-  /* Accroche */
+  /* Accroche : citation éditoriale, sans italique forcé */
   .accroche {
     font-size: 9.8pt;
     color: var(--ink-soft);
-    line-height: 1.5;
-    font-style: italic;
+    line-height: 1.55;
+    padding-left: 10pt;
+    border-left: 1.2pt solid var(--accent);
   }
 
   /* ========== VARIATIONS TEMPLATE ========== */
-  /* Sidebar : adapter les tailles + densité */
+  /* Sidebar : fond très subtilement teinté + accent à gauche pour démarquer */
+  .cv-sidebar {
+    background: linear-gradient(to right, var(--accent-soft) 0, transparent 3pt);
+    padding-top: 4pt;
+  }
+  .template-sidebar-right .cv-sidebar {
+    background: linear-gradient(to left, var(--accent-soft) 0, transparent 3pt);
+  }
   .cv-sidebar .section-title {
     font-size: 7.5pt;
     letter-spacing: 1.6pt;
