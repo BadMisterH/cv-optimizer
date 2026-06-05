@@ -1,11 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { OptimizedCV } from "@/app/types";
-import {
-  ANON_COOKIE_MAX_AGE,
-  checkUsageGate,
-  deductCredit,
-} from "@/lib/usage-gate";
+import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
 
 export const runtime = "nodejs";
 
@@ -170,12 +166,12 @@ function todayInFrench(): string {
 
 export async function POST(req: Request) {
   try {
-    const gate = await checkUsageGate(req);
+    const gate = await checkUsageGate(req, { requireAuth: true, anonRedirectPath: "/lettre" });
     if (!gate.allowed) {
       const error =
         gate.reason === "no_credits"
           ? "Tu n'as plus de crédits. Achète un pack pour continuer."
-          : "Tu as déjà utilisé ton essai gratuit. Crée un compte pour continuer.";
+          : "Crée un compte gratuit pour générer une lettre de motivation.";
       return NextResponse.json(
         { error, redirect: gate.redirect },
         { status: 401 }
@@ -289,17 +285,7 @@ export async function POST(req: Request) {
       await deductCredit(gate.userId);
     }
 
-    const res = NextResponse.json(parsed);
-    if (!gate.isAuthenticated && gate.cookieToSet) {
-      res.cookies.set(gate.cookieToSet, "1", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: ANON_COOKIE_MAX_AGE,
-      });
-    }
-    return res;
+    return NextResponse.json(parsed);
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       return NextResponse.json(

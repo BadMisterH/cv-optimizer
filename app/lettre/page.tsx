@@ -8,7 +8,7 @@ import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readLastCV, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
+import { readLastCV } from "../lib/cvStore";
 import type { CoverLetter, LetterResponse, OptimizedCV } from "../types";
 
 type Source = "upload" | "stored";
@@ -28,11 +28,6 @@ export default function LetterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LetterResponse | null>(null);
-  // Hydration-safe : null avant mount, lit localStorage après
-  const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
-  useEffect(() => {
-    setCanGenerateFree(canGenerateWithoutAuth("letter"));
-  }, []);
 
   useEffect(() => {
     const stored = readLastCV();
@@ -46,10 +41,8 @@ export default function LetterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Check free tier limit
-    const stillFree = canGenerateFree ?? canGenerateWithoutAuth("letter");
-    if (!stillFree && !session?.user) {
-      router.push("/sign-in?redirect=/lettre");
+    if (!session?.user) {
+      router.push("/sign-up?redirect=/lettre");
       return;
     }
 
@@ -78,8 +71,6 @@ export default function LetterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
       setResult(data);
-      // Increment generation counter
-      incrementGenerationCount("letter");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -98,11 +89,6 @@ export default function LetterPage() {
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
-              {!session?.user && canGenerateFree !== null && (
-                <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateFree ? "1 gratuit restant" : "Connectez-vous pour continuer"}
-                </span>
-              )}
               <span className="hidden sm:inline">v.01</span>
             </div>
           </div>
@@ -174,7 +160,7 @@ export default function LetterPage() {
                 <>
                   <label
                     htmlFor="letter-cv-file"
-                    className={`flex h-[180px] cursor-pointer flex-col items-center justify-center border border-dashed px-6 text-center transition ${
+                    className={`flex h-45 cursor-pointer flex-col items-center justify-center border border-dashed px-6 text-center transition ${
                       cvFile
                         ? "border-success bg-success-soft/40"
                         : "border-rule bg-card hover:border-ink"

@@ -26,12 +26,15 @@ export type UsageGateResult =
 
 /**
  * Décide si la requête peut générer.
- * - Anon, 1er essai (tous services confondus) → allowed + cookie à set
- * - Anon, essai suivant → bloqué, redirect /sign-up
+ * - requireAuth=true : les anonymes sont redirigés vers /sign-up (pas d'essai gratuit)
+ * - requireAuth=false (défaut) : Anon, 1er essai → allowed + cookie à set ; suivant → bloqué
  * - Connecté, credits > 0 → allowed (déduction faite par deductCredit après succès)
  * - Connecté, credits = 0 → bloqué, redirect /buy-credits
  */
-export async function checkUsageGate(req: Request): Promise<UsageGateResult> {
+export async function checkUsageGate(
+  req: Request,
+  opts: { requireAuth?: boolean; anonRedirectPath?: string } = {}
+): Promise<UsageGateResult> {
   const session = await auth.api.getSession({ headers: req.headers });
 
   if (session?.user) {
@@ -55,6 +58,15 @@ export async function checkUsageGate(req: Request): Promise<UsageGateResult> {
       };
     }
     return { allowed: true, isAuthenticated: true, userId, isAdmin: false };
+  }
+
+  if (opts.requireAuth) {
+    const path = opts.anonRedirectPath ?? "/";
+    return {
+      allowed: false,
+      redirect: `/sign-up?redirect=${encodeURIComponent(path)}`,
+      reason: "anon_limit",
+    };
   }
 
   const cookieHeader = req.headers.get("cookie") ?? "";
