@@ -75,7 +75,7 @@ export default function RGPDPage() {
             </ul>
             <h3>Cookies anti-fraude (sans connexion)</h3>
             <ul>
-              <li><span><code>anon_cv_used</code> et <code>anon_letter_used</code> — cookies httpOnly, durée 30 jours, posés après le premier essai gratuit pour limiter à 1 génération par service par navigateur non-connecté</span></li>
+              <li><span><code>anon_used</code> — cookie httpOnly, durée 30 jours, posé après le premier essai gratuit pour limiter à 1 génération (tous services confondus) par navigateur non-connecté</span></li>
               <li><span>Cookies de session better-auth — strictement nécessaires au fonctionnement de l&apos;authentification</span></li>
             </ul>
           </section>
@@ -181,7 +181,7 @@ export default function RGPDPage() {
             </p>
             <ul>
               <li><span><code>better-auth.session_token</code> — cookie de session, indispensable à l&apos;authentification</span></li>
-              <li><span><code>anon_cv_used</code> / <code>anon_letter_used</code> — limitation anti-abus pour les essais gratuits sans compte</span></li>
+              <li><span><code>anon_used</code> — limitation anti-abus pour l&apos;essai gratuit sans compte</span></li>
             </ul>
           </section>
 

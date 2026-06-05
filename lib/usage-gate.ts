@@ -2,13 +2,8 @@ import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { isAdminEmail } from "@/lib/admin";
 
-export type AnonService = "cv" | "letter";
-
-const COOKIE_NAMES: Record<AnonService, string> = {
-  cv: "anon_cv_used",
-  letter: "anon_letter_used",
-};
-
+// Cookie unique partagé entre CV et Lettre — 1 seul essai gratuit global
+export const ANON_COOKIE_NAME = "anon_used";
 export const ANON_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 jours
 
 export type UsageGateResult =
@@ -31,15 +26,12 @@ export type UsageGateResult =
 
 /**
  * Décide si la requête peut générer.
- * - Anon, 1er essai → allowed + cookie à set sur la réponse
- * - Anon, 2e essai → bloqué, redirect /sign-up
+ * - Anon, 1er essai (tous services confondus) → allowed + cookie à set
+ * - Anon, essai suivant → bloqué, redirect /sign-up
  * - Connecté, credits > 0 → allowed (déduction faite par deductCredit après succès)
  * - Connecté, credits = 0 → bloqué, redirect /buy-credits
  */
-export async function checkUsageGate(
-  req: Request,
-  service: AnonService
-): Promise<UsageGateResult> {
+export async function checkUsageGate(req: Request): Promise<UsageGateResult> {
   const session = await auth.api.getSession({ headers: req.headers });
 
   if (session?.user) {
@@ -66,11 +58,10 @@ export async function checkUsageGate(
   }
 
   const cookieHeader = req.headers.get("cookie") ?? "";
-  const cookieName = COOKIE_NAMES[service];
   const hasUsed = cookieHeader
     .split(";")
     .map((c) => c.trim())
-    .some((c) => c.startsWith(`${cookieName}=`));
+    .some((c) => c.startsWith(`${ANON_COOKIE_NAME}=`));
 
   if (hasUsed) {
     return {
@@ -80,7 +71,7 @@ export async function checkUsageGate(
     };
   }
 
-  return { allowed: true, isAuthenticated: false, cookieToSet: cookieName };
+  return { allowed: true, isAuthenticated: false, cookieToSet: ANON_COOKIE_NAME };
 }
 
 /**

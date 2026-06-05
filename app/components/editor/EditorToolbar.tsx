@@ -18,14 +18,10 @@ const ACCENT_LABEL: Record<AccentKey, string> = {
   green: "Vert",
   ink: "Noir",
 };
-const TEMPLATE_ORDER: TemplateKey[] = ["classic", "sidebar-left", "sidebar-right", "single"];
+const TEMPLATE_ORDER: TemplateKey[] = ["classic", "single"];
 
-/**
- * Mini thumbnail SVG par template — donne un aperçu visuel du layout.
- */
 function TemplateIcon({ template, active }: { template: TemplateKey; active: boolean }) {
   const stroke = active ? "currentColor" : "currentColor";
-  const fill = active ? "currentColor" : "transparent";
   return (
     <svg viewBox="0 0 24 18" className="h-3.5 w-4.5" aria-hidden>
       <rect x="0.5" y="0.5" width="23" height="17" fill="none" stroke={stroke} strokeWidth="1" />
@@ -35,24 +31,6 @@ function TemplateIcon({ template, active }: { template: TemplateKey; active: boo
           <line x1="3" y1="8" x2="21" y2="8" stroke={stroke} strokeWidth="0.6" />
           <line x1="3" y1="11" x2="21" y2="11" stroke={stroke} strokeWidth="0.6" />
           <line x1="3" y1="14" x2="18" y2="14" stroke={stroke} strokeWidth="0.6" />
-        </>
-      )}
-      {template === "sidebar-left" && (
-        <>
-          <rect x="0.5" y="0.5" width="7" height="17" fill={fill} opacity="0.25" />
-          <line x1="9" y1="4" x2="21" y2="4" stroke={stroke} strokeWidth="1.5" />
-          <line x1="9" y1="8" x2="21" y2="8" stroke={stroke} strokeWidth="0.6" />
-          <line x1="9" y1="11" x2="20" y2="11" stroke={stroke} strokeWidth="0.6" />
-          <line x1="9" y1="14" x2="19" y2="14" stroke={stroke} strokeWidth="0.6" />
-        </>
-      )}
-      {template === "sidebar-right" && (
-        <>
-          <rect x="16.5" y="0.5" width="7" height="17" fill={fill} opacity="0.25" />
-          <line x1="3" y1="4" x2="15" y2="4" stroke={stroke} strokeWidth="1.5" />
-          <line x1="3" y1="8" x2="15" y2="8" stroke={stroke} strokeWidth="0.6" />
-          <line x1="3" y1="11" x2="14" y2="11" stroke={stroke} strokeWidth="0.6" />
-          <line x1="3" y1="14" x2="13" y2="14" stroke={stroke} strokeWidth="0.6" />
         </>
       )}
       {template === "single" && (

@@ -1,7 +1,7 @@
 import type { CVItem, CVSection, OptimizedCV } from "../types";
 
 export type AccentKey = "blue" | "warm" | "green" | "ink";
-export type TemplateKey = "classic" | "sidebar-left" | "sidebar-right" | "single";
+export type TemplateKey = "classic" | "single";
 
 export const ACCENT_HEX: Record<AccentKey, string> = {
   blue: "#1f4bff",
@@ -12,8 +12,6 @@ export const ACCENT_HEX: Record<AccentKey, string> = {
 
 export const TEMPLATE_LABEL: Record<TemplateKey, string> = {
   classic: "Classique",
-  "sidebar-left": "Sidebar gauche",
-  "sidebar-right": "Sidebar droite",
   single: "Une colonne",
 };
 
@@ -293,12 +291,16 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 // ===== localStorage persistence =====
 const DRAFT_KEY = "cv-optimizer:editor-draft";
 
+const VALID_TEMPLATES: TemplateKey[] = ["classic", "single"];
+
 export function readDraft(): EditorState | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as EditorState;
+    const draft = JSON.parse(raw) as EditorState;
+    if (!VALID_TEMPLATES.includes(draft.template)) draft.template = "classic";
+    return draft;
   } catch {
     return null;
   }

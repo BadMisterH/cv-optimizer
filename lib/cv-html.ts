@@ -7,33 +7,7 @@
  */
 import type { CVSection, OptimizedCV } from "@/app/types";
 
-export type Template = "classic" | "sidebar-left" | "sidebar-right" | "single";
-
-// Mots-clés pour identifier les sections qui vont en sidebar (mode 2-col)
-const SIDEBAR_KEYWORDS = [
-  "compétence",
-  "competence",
-  "skill",
-  "langue",
-  "language",
-  "centre",
-  "interet",
-  "intérêt",
-  "hobby",
-  "loisir",
-  "formation",
-  "education",
-  "éducation",
-  "diplôme",
-  "diplome",
-  "studies",
-  "parcours",
-];
-
-function isSidebarSection(title: string): boolean {
-  const lower = title.toLowerCase();
-  return SIDEBAR_KEYWORDS.some((k) => lower.includes(k));
-}
+export type Template = "classic" | "single";
 
 function escapeHtml(unsafe: string): string {
   return unsafe
@@ -137,15 +111,6 @@ export function buildHtml(
   const contactHtml = buildContactHtml(cv.contact);
   const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(accentColor) ? accentColor : "#1f4bff";
   const containerClass = `container template-${template}`;
-  const useSidebar = template === "sidebar-left" || template === "sidebar-right";
-
-  // Découpe sidebar / main si template 2-col
-  const sidebarSections = useSidebar
-    ? cv.sections.filter((s) => isSidebarSection(s.title))
-    : [];
-  const mainSections = useSidebar
-    ? cv.sections.filter((s) => !isSidebarSection(s.title))
-    : cv.sections;
 
   const accrocheHtml = cv.accroche?.trim()
     ? `<section class="cv-section"><h2 class="section-title">À propos</h2><p class="accroche">${escapeHtml(cv.accroche.trim())}</p></section>`
@@ -162,34 +127,13 @@ export function buildHtml(
           <p class="title">${escapeHtml(cv.fullName)}</p>
           ${cv.title ? `<p class="subtitle">${escapeHtml(cv.title)}</p>` : ""}
         </div>
-        ${!useSidebar ? photoHtml : ""}
+        ${photoHtml}
       </div>
       ${contactHtml ? `<div class="contact">${contactHtml}</div>` : ""}
     </header>
   `;
 
-  // Layout interne
-  let layoutHtml: string;
-  if (useSidebar) {
-    const sidebarBody = `
-      <aside class="cv-sidebar">
-        ${photoHtml}
-        ${sidebarSections.map(renderSection).join("")}
-      </aside>
-    `;
-    const mainBody = `
-      <div class="cv-main">
-        ${accrocheHtml}
-        ${mainSections.map(renderSection).join("")}
-      </div>
-    `;
-    // Ordre HTML selon template : sidebar-left = aside puis main, sidebar-right = main puis aside
-    layoutHtml = `<div class="cv-layout">${
-      template === "sidebar-right" ? mainBody + sidebarBody : sidebarBody + mainBody
-    }</div>`;
-  } else {
-    layoutHtml = `<div class="cv-flow">${accrocheHtml}${mainSections.map(renderSection).join("")}</div>`;
-  }
+  const layoutHtml = `<div class="cv-flow">${accrocheHtml}${cv.sections.map(renderSection).join("")}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -228,8 +172,6 @@ export function buildHtml(
     --header-subtitle-fs: 15pt;
     --photo-w: 78px;
     --photo-h: 96px;
-    --sidebar-w: 200px;
-    --layout-gap: 22px;
     --tag-fs: 8.4pt;
     --tag-pad: 2.5px 7px;
   }
@@ -248,7 +190,6 @@ export function buildHtml(
     --header-subtitle-fs: 14.5pt;
     --photo-w: 72px;
     --photo-h: 90px;
-    --layout-gap: 18px;
   }
   body.density-2 {
     --base-fs: 10pt;
@@ -266,8 +207,6 @@ export function buildHtml(
     --header-subtitle-fs: 13.5pt;
     --photo-w: 66px;
     --photo-h: 82px;
-    --sidebar-w: 190px;
-    --layout-gap: 16px;
     --tag-fs: 8.1pt;
     --tag-pad: 2px 6px;
   }
@@ -288,8 +227,6 @@ export function buildHtml(
     --header-subtitle-fs: 12.5pt;
     --photo-w: 60px;
     --photo-h: 74px;
-    --sidebar-w: 180px;
-    --layout-gap: 14px;
     --tag-fs: 7.9pt;
     --tag-pad: 1.5px 5.5px;
   }
@@ -311,8 +248,6 @@ export function buildHtml(
     --header-subtitle-fs: 11.5pt;
     --photo-w: 56px;
     --photo-h: 70px;
-    --sidebar-w: 170px;
-    --layout-gap: 12px;
     --tag-fs: 7.7pt;
     --tag-pad: 1px 5px;
   }
@@ -410,43 +345,12 @@ export function buildHtml(
 
   /* ========== LAYOUT ========== */
   .cv-flow {
-    /* mode 1 colonne */
-  }
-  .cv-layout {
-    display: grid;
-    gap: var(--layout-gap);
-    margin-top: 4px;
-  }
-  .template-sidebar-left .cv-layout {
-    grid-template-columns: var(--sidebar-w) 1fr;
-  }
-  .template-sidebar-right .cv-layout {
-    grid-template-columns: 1fr var(--sidebar-w);
-  }
-  .cv-sidebar .photo {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 5;
-    margin-bottom: 14px;
-    border-radius: 3px;
-  }
-
-  /* Divider sous header (mode 1-col uniquement) */
-  .cv-flow {
     position: relative;
   }
   .template-classic .header,
   .template-single .header {
     border-bottom: 1.5pt solid var(--ink);
     padding-bottom: 12px;
-  }
-
-  /* Sidebar template = pas de divider sous header (la grille s'en charge) */
-  .template-sidebar-left .header,
-  .template-sidebar-right .header {
-    border-bottom: 0.5pt solid var(--rule);
-    padding-bottom: 10px;
   }
 
   /* ========== SECTIONS ========== */
@@ -605,49 +509,6 @@ export function buildHtml(
   }
 
   /* ========== VARIATIONS TEMPLATE ========== */
-  /* Sidebar : fond très subtilement teinté + accent à gauche pour démarquer */
-  .cv-sidebar {
-    background: linear-gradient(to right, var(--accent-soft) 0, transparent 3pt);
-    padding-top: 4pt;
-  }
-  .template-sidebar-right .cv-sidebar {
-    background: linear-gradient(to left, var(--accent-soft) 0, transparent 3pt);
-  }
-  .cv-sidebar .section-title {
-    font-size: 7.5pt;
-    letter-spacing: 1.6pt;
-    margin-bottom: 6px;
-    padding-bottom: 3px;
-  }
-  .cv-sidebar .item-heading,
-  .cv-sidebar .item-company {
-    font-size: 9.5pt;
-  }
-  .cv-sidebar .item-meta {
-    font-size: 8pt;
-    text-align: left;
-    display: block;
-    margin-top: 1px;
-  }
-  .cv-sidebar .item-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1px;
-  }
-  .cv-sidebar .item-bullets {
-    font-size: 8.8pt;
-  }
-  .cv-sidebar .cv-section {
-    margin-bottom: 12px;
-  }
-  .cv-sidebar .skills span {
-    font-size: 8pt;
-    padding: 2px 6px;
-  }
-  .cv-sidebar .skill-cat-heading {
-    font-size: 7.8pt;
-  }
-
   /* Single (centré) */
   .template-single .header {
     text-align: center;

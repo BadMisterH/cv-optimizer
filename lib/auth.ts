@@ -160,7 +160,7 @@ export const auth = betterAuth({
     additionalFields: {
       credits: {
         type: "number",
-        defaultValue: 2,
+        defaultValue: 0,
         required: false,
         input: false, // empêche un user de set ses propres crédits à l'inscription
       },

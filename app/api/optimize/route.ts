@@ -151,7 +151,7 @@ const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   try {
-    const gate = await checkUsageGate(req, "cv");
+    const gate = await checkUsageGate(req);
     if (!gate.allowed) {
       const error =
         gate.reason === "no_credits"

@@ -32,5 +32,11 @@
     "puppeteer": "^24.43.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "puppeteer",
+      "sharp"
+    ]
   }
 }

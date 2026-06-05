@@ -170,7 +170,7 @@ function todayInFrench(): string {
 
 export async function POST(req: Request) {
   try {
-    const gate = await checkUsageGate(req, "letter");
+    const gate = await checkUsageGate(req);
     if (!gate.allowed) {
       const error =
         gate.reason === "no_credits"
