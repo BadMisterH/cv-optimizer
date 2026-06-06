@@ -108,7 +108,7 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-faint">
-          <span>↪ pixel-perfect du PDF</span>
+          <span>↪ aperçu du rendu final</span>
           <span>A4 · {pct} %</span>
         </div>
       </div>
