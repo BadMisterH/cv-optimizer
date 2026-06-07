@@ -1,6 +1,6 @@
 export const STRIPE_ENABLED = false;
 
-export const PADDLE_ENABLED = true;
+export const PADDLE_ENABLED = false;
 
 export const PRICING_PUBLIC = true;
 
