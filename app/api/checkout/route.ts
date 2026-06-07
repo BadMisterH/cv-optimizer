@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getStripe } from "@/lib/stripe";
-import { PACK_PRICE_ENV, PACKS, isPackKey } from "@/lib/stripe-packs";
-import { STRIPE_ENABLED, isStripeConfigured } from "@/lib/feature-flags";
+import { getPaddle } from "@/lib/paddle";
+import { PADDLE_PACK_PRICE_ENV } from "@/lib/paddle-packs";
+import { PACKS, isPackKey } from "@/lib/stripe-packs";
+import { PADDLE_ENABLED, isPaddleConfigured } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  if (!STRIPE_ENABLED) {
+  if (!PADDLE_ENABLED) {
     return NextResponse.json(
       { error: "Le paiement n'est pas encore disponible. Réessaie plus tard." },
       { status: 503 }
     );
   }
-  // Garde-fou : si une env var manque, on évite le crash de la SDK Stripe
-  if (!isStripeConfigured()) {
-    console.error("[api/checkout] env Stripe incomplet — vérifier les variables sur Vercel");
+  if (!isPaddleConfigured()) {
+    console.error("[api/checkout] env Paddle incomplet — vérifier les variables sur Vercel");
     return NextResponse.json(
       {
         error:
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
+
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) {
@@ -39,17 +40,16 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const packKey = body?.pack;
     if (typeof packKey !== "string" || !isPackKey(packKey)) {
-      return NextResponse.json(
-        { error: "Pack invalide." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Pack invalide." }, { status: 400 });
     }
 
     const pack = PACKS[packKey];
-    const priceId = process.env[PACK_PRICE_ENV[packKey]];
+    const priceId = process.env[PADDLE_PACK_PRICE_ENV[packKey]];
     if (!priceId) {
       return NextResponse.json(
-        { error: `Le pack "${pack.label}" n'est pas configuré (env var ${PACK_PRICE_ENV[packKey]} manquante).` },
+        {
+          error: `Le pack "${pack.label}" n'est pas configuré (env var ${PADDLE_PACK_PRICE_ENV[packKey]} manquante).`,
+        },
         { status: 500 }
       );
     }
@@ -59,53 +59,39 @@ export async function POST(req: Request) {
       process.env.BETTER_AUTH_URL ??
       "http://localhost:3000";
 
-    const stripe = getStripe();
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: session.user.email,
-      metadata: {
+    const paddle = getPaddle();
+    const transaction = await paddle.transactions.create({
+      items: [{ priceId, quantity: 1 }],
+      customData: {
         userId: session.user.id,
         pack: packKey,
         credits: String(pack.credits),
       },
-      success_url: `${origin}/buy-credits?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/buy-credits?canceled=true`,
+      checkout: {
+        url: `${origin}/buy-credits?success=true`,
+      },
     });
 
-    if (!checkoutSession.url) {
+    const checkoutUrl = transaction.checkout?.url;
+    if (!checkoutUrl) {
       return NextResponse.json(
-        { error: "Impossible de créer la session Stripe." },
+        { error: "Impossible de créer la session Paddle." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ url: checkoutSession.url });
+    return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
-    console.error("[api/checkout] failed:", err);
+    console.error("[api/checkout] Paddle failed:", err);
 
-    // Mapping des erreurs Stripe vers des messages utilisateurs lisibles.
-    // On ne leak jamais le détail technique au client (request_log_url etc.).
-    const e = err as { type?: string; raw?: { message?: string }; message?: string };
-    const rawMsg = e?.raw?.message ?? e?.message ?? "";
-
-    let userMessage = "Une erreur est survenue lors de la création du paiement. Réessaie dans un instant.";
+    const e = err as { code?: string; message?: string };
+    let userMessage =
+      "Une erreur est survenue lors de la création du paiement. Réessaie dans un instant.";
     let status = 500;
 
-    if (rawMsg.includes("cannot currently make live charges")) {
-      userMessage =
-        "Le paiement n'est pas encore activé. On revient très vite — réessaie dans quelques instants.";
-      status = 503;
-    } else if (e?.type === "StripeInvalidRequestError") {
+    if (e?.code === "not_found") {
       userMessage = "Le paiement est temporairement indisponible. Réessaie plus tard.";
       status = 503;
-    } else if (e?.type === "StripeAuthenticationError") {
-      userMessage = "Le service de paiement est mal configuré. Contacte-nous à contact@cv-optimizer.fr.";
-      status = 503;
-    } else if (e?.type === "StripeConnectionError" || e?.type === "StripeAPIError") {
-      userMessage = "Service de paiement injoignable. Réessaie dans un instant.";
-      status = 502;
     }
 
     return NextResponse.json({ error: userMessage }, { status });

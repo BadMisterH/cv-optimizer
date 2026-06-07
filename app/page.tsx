@@ -1095,6 +1095,9 @@ export default function Landing() {
               <Link href="/rgpd" className="hover:text-ink transition">
                 RGPD
               </Link>
+              <Link href="/remboursement" className="hover:text-ink transition">
+                Remboursement
+              </Link>
               <a
                 href="mailto:contact@cv-optimizer.fr"
                 className="hover:text-ink transition"

@@ -1,24 +1,9 @@
-/**
- * Flags pour activer/désactiver des features.
- *
- * Stripe est désormais ACTIVÉ. Le système est garde-fou'é côté serveur :
- * si les env vars (STRIPE_SECRET_KEY, STRIPE_PRICE_*, STRIPE_WEBHOOK_SECRET)
- * sont manquantes sur Vercel, /api/checkout renvoie un 503 propre au lieu
- * de crash, et l'UI affiche l'erreur. Une fois les env vars renseignées
- * sur Vercel, le paiement fonctionne sans redéploiement.
- */
 export const STRIPE_ENABLED = false;
 
-/**
- * Visibilité publique du pricing sur la landing (lien "Tarifs" + section).
- */
-export const PRICING_PUBLIC = false;
+export const PADDLE_ENABLED = true;
 
-/**
- * Server-side check : tous les env vars Stripe nécessaires sont-ils présents ?
- * À appeler dans les routes /api/checkout et /api/webhooks/stripe pour fail-fast
- * proprement si la config est incomplète.
- */
+export const PRICING_PUBLIC = true;
+
 export function isStripeConfigured(): boolean {
   return Boolean(
     process.env.STRIPE_SECRET_KEY &&
@@ -26,5 +11,15 @@ export function isStripeConfigured(): boolean {
       process.env.STRIPE_PRICE_STARTER &&
       process.env.STRIPE_PRICE_PRO &&
       process.env.STRIPE_PRICE_PREMIUM
+  );
+}
+
+export function isPaddleConfigured(): boolean {
+  return Boolean(
+    process.env.PADDLE_API_KEY &&
+      process.env.PADDLE_WEBHOOK_SECRET &&
+      process.env.PADDLE_PRICE_STARTER &&
+      process.env.PADDLE_PRICE_PRO &&
+      process.env.PADDLE_PRICE_PREMIUM
   );
 }
