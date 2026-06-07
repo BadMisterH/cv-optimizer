@@ -105,6 +105,27 @@ async function sendResetPasswordEmail(email: string, url: string) {
   });
 }
 
+async function sendWelcomeEmail(email: string) {
+  const siteUrl =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.BETTER_AUTH_URL ?? "https://cv-optimizer.fr";
+  await sendEmail({
+    to: email,
+    subject: "2 crédits offerts — bienvenue sur CV Optimizer",
+    fallbackLabel: "WELCOME EMAIL",
+    html: buildEmailHtml({
+      title: "Tu as 2 crédits gratuits.",
+      intro:
+        "Bienvenue sur CV Optimizer ! Ton compte est actif et tu disposes de 2 crédits offerts pour commencer. Utilise-les pour optimiser ton CV face à une offre d'emploi ou générer une lettre de motivation.",
+      ctaLabel: "Optimiser mon CV maintenant",
+      url: `${siteUrl}/optimiser`,
+      footer:
+        "Tu reçois cet email car tu viens de créer un compte sur cv-optimizer.fr. Aucune action requise si tu n'es pas à l'origine de cette inscription.",
+    }),
+  });
+}
+
 async function sendVerificationEmail(email: string, url: string) {
   await sendEmail({
     to: email,
@@ -184,6 +205,11 @@ export const auth = betterAuth({
               );
               console.log(
                 `[welcome-bonus] email déjà consommé pour ${user.id} → credits=0`
+              );
+            } else {
+              // Nouveau compte : envoyer l'email de bienvenue (non bloquant)
+              sendWelcomeEmail(email).catch((err) =>
+                console.error("[welcome-email] échec envoi:", err)
               );
             }
           } catch (err) {
