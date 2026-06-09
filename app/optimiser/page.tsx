@@ -495,7 +495,7 @@ function Result({
                 className={`px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] transition ${
                   mode === "edit"
                     ? "bg-ink text-paper rounded-full"
-                    : "text-ink-muted hover:text-ink"
+                    : "bg-accent-soft text-accent rounded-full font-semibold hover:bg-accent hover:text-paper"
                 }`}
               >
                 ✎ Éditer
