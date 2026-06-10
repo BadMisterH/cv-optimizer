@@ -8,6 +8,7 @@ import { UserMenu } from "./UserMenu";
 const services = [
   { href: "/optimiser", label: "CV" },
   { href: "/lettre", label: "Lettre" },
+  { href: "/historique", label: "Historique" },
 ];
 
 export function ServiceNav() {

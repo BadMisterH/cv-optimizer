@@ -2,12 +2,16 @@
 
 import type { OptimizedCV } from "../types";
 
-const KEY = "cv-optimizer:last-cv";
+const LEGACY_KEY = "cv-optimizer:last-cv";
+const HISTORY_KEY = "cv-optimizer:cv-history";
 const PHOTO_KEY = "cv-optimizer:last-photo";
 const CV_GENERATE_COUNT_KEY = "cv-optimizer:cv-generate-count";
 const LETTER_GENERATE_COUNT_KEY = "cv-optimizer:letter-generate-count";
 
-type Stored = {
+const HISTORY_MAX = 5;
+
+export type StoredCV = {
+  id: string;
   cv: OptimizedCV;
   offer: string;
   savedAt: string;
@@ -45,10 +49,49 @@ export function canGenerateWithoutAuth(type: "cv" | "letter"): boolean {
 export function saveLastCV(cv: OptimizedCV, offer: string): void {
   if (typeof window === "undefined") return;
   try {
-    const payload: Stored = { cv, offer, savedAt: new Date().toISOString() };
-    localStorage.setItem(KEY, JSON.stringify(payload));
+    const entry: StoredCV = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      cv,
+      offer,
+      savedAt: new Date().toISOString(),
+    };
+
+    const history = readCVHistory();
+    const updated = [entry, ...history].slice(0, HISTORY_MAX);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+
+    // Legacy key — conservé pour la compat page /lettre
+    localStorage.setItem(LEGACY_KEY, JSON.stringify({ cv, offer, savedAt: entry.savedAt }));
   } catch {
     // localStorage indisponible — silently ignore
+  }
+}
+
+export function readCVHistory(): StoredCV[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as StoredCV[];
+  } catch {
+    return [];
+  }
+}
+
+export function readLastCV(): { cv: OptimizedCV; offer: string; savedAt: string } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    // Priorité : tête de l'historique, fallback legacy key
+    const history = readCVHistory();
+    if (history.length > 0) {
+      const { cv, offer, savedAt } = history[0];
+      return { cv, offer, savedAt };
+    }
+    const raw = localStorage.getItem(LEGACY_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { cv: OptimizedCV; offer: string; savedAt: string };
+  } catch {
+    return null;
   }
 }
 
@@ -71,21 +114,11 @@ export function readPhoto(): string | null {
   }
 }
 
-export function readLastCV(): Stored | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Stored;
-  } catch {
-    return null;
-  }
-}
-
 export function clearLastCV(): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(LEGACY_KEY);
+    localStorage.removeItem(HISTORY_KEY);
   } catch {
     // ignore
   }

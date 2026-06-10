@@ -134,7 +134,10 @@ export default function Page() {
 
       const res = await fetchWithAuth("/api/optimize", { method: "POST", body });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
+      if (!res.ok) {
+        if (data.redirect) { router.push(data.redirect); return; }
+        throw new Error(data.error ?? "Erreur inconnue");
+      }
       setResult(data);
       // Persist for the cover letter service
       saveLastCV(data.cv, offer);

@@ -69,7 +69,10 @@ export default function LetterPage() {
         res = await fetchWithAuth("/api/cover-letter", { method: "POST", body });
       }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Erreur inconnue");
+      if (!res.ok) {
+        if (data.redirect) { router.push(data.redirect); return; }
+        throw new Error(data.error ?? "Erreur inconnue");
+      }
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
