@@ -56,7 +56,14 @@ OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'a
 - "closing" : formule de politesse française classique (ex: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.").
 - "signature" : nom complet du candidat.
 
-Retourne aussi "notes" : 3 à 5 puces concrètes expliquant tes choix éditoriaux (quel élément CV mis en avant, quel mot-clé offre repris, ton choisi). Pas de meta-blabla, juste des faits.`;
+Retourne aussi "notes" : 3 à 5 puces concrètes expliquant tes choix éditoriaux (quel élément CV mis en avant, quel mot-clé offre repris, ton choisi). Pas de meta-blabla, juste des faits.
+
+== ANCIENNE LETTRE DE MOTIVATION (si fournie) ==
+Si un document intitulé "Ancienne lettre de motivation" est présent, utilise-le UNIQUEMENT pour calibrer le style du candidat :
+- Longueur typique de ses phrases et de ses paragraphes
+- Registre (soutenu, direct, sobre…) et niveau de formalité
+- Vocabulaire naturel, tournures qui lui sont propres
+Ne reprends jamais le contenu factuel de cette ancienne lettre (missions, entreprises, formules déjà utilisées). Réécris tout de zéro. Si une ancienne lettre est fournie, mentionne-le dans les notes.`;
 
 const letterSchema = {
   type: "object",
@@ -182,10 +189,11 @@ export async function POST(req: Request) {
 
     let cvAsText: string | null = null;
     let cvPdfBase64: string | null = null;
+    let prevLetterBase64: string | null = null;
     let offer: string | null = null;
 
     if (contentType.includes("application/json")) {
-      // Mode "CV optimisé" : on envoie le JSON OptimizedCV + offre
+      // Mode "CV optimisé sans ancienne lettre" : JSON OptimizedCV + offre
       const body = await req.json();
       const cv = body?.cv as OptimizedCV | undefined;
       offer = body?.offer ?? null;
@@ -194,21 +202,48 @@ export async function POST(req: Request) {
       }
       cvAsText = JSON.stringify(cv, null, 2);
     } else {
-      // Mode "PDF brut" : multipart avec fichier
+      // Mode FormData : CV (PDF ou JSON stringifié) + offre + ancienne lettre optionnelle
       const formData = await req.formData();
       const cvEntry = formData.get("cv");
+      const cvJsonEntry = formData.get("cvJson"); // CV stocké sérialisé quand prevLetter est fourni
       const offerEntry = formData.get("offer");
-      if (!(cvEntry instanceof File) || cvEntry.size === 0) {
-        return NextResponse.json({ error: "CV (PDF) requis." }, { status: 400 });
+      const prevLetterEntry = formData.get("prevLetter");
+
+      if (cvJsonEntry && typeof cvJsonEntry === "string") {
+        // CV stocké envoyé via FormData (cas: source=stored + prevLetter)
+        try {
+          const cv = JSON.parse(cvJsonEntry) as OptimizedCV;
+          if (!cv?.fullName) throw new Error("invalid");
+          cvAsText = JSON.stringify(cv, null, 2);
+        } catch {
+          return NextResponse.json({ error: "CV invalide." }, { status: 400 });
+        }
+      } else {
+        // CV PDF brut
+        if (!(cvEntry instanceof File) || cvEntry.size === 0) {
+          return NextResponse.json({ error: "CV (PDF) requis." }, { status: 400 });
+        }
+        if (cvEntry.type !== "application/pdf") {
+          return NextResponse.json({ error: "Le CV doit être un PDF." }, { status: 400 });
+        }
+        if (cvEntry.size > MAX_PDF_BYTES) {
+          return NextResponse.json({ error: "Le PDF dépasse 25 Mo." }, { status: 400 });
+        }
+        cvPdfBase64 = Buffer.from(await cvEntry.arrayBuffer()).toString("base64");
       }
-      if (cvEntry.type !== "application/pdf") {
-        return NextResponse.json({ error: "Le CV doit être un PDF." }, { status: 400 });
-      }
-      if (cvEntry.size > MAX_PDF_BYTES) {
-        return NextResponse.json({ error: "Le PDF dépasse 25 Mo." }, { status: 400 });
-      }
+
       offer = typeof offerEntry === "string" ? offerEntry : null;
-      cvPdfBase64 = Buffer.from(await cvEntry.arrayBuffer()).toString("base64");
+
+      // Ancienne lettre optionnelle (max 5 Mo)
+      if (prevLetterEntry instanceof File && prevLetterEntry.size > 0) {
+        if (prevLetterEntry.type !== "application/pdf") {
+          return NextResponse.json({ error: "L'ancienne lettre doit être un PDF." }, { status: 400 });
+        }
+        if (prevLetterEntry.size > 5 * 1024 * 1024) {
+          return NextResponse.json({ error: "L'ancienne lettre dépasse 5 Mo." }, { status: 400 });
+        }
+        prevLetterBase64 = Buffer.from(await prevLetterEntry.arrayBuffer()).toString("base64");
+      }
     }
 
     if (!offer || !offer.trim()) {
@@ -229,14 +264,19 @@ export async function POST(req: Request) {
 
     const userContent: Anthropic.Messages.ContentBlockParam[] = [];
 
+    // Ancienne lettre en tête de contexte (calibration de style)
+    if (prevLetterBase64) {
+      userContent.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: prevLetterBase64 },
+        title: "Ancienne lettre de motivation",
+      } as Anthropic.Messages.ContentBlockParam);
+    }
+
     if (cvPdfBase64) {
       userContent.push({
         type: "document",
-        source: {
-          type: "base64",
-          media_type: "application/pdf",
-          data: cvPdfBase64,
-        },
+        source: { type: "base64", media_type: "application/pdf", data: cvPdfBase64 },
       });
       userContent.push({
         type: "text",

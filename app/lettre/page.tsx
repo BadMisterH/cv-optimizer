@@ -24,6 +24,7 @@ export default function LetterPage() {
   } | null>(null);
 
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [prevLetterFile, setPrevLetterFile] = useState<File | null>(null);
   const [offer, setOffer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,23 @@ export default function LetterPage() {
     setResult(null);
     try {
       let res: Response;
-      if (source === "stored" && storedCv) {
+      if (prevLetterFile) {
+        // Toujours FormData quand une ancienne lettre est fournie
+        const body = new FormData();
+        if (source === "stored" && storedCv) {
+          body.append("cvJson", JSON.stringify(storedCv.cv));
+        } else {
+          if (!cvFile) {
+            setError("Téléverse d'abord ton CV (PDF).");
+            setLoading(false);
+            return;
+          }
+          body.append("cv", cvFile);
+        }
+        body.append("offer", offer);
+        body.append("prevLetter", prevLetterFile);
+        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body });
+      } else if (source === "stored" && storedCv) {
         res = await fetchWithAuth("/api/cover-letter", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -158,6 +175,57 @@ export default function LetterPage() {
                   />
                 </div>
               ) : null}
+
+              {/* Upload ancienne lettre — optionnel, toujours visible */}
+              <div className="mt-6">
+                <p className="mb-2 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
+                  Ancienne lettre{" "}
+                  <span className="text-ink-faint">(optionnel)</span>
+                </p>
+                {prevLetterFile ? (
+                  <div className="flex items-center justify-between border border-success bg-success-soft/40 px-4 py-3">
+                    <div>
+                      <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-success">
+                        ✓ Style calibré
+                      </span>
+                      <p className="mt-0.5 font-mono text-[12px] text-ink-muted truncate max-w-[200px]">
+                        {prevLetterFile.name.length > 32
+                          ? `${prevLetterFile.name.slice(0, 29)}…`
+                          : prevLetterFile.name}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPrevLetterFile(null)}
+                      className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint hover:text-danger transition"
+                      aria-label="Retirer l'ancienne lettre"
+                    >
+                      ✕ Retirer
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <label
+                      htmlFor="prev-letter-file"
+                      className="flex h-16 cursor-pointer items-center justify-center border border-dashed border-rule bg-card px-4 text-center transition hover:border-ink"
+                    >
+                      <span className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
+                        + Dépose ta précédente lettre (PDF)
+                      </span>
+                    </label>
+                    <input
+                      id="prev-letter-file"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setPrevLetterFile(e.target.files?.[0] ?? null)}
+                      className="hidden"
+                    />
+                  </>
+                )}
+                <p className="mt-1.5 font-mono text-[11px] text-ink-faint">
+                  Claude s&apos;en sert uniquement pour imiter ton style d&apos;écriture.
+                </p>
+              </div>
 
               {source === "upload" && (
                 <>
