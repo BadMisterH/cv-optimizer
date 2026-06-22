@@ -5,7 +5,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
-import { PADDLE_ENABLED } from "@/lib/feature-flags";
+import { STRIPE_ENABLED } from "@/lib/feature-flags";
 import { PACKS, type PackKey } from "@/lib/stripe-packs";
 import { Logo } from "../components/Logo";
 
@@ -36,7 +36,7 @@ function BuyCreditsContent() {
   const canceled = searchParams.get("canceled") === "true";
 
   async function handleBuy(pack: PackKey) {
-    if (!PADDLE_ENABLED) return;
+    if (!STRIPE_ENABLED) return;
     if (!user) {
       window.location.href = "/sign-in?redirect=/buy-credits";
       return;
@@ -83,7 +83,7 @@ function BuyCreditsContent() {
   }
 
   // ========== VUE SUCCÈS DÉDIÉE ==========
-  if (success && PADDLE_ENABLED) {
+  if (success && STRIPE_ENABLED) {
     return (
       <main className="min-h-screen bg-paper">
         <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
@@ -162,7 +162,7 @@ function BuyCreditsContent() {
           </div>
 
           <p className="mt-10 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
-            ● Un reçu t&apos;a été envoyé par email
+            ● Un reçu Stripe t&apos;a été envoyé par email
           </p>
         </div>
       </main>
@@ -183,13 +183,13 @@ function BuyCreditsContent() {
           </Link>
         </div>
 
-        {!PADDLE_ENABLED && (
+        {!STRIPE_ENABLED && (
           <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
             <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
               ● Paiement par carte bientôt disponible
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              On finalise l'intégration Paddle. Les packs ci-dessous montrent les
+              On finalise l'intégration Stripe. Les packs ci-dessous montrent les
               tarifs prévus — l'achat sera activé sous peu.
             </p>
           </div>
@@ -217,7 +217,7 @@ function BuyCreditsContent() {
 
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
           Chaque crédit te permet de générer un CV ou une lettre de motivation.
-          Paiement sécurisé via Paddle. Pas d'abonnement.
+          Paiement sécurisé via Stripe. Pas d'abonnement.
         </p>
 
         {!isPending && (
@@ -262,14 +262,14 @@ function BuyCreditsContent() {
                 <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
                 <button
                   onClick={() => handleBuy(key)}
-                  disabled={!PADDLE_ENABLED || isLoading || loadingPack !== null}
+                  disabled={!STRIPE_ENABLED || isLoading || loadingPack !== null}
                   className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
                     featured
                       ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
                       : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
                   } disabled:cursor-not-allowed`}
                 >
-                  {!PADDLE_ENABLED
+                  {!STRIPE_ENABLED
                     ? "Bientôt disponible"
                     : isLoading
                       ? "Redirection…"
@@ -281,7 +281,7 @@ function BuyCreditsContent() {
         </section>
 
         <p className="mt-10 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
-          ● Paiement sécurisé par Paddle · Aucune donnée carte stockée
+          ● Paiement sécurisé par Stripe · Aucune donnée carte stockée
         </p>
       </div>
     </main>
