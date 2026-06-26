@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SITE_AUTHOR, SITE_DESCRIPTION, SITE_KEYWORDS, SITE_LOCALE, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -115,6 +116,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-paper text-ink font-sans">
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
