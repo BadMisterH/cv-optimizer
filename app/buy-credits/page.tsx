@@ -27,6 +27,18 @@ function BuyCreditsContent() {
   const searchParams = useSearchParams();
   const [loadingPack, setLoadingPack] = useState<PackKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waitlistStatus, setWaitlistStatus] = useState<Record<PackKey, "idle" | "loading" | "done">>({
+    starter: "idle",
+    pro: "idle",
+    premium: "idle",
+  });
+  const [waitlistEmailDraft, setWaitlistEmailDraft] = useState<Record<PackKey, string>>({
+    starter: "",
+    pro: "",
+    premium: "",
+  });
+  const [waitlistEmailOpen, setWaitlistEmailOpen] = useState<PackKey | null>(null);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
   const user = session?.user as SessionUser | undefined;
   const credits = user?.credits ?? 0;
@@ -67,6 +79,44 @@ function BuyCreditsContent() {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
       setLoadingPack(null);
     }
+  }
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  async function submitWaitlist(pack: PackKey, email?: string) {
+    setWaitlistError(null);
+    setWaitlistStatus((s) => ({ ...s, [pack]: "loading" }));
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Erreur inconnue");
+      setWaitlistStatus((s) => ({ ...s, [pack]: "done" }));
+      setWaitlistEmailOpen(null);
+    } catch (err) {
+      setWaitlistError(err instanceof Error ? err.message : "Erreur inconnue");
+      setWaitlistStatus((s) => ({ ...s, [pack]: "idle" }));
+    }
+  }
+
+  function handleWaitlistClick(pack: PackKey) {
+    if (user?.email) {
+      submitWaitlist(pack);
+      return;
+    }
+    setWaitlistEmailOpen(pack);
+  }
+
+  function handleWaitlistConfirm(pack: PackKey) {
+    const email = waitlistEmailDraft[pack].trim();
+    if (!EMAIL_RE.test(email)) {
+      setWaitlistError("Email invalide.");
+      return;
+    }
+    submitWaitlist(pack, email);
   }
 
   // Récupère le détail du pack acheté (côté client) après retour de Stripe
@@ -186,11 +236,11 @@ function BuyCreditsContent() {
         {!STRIPE_ENABLED && (
           <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
             <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
-              ● Paiement par carte bientôt disponible
+              ● Bêta — places limitées
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              On finalise l'intégration Stripe. Les packs ci-dessous montrent les
-              tarifs prévus — l'achat sera activé sous peu.
+              On ouvre les paiements dès qu'on a assez de monde dessus. Dis-nous
+              que tu es chaud, on te recontacte en priorité.
             </p>
           </div>
         )}
@@ -235,6 +285,15 @@ function BuyCreditsContent() {
           </p>
         )}
 
+        {waitlistError && (
+          <p
+            role="alert"
+            className="mt-4 font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
+          >
+            ✕ {waitlistError}
+          </p>
+        )}
+
         <section className="mt-12 grid gap-4 md:grid-cols-3">
           {(Object.keys(PACKS) as PackKey[]).map((key) => {
             const pack = PACKS[key];
@@ -260,28 +319,73 @@ function BuyCreditsContent() {
                   </span>
                 </p>
                 <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
-                <button
-                  onClick={() => handleBuy(key)}
-                  disabled={!STRIPE_ENABLED || isLoading || loadingPack !== null}
-                  className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
-                    featured
-                      ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
-                      : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
-                  } disabled:cursor-not-allowed`}
-                >
-                  {!STRIPE_ENABLED
-                    ? "Bientôt disponible"
-                    : isLoading
-                      ? "Redirection…"
-                      : "Acheter"}
-                </button>
+                {STRIPE_ENABLED ? (
+                  <button
+                    onClick={() => handleBuy(key)}
+                    disabled={isLoading || loadingPack !== null}
+                    className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
+                      featured
+                        ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
+                        : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+                    } disabled:cursor-not-allowed`}
+                  >
+                    {isLoading ? "Redirection…" : "Acheter"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleWaitlistClick(key)}
+                      disabled={waitlistStatus[key] !== "idle"}
+                      className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
+                        waitlistStatus[key] === "done"
+                          ? "border border-success bg-success-soft text-success"
+                          : featured
+                            ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
+                            : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+                      } disabled:cursor-not-allowed`}
+                    >
+                      {waitlistStatus[key] === "done"
+                        ? "✓ Tu es sur la liste"
+                        : waitlistStatus[key] === "loading"
+                          ? "Envoi…"
+                          : "Je veux l'acheter"}
+                    </button>
+                    {waitlistStatus[key] === "done" && (
+                      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-success">
+                        On te recontacte dès l'ouverture.
+                      </p>
+                    )}
+                    {waitlistEmailOpen === key && (
+                      <div className="mt-3 flex flex-col gap-2">
+                        <input
+                          type="email"
+                          value={waitlistEmailDraft[key]}
+                          onChange={(e) =>
+                            setWaitlistEmailDraft((d) => ({ ...d, [key]: e.target.value }))
+                          }
+                          placeholder="ton@email.com"
+                          className="border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
+                        />
+                        <button
+                          onClick={() => handleWaitlistConfirm(key)}
+                          disabled={waitlistStatus[key] === "loading"}
+                          className="bg-ink px-4 py-2 font-mono text-[12px] uppercase tracking-[0.16em] text-paper transition hover:bg-accent disabled:opacity-60"
+                        >
+                          Confirmer
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             );
           })}
         </section>
 
         <p className="mt-10 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
-          ● Paiement sécurisé par Stripe · Aucune donnée carte stockée
+          {STRIPE_ENABLED
+            ? "● Paiement sécurisé par Stripe · Aucune donnée carte stockée"
+            : "● On t'écrit par email dès l'ouverture des paiements"}
         </p>
       </div>
     </main>
