@@ -55,10 +55,10 @@ export async function POST(req: Request) {
   let userId: string | null = null;
 
   if (session?.user) {
-    email = session.user.email;
+    email = session.user.email.toLowerCase();
     userId = session.user.id;
   } else {
-    const bodyEmail = typeof body?.email === "string" ? body.email.trim() : "";
+    const bodyEmail = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     if (!EMAIL_RE.test(bodyEmail)) {
       return NextResponse.json({ error: "Email invalide." }, { status: 400 });
     }
