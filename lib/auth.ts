@@ -117,12 +117,8 @@ export const auth = betterAuth({
           const email = typeof user.email === "string" ? user.email : null;
           if (!email) return;
           try {
-            const granted = await claimWelcomeBonus(email);
+            const granted = await claimWelcomeBonus(user.id, email);
             if (!granted) {
-              await pool.query(
-                'UPDATE "user" SET credits = 0 WHERE id = $1',
-                [user.id]
-              );
               console.log(
                 `[welcome-bonus] email déjà consommé pour ${user.id} → credits=0`
               );
