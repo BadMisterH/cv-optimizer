@@ -4,13 +4,37 @@ import { pool } from "@/lib/db";
 export const WELCOME_BONUS_CREDITS = 2;
 
 /**
+ * Normalise une adresse email pour la détection anti-fraude du bonus de bienvenue :
+ * - lower + trim ("Foo@Bar.com" === " foo@bar.com ")
+ * - retire le tag "+xxx" du local-part (alias type "user+1@gmail.com" === "user@gmail.com"),
+ *   sinon il suffit de changer de tag pour réclamer le bonus à l'infini sur la même boîte.
+ * - ignore les points du local-part pour gmail.com/googlemail.com (Gmail les ignore aussi).
+ */
+function normalizeEmailForFraudCheck(email: string): string {
+  const trimmed = email.toLowerCase().trim();
+  const atIndex = trimmed.lastIndexOf("@");
+  if (atIndex === -1) return trimmed;
+
+  let local = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex + 1);
+
+  const plusIndex = local.indexOf("+");
+  if (plusIndex !== -1) local = local.slice(0, plusIndex);
+
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    local = local.replace(/\./g, "");
+  }
+
+  return `${local}@${domain}`;
+}
+
+/**
  * Hash anonyme d'une adresse email pour la table consumed_signup_bonuses.
- * Normalise (lower + trim) pour que "Foo@Bar.com" et " foo@bar.com " hashent pareil.
  */
 export function hashEmail(email: string): string {
   return crypto
     .createHash("sha256")
-    .update(email.toLowerCase().trim())
+    .update(normalizeEmailForFraudCheck(email))
     .digest("hex");
 }
 
