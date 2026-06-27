@@ -19,8 +19,8 @@ export const PACKS = {
   premium: {
     label: "Premium",
     credits: 50,
-    price: "19,99 €",
-    amountCents: 1999,
+    price: "24,99 €",
+    amountCents: 2499,
   },
 } as const;
 
