@@ -95,3 +95,37 @@ export function breadcrumbJsonLd(crumbs: Array<{ name: string; path: string }>) 
     })),
   };
 }
+
+/**
+ * JSON-LD Article pour un billet de blog.
+ * À inclure via un <script type="application/ld+json"> côté server.
+ */
+export function articleJsonLd(opts: {
+  title: string;
+  description: string;
+  path: string;
+  datePublished: string;
+  dateModified?: string;
+}) {
+  const url = `${SITE_URL}${opts.path}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: opts.title,
+    description: opts.description,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    datePublished: opts.datePublished,
+    dateModified: opts.dateModified ?? opts.datePublished,
+    inLanguage: "fr-FR",
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/CV-optimize-logo.png`,
+      },
+    },
+  };
+}

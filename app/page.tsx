@@ -32,7 +32,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Le PDF est-il vraiment compatible ATS ?",
-    a: "Oui. Texte sélectionnable, structure A4 deux colonnes, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
+    a: "Oui. Texte sélectionnable, structure A4 une colonne, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
   },
 ] as const;
 
@@ -658,7 +658,7 @@ export default function Landing() {
               {
                 num: "03",
                 title: "Télécharge",
-                desc: "PDF A4 deux colonnes, ATS-friendly, en moins de 30 secondes. Lettre alignée optionnelle.",
+                desc: "PDF A4 une colonne, ATS-friendly, en moins de 30 secondes. Lettre alignée optionnelle.",
                 meta: "PDF · 1 page",
               },
             ].map((step) => (
@@ -719,7 +719,7 @@ export default function Landing() {
               {
                 num: "03",
                 title: "Une page, point",
-                desc: "Layout A4 deux colonnes. Auto-scaling intelligent (0.55× à 1.15×) pour tenir sur une page peu importe la densité.",
+                desc: "Layout A4 une colonne. Auto-scaling intelligent (0.55× à 1.15×) pour tenir sur une page peu importe la densité.",
               },
               {
                 num: "04",
@@ -1079,6 +1079,9 @@ export default function Landing() {
               </Link>
               <Link href="/lettre" className="hover:text-ink transition">
                 Lettre
+              </Link>
+              <Link href="/blog" className="hover:text-ink transition">
+                Blog
               </Link>
               {isLogged ? (
                 <Link href="/account" className="hover:text-ink transition">
