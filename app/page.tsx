@@ -19,6 +19,10 @@ const FAQ_ITEMS = [
     a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
   },
   {
+    q: "Pour qui CV Optimizer est-il pensé ?",
+    a: "D'abord pour les alternants, étudiants, jeunes diplômés et profils en reconversion. L'objectif est de rendre ton expérience plus lisible pour l'offre, sans inventer de parcours.",
+  },
+  {
     q: "Est-ce que l'IA invente des expériences ?",
     a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
   },
@@ -39,6 +43,7 @@ const FAQ_ITEMS = [
 const NAV_LINKS_BASE = [
   { href: "#comment", label: "Comment" },
   { href: "#pourquoi", label: "Pourquoi" },
+  { href: "#cible", label: "Cible" },
   { href: "#tarifs", label: "Tarifs", requiresPricing: true },
   { href: "#faq", label: "FAQ" },
 ] as const;
@@ -307,7 +312,7 @@ export default function Landing() {
             <div className="lg:col-span-8">
               <p className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 <span className="inline-flex items-center gap-2">
-                  <span className="text-warm">●</span> ATS-friendly
+                  <span className="text-warm">●</span> Outil français
                 </span>
                 <span className="hidden h-3 w-px bg-rule sm:inline-block" />
                 <span className="inline-flex items-center gap-2">
@@ -315,7 +320,7 @@ export default function Landing() {
                 </span>
                 <span className="hidden h-3 w-px bg-rule sm:inline-block" />
                 <span className="inline-flex items-center gap-2">
-                  <span className="text-success">●</span> Une page A4
+                  <span className="text-success">●</span> Sans abonnement
                 </span>
               </p>
 
@@ -328,9 +333,9 @@ export default function Landing() {
               </h1>
 
               <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft">
-                Téléverse ton CV, colle l&apos;offre. Une IA reformule, priorise
-                les bonnes expériences et glisse les mots-clés. Tu récupères un
-                PDF prêt à envoyer.
+                CV Optimizer adapte ton CV à chaque offre sans mentir, sans
+                abonnement, en 30 secondes. Pensé d&apos;abord pour alternants,
+                étudiants, jeunes diplômés et profils en reconversion.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -355,7 +360,7 @@ export default function Landing() {
               </div>
 
               <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-faint">
-                ● 2 crédits offerts à l&apos;inscription · Pas de carte requise
+                ● 2 crédits offerts · Stage · Alternance · Premier CDI · Reconversion
               </p>
             </div>
 
@@ -497,6 +502,31 @@ export default function Landing() {
                       badr@example.com · Paris · linkedin.com/in/badr
                     </p>
 
+                    {/* Score de matching */}
+                    <div className="mt-3 border border-success/25 bg-success-soft/45 p-2.5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-muted">
+                          Match offre
+                        </span>
+                        <span className="font-display text-xl font-medium leading-none tracking-tight text-success">
+                          91 %
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1 overflow-hidden bg-paper">
+                        <div className="h-full w-[91%] bg-success" />
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {["React", "SEO", "Reporting"].map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-sm bg-paper px-1.5 py-0.5 font-mono text-[7.5px] tracking-[0.04em] text-success"
+                          >
+                            + {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* À propos */}
                     <div className="mt-4 border-t border-rule pt-3">
                       <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
@@ -636,8 +666,8 @@ export default function Landing() {
               </h2>
             </div>
             <p className="max-w-sm text-[15px] leading-relaxed text-ink-soft">
-              Pas de compte obligatoire pour tester. 1 essai gratuit, puis 2
-              crédits offerts à l&apos;inscription.
+              Tu vois le score CV/offre, les mots-clés à intégrer et la version
+              PDF prête à envoyer.
             </p>
           </div>
 
@@ -646,20 +676,20 @@ export default function Landing() {
               {
                 num: "01",
                 title: "Téléverse",
-                desc: "PDF de ton CV actuel. Aucune mise en page exigée, on lit tout.",
+                desc: "PDF de ton CV actuel. L'IA extrait ton parcours réel : formations, expériences, projets et compétences.",
                 meta: "PDF · jusqu'à 25 Mo",
               },
               {
                 num: "02",
-                title: "Colle l'offre",
-                desc: "N'importe quel type de contrat : stage, alternance, CDD, CDI, freelance. Détection auto du ton.",
-                meta: "Copier · coller",
+                title: "Choisis ton profil",
+                desc: "Stage, alternance, premier CDI ou reconversion : le ton et les priorités changent selon ta situation.",
+                meta: "Profil · ton adapté",
               },
               {
                 num: "03",
-                title: "Télécharge",
-                desc: "PDF A4 une colonne, ATS-friendly, en moins de 30 secondes. Lettre alignée optionnelle.",
-                meta: "PDF · 1 page",
+                title: "Colle l'offre",
+                desc: "Score de matching, mots-clés ajoutés, expériences priorisées. Tu télécharges un PDF A4 en moins de 30 secondes.",
+                meta: "Score · PDF",
               },
             ].map((step) => (
               <li
@@ -693,14 +723,14 @@ export default function Landing() {
                 ● Pourquoi ça marche
               </p>
               <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-                Les CV{" "}
-                <span className="italic font-normal text-warm">génériques</span>{" "}
-                finissent à la poubelle.
+                Un CV{" "}
+                <span className="italic font-normal text-warm">générique</span>{" "}
+                coûte des réponses.
               </h2>
             </div>
             <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
-              75 % des CV sont filtrés par un ATS avant qu&apos;un humain les lise.
-              On résout ça en gardant ton parcours intact.
+              CV Optimizer ne remplace pas ton parcours. Il rend visibles les
+              bons éléments pour l&apos;offre que tu vises.
             </p>
           </div>
 
@@ -708,23 +738,28 @@ export default function Landing() {
             {[
               {
                 num: "01",
+                title: "Score CV/offre",
+                desc: "Un indicateur simple te montre le niveau de matching : 62 %, 78 %, 91 %. Tu comprends si ton CV parle vraiment le langage de l'offre.",
+              },
+              {
+                num: "02",
+                title: "Mots-clés ajoutés",
+                desc: "React, SEO, gestion de projet, reporting, relation client : les termes importants sont intégrés naturellement quand ton expérience le permet.",
+              },
+              {
+                num: "03",
+                title: "Modes profil",
+                desc: "Alternance, stage, premier CDI ou reconversion : le ton change. On ne présente pas un étudiant comme un senior.",
+              },
+              {
+                num: "04",
                 title: "Anti-invention",
                 desc: "L'IA ne fabrique rien : ni expériences, ni compétences. Tout sort de ton CV original, reformulé pour matcher l'offre.",
               },
               {
-                num: "02",
-                title: "Mots-clés ATS",
-                desc: "Les bons termes de l'offre sont placés naturellement dans tes bullets et tes compétences. Pas de bourrage.",
-              },
-              {
-                num: "03",
-                title: "Une page, point",
-                desc: "Layout A4 une colonne. Auto-scaling intelligent (0.55× à 1.15×) pour tenir sur une page peu importe la densité.",
-              },
-              {
-                num: "04",
-                title: "Lettre alignée",
-                desc: "Génère en un clic une lettre de motivation qui cite les mêmes expériences que ton CV optimisé. Ton humain, zéro cliché.",
+                num: "05",
+                title: "Avant / après lisible",
+                desc: "Tu vois ce qui change : les bullets deviennent plus précis, les mots-clés ressortent et le CV reste prêt à envoyer en PDF.",
               },
             ].map((feat) => (
               <div
@@ -756,60 +791,88 @@ export default function Landing() {
               ● Avant / Après
             </p>
             <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-              Le même candidat, deux <span className="italic font-normal text-accent">offres différentes</span>.
+              Une transformation <span className="italic font-normal text-accent">visible</span>, pas juste un PDF.
             </h2>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12">
             {[
               {
-                tag: "Stage · Marketing",
-                heading: "Stagiaire Marketing Digital",
+                tag: "Avant",
+                score: "62 %",
+                scoreWidth: "62%",
+                heading: "CV générique",
+                target: "Offre visée · Alternance marketing digital",
                 bullets: [
-                  "Animé 5 campagnes Instagram (+18 % engagement)",
-                  "Rédigé 30 articles SEO (top 3 Google sur 4 mots-clés)",
-                  "Reporting hebdo Looker Studio",
+                  "A participé à la communication de l'entreprise",
+                  "Création de contenus pour les réseaux sociaux",
+                  "Aide sur différents projets marketing",
                 ],
+                keywords: ["communication", "réseaux sociaux"],
+                note: "Trop vague pour ressortir sur une offre précise.",
                 tone: "warm",
               },
               {
-                tag: "CDI · Growth",
-                heading: "Growth Marketer",
+                tag: "Après",
+                score: "91 %",
+                scoreWidth: "91%",
+                heading: "CV adapté à l'offre",
+                target: "Offre visée · Alternance marketing digital",
                 bullets: [
-                  "Piloté l'acquisition paid (3 canaux, CAC ÷ 2 en 6 mois)",
-                  "Structuré le funnel et le tracking GA4/Mixpanel",
-                  "Recruté et formé 2 stagiaires marketing",
+                  "Animé 5 campagnes Instagram et TikTok avec suivi du taux d'engagement",
+                  "Rédigé 30 contenus SEO alignés sur les mots-clés de l'offre",
+                  "Produit un reporting hebdomadaire sur Looker Studio pour prioriser les actions",
                 ],
-                tone: "accent",
+                keywords: ["SEO", "reporting", "Looker Studio", "engagement"],
+                note: "Même parcours, mais vocabulaire et preuves alignés.",
+                tone: "success",
               },
             ].map((variant, i) => (
               <article
                 key={i}
-                className="relative border border-rule bg-card p-8 transition hover:shadow-[0_24px_60px_-30px_rgba(15,15,16,0.18)] lg:p-10"
+                className={`relative border p-8 transition hover:shadow-[0_24px_60px_-30px_rgba(15,15,16,0.18)] lg:p-10 ${
+                  variant.tone === "success"
+                    ? "border-success/30 bg-card"
+                    : "border-rule bg-paper-deep"
+                }`}
               >
-                <p
-                  className={`font-mono text-[12px] uppercase tracking-[0.22em] ${
-                    variant.tone === "warm" ? "text-warm" : "text-accent"
-                  }`}
-                >
-                  ● {variant.tag}
-                </p>
-                <p className="mt-6 font-display text-xl font-medium tracking-tight text-ink">
-                  {variant.heading}{" "}
-                  <span className="text-ink-muted">·</span>{" "}
-                  <span
-                    className={
-                      variant.tone === "warm"
-                        ? "text-warm font-semibold"
-                        : "text-accent font-semibold"
-                    }
-                  >
-                    Acme Corp.
-                  </span>
-                </p>
-                <p className="mt-1 font-mono text-[13px] tracking-[0.04em] text-ink-muted">
-                  2022 · 2024 · Paris
-                </p>
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <p
+                      className={`font-mono text-[12px] uppercase tracking-[0.22em] ${
+                        variant.tone === "success" ? "text-success" : "text-warm"
+                      }`}
+                    >
+                      ● {variant.tag}
+                    </p>
+                    <h3 className="mt-5 font-display text-2xl font-medium tracking-tight text-ink">
+                      {variant.heading}
+                    </h3>
+                    <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-muted">
+                      {variant.target}
+                    </p>
+                  </div>
+                  <div className="min-w-24 text-right">
+                    <span
+                      className={`font-display text-4xl font-light leading-none tracking-tight ${
+                        variant.tone === "success" ? "text-success" : "text-warm"
+                      }`}
+                    >
+                      {variant.score}
+                    </span>
+                    <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
+                      match
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 h-1.5 overflow-hidden bg-rule">
+                  <div
+                    className={`h-full ${
+                      variant.tone === "success" ? "bg-success" : "bg-warm"
+                    }`}
+                    style={{ width: variant.scoreWidth }}
+                  />
+                </div>
                 <ul className="mt-5 space-y-2.5">
                   {variant.bullets.map((b, idx) => (
                     <li
@@ -824,8 +887,27 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-8 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
-                  ↪ Même candidat · réécrit pour l&apos;offre
+                <div className="mt-6 border-t border-rule pt-5">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+                    Mots-clés visibles
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {variant.keywords.map((kw) => (
+                      <span
+                        key={kw}
+                        className={`rounded-sm px-2 py-1 font-mono text-[11px] tracking-[0.04em] ${
+                          variant.tone === "success"
+                            ? "bg-success-soft text-success"
+                            : "bg-warm-soft text-warm"
+                        }`}
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-7 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
+                  ↪ {variant.note}
                 </p>
               </article>
             ))}
@@ -834,34 +916,45 @@ export default function Landing() {
       </section>
 
       {/* ============ POUR QUI ============ */}
-      <section className="border-b border-rule bg-paper-deep">
+      <section id="cible" className="border-b border-rule bg-paper-deep">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
-          <div className="mb-14 flex flex-wrap items-baseline justify-between gap-6">
-            <h2 className="max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-              Pour ceux qui postulent <span className="italic font-normal">vraiment</span>.
-            </h2>
-            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              ● Cas d&apos;usage
+          <div className="mb-14 grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                ● Pour qui
+              </p>
+              <h2 className="mt-3 max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                D&apos;abord pour les candidatures où{" "}
+                <span className="italic font-normal">chaque mot compte</span>.
+              </h2>
+            </div>
+            <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
+              Pas un outil généraliste. La page est pensée pour les profils qui
+              doivent prouver vite leur potentiel, même avec peu d&apos;expérience.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
+                k: "Alternants",
+                v: "Valoriser les missions terrain, les outils utilisés et le rythme école / entreprise.",
+                mode: "Mode alternance",
+              },
+              {
                 k: "Étudiants",
-                v: "Stages, alternances. Ton humble qui met en avant le potentiel.",
+                v: "Transformer projets, associations et jobs étudiants en expériences utiles pour un stage.",
+                mode: "Mode stage",
               },
               {
                 k: "Jeunes diplômés",
-                v: "Premier CDI. Compétences école + projets = ATS-ready.",
+                v: "Faire ressortir les bons projets, stages et compétences pour un premier CDI.",
+                mode: "Mode CDI junior",
               },
               {
                 k: "Reconversion",
-                v: "Mise en valeur des compétences transférables, pas du gap.",
-              },
-              {
-                k: "Freelances",
-                v: "Cibler chaque mission. Vocabulaire client, pas corporate.",
+                v: "Traduire les expériences passées en compétences transférables, sans masquer le parcours.",
+                mode: "Mode reconversion",
               },
             ].map((c, idx) => (
               <div
@@ -877,9 +970,36 @@ export default function Landing() {
                 <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
                   {c.v}
                 </p>
+                <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+                  {c.mode}
+                </p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ============ PREUVE HUMAINE ============ */}
+      <section className="border-b border-rule bg-paper">
+        <div className="mx-auto grid max-w-360 gap-10 px-6 py-16 lg:grid-cols-12 lg:items-end lg:py-24">
+          <div className="lg:col-span-4">
+            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+              ● Preuve humaine
+            </p>
+            <p className="mt-6 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
+              Candidatures sans réponse · CV trop générique · mots-clés manquants
+            </p>
+          </div>
+          <blockquote className="lg:col-span-8">
+            <p className="font-display text-[clamp(1.8rem,4vw,3.5rem)] font-light leading-[1.02] tracking-[-0.02em] text-ink">
+              “Créé par un candidat qui a connu la galère des candidatures sans réponse.”
+            </p>
+            <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+              L&apos;objectif est simple : aider les profils juniors ou en transition à
+              présenter leur vraie expérience avec les bons mots, sans tricher et
+              sans abonnement.
+            </p>
+          </blockquote>
         </div>
       </section>
 
@@ -896,8 +1016,8 @@ export default function Landing() {
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
               1 essai gratuit par service sans compte, puis 2 crédits offerts
-              à l&apos;inscription. Pas d&apos;abonnement, pas de carte requise
-              pour démarrer.
+              à l&apos;inscription. Pas d&apos;abonnement, pas de carte requise pour
+              démarrer.
             </p>
           </div>
 
@@ -1028,12 +1148,12 @@ export default function Landing() {
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-8">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
-                ● Prêt à postuler intelligemment ?
+                ● Prêt à envoyer un CV moins générique ?
               </p>
               <h2 className="mt-4 font-display text-[clamp(2.5rem,6vw,5rem)] font-light leading-[0.95] tracking-[-0.02em] text-paper">
-                Ton prochain entretien.
+                Adapte ton prochain CV.
                 <br />
-                <span className="italic font-normal text-warm">À une optimisation près.</span>
+                <span className="italic font-normal text-warm">Sans mentir.</span>
               </h2>
             </div>
             <div className="lg:col-span-4 flex flex-col gap-4">
@@ -1056,7 +1176,7 @@ export default function Landing() {
                 </span>
               </Link>
               <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
-                ● 2 crédits offerts · Sans carte
+                ● 2 crédits offerts · Sans abonnement
               </p>
             </div>
           </div>
@@ -1070,7 +1190,8 @@ export default function Landing() {
             <div>
               <Logo size="sm" />
               <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-ink-soft">
-                Ton CV adapté à chaque offre. Pas d&apos;invention, pas de magie, juste du contexte bien placé.
+                L&apos;outil français pour adapter ton CV à chaque offre sans mentir,
+                sans abonnement, en 30 secondes.
               </p>
             </div>
             <nav aria-label="Pied de page" className="grid grid-cols-2 gap-x-10 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted sm:grid-cols-3">

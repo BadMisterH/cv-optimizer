@@ -8,7 +8,7 @@ export const SITE_URL =
 export const SITE_NAME = "CV Optimizer";
 
 export const SITE_DESCRIPTION =
-  "Adapte ton CV à chaque offre d'emploi en 30 secondes. Reformulation des expériences pertinentes, mots-clés ATS bien placés, sans rien inventer dans ton parcours. CV sur une page A4 prête à envoyer, lettre de motivation alignée. 2 crédits offerts à l'inscription.";
+  "CV Optimizer est l'outil français pour adapter ton CV à chaque offre sans mentir, sans abonnement, en 30 secondes. Score CV/offre, mots-clés ATS, modes stage, alternance, premier CDI et reconversion. 2 crédits offerts à l'inscription.";
 
 export const SITE_KEYWORDS = [
   "optimisation CV",
@@ -20,10 +20,13 @@ export const SITE_KEYWORDS = [
   "lettre de motivation IA",
   "lettre de motivation personnalisée",
   "IA CV",
-  "CV stage",
+  "score matching CV offre",
   "CV alternance",
+  "CV stage",
+  "CV étudiant",
+  "CV jeune diplômé",
+  "CV reconversion",
   "CV CDI",
-  "CV freelance",
   "ATS scanner",
   "mots-clés ATS",
 ];

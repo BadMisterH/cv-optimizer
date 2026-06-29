@@ -75,7 +75,7 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
         "@id": `${SITE_URL}#how-to`,
         name: "Comment optimiser ton CV à une offre d'emploi avec CV Optimizer",
         description:
-          "3 étapes pour adapter ton CV à chaque candidature et booster ton taux de réponse.",
+          "3 étapes pour adapter ton CV à chaque candidature avec un score CV/offre, des mots-clés ATS et un PDF prêt à envoyer.",
         totalTime: "PT30S",
         estimatedCost: {
           "@type": "MonetaryAmount",
@@ -93,15 +93,15 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
           {
             "@type": "HowToStep",
             position: 2,
-            name: "Colle l'offre d'emploi",
-            text: "Copie le texte complet de l'offre d'emploi visée (intitulé, missions, profil recherché). Peu importe le type de contrat : stage, alternance, CDD, CDI, freelance.",
+            name: "Choisis ton profil et colle l'offre",
+            text: "Choisis le mode adapté à ta situation : stage, alternance, premier CDI ou reconversion. Copie ensuite le texte complet de l'offre visée.",
             url: `${SITE_URL}/optimiser#comment`,
           },
           {
             "@type": "HowToStep",
             position: 3,
             name: "Récupère ton CV optimisé en PDF",
-            text: "Une IA reformule, priorise les bonnes expériences et place les mots-clés ATS. Tu récupères un PDF prêt à envoyer en moins de 30 secondes.",
+            text: "Une IA reformule, priorise les bonnes expériences, place les mots-clés ATS et affiche un score de matching CV/offre. Tu récupères un PDF prêt à envoyer en moins de 30 secondes.",
             url: `${SITE_URL}/optimiser#comment`,
           },
         ],
