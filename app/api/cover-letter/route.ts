@@ -176,12 +176,15 @@ export async function POST(req: Request) {
     const gate = await checkUsageGate(req, { requireAuth: true, anonRedirectPath: "/lettre" });
     if (!gate.allowed) {
       const error =
-        gate.reason === "no_credits"
+        gate.reason === "email_unverified"
+          ? "Vérifie ton adresse email avant d'utiliser tes crédits."
+          : gate.reason === "no_credits"
           ? "Tu n'as plus de crédits. Achète un pack pour continuer."
           : "Crée un compte gratuit pour générer une lettre de motivation.";
+      const status = gate.reason === "email_unverified" ? 403 : 401;
       return NextResponse.json(
         { error, redirect: gate.redirect },
-        { status: 401 }
+        { status }
       );
     }
 

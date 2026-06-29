@@ -43,9 +43,9 @@ export function hashEmail(email: string): string {
  * en conséquence, dans une seule transaction (claim + crédit atomiques).
  * - Renvoie `true` si c'est la première fois : l'utilisateur reçoit WELCOME_BONUS_CREDITS crédits.
  * - Renvoie `false` si l'email était déjà dans la table (compte supprimé puis recréé) :
- *   le solde est remis à 0, anti-fraude.
+ *   aucun crédit n'est ajouté, anti-fraude.
  *
- * Le claim (INSERT ... ON CONFLICT) et le crédit sont dans la même transaction,
+ * Le claim (INSERT ... ON CONFLICT) et l'ajout de crédits sont dans la même transaction,
  * donc pas de race condition ni d'état incohérent entre les deux.
  */
 export async function claimWelcomeBonus(
@@ -63,10 +63,12 @@ export async function claimWelcomeBonus(
       [hash]
     );
     const granted = (result.rowCount ?? 0) > 0;
-    await client.query('UPDATE "user" SET credits = $1 WHERE id = $2', [
-      granted ? WELCOME_BONUS_CREDITS : 0,
-      userId,
-    ]);
+    if (granted) {
+      await client.query('UPDATE "user" SET credits = credits + $1 WHERE id = $2', [
+        WELCOME_BONUS_CREDITS,
+        userId,
+      ]);
+    }
     await client.query("COMMIT");
     return granted;
   } catch (err) {

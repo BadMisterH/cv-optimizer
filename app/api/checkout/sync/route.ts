@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import {
   grantCreditsForStripeCheckoutSession,
   StripeCreditError,
 } from "@/lib/stripe-crediting";
+import { requireVerifiedSession } from "@/lib/auth-verification";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const session = await auth.api.getSession({ headers: req.headers });
+  const { session, response } = await requireVerifiedSession(req);
+  if (response) {
+    if (response.status === 401) {
+      return NextResponse.json(
+        { error: "Tu dois être connecté pour synchroniser ce paiement." },
+        { status: 401 }
+      );
+    }
+    return response;
+  }
+
   if (!session?.user) {
     return NextResponse.json(
       { error: "Tu dois être connecté pour synchroniser ce paiement." },

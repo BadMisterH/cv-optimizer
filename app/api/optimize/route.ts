@@ -154,12 +154,15 @@ export async function POST(req: Request) {
     const gate = await checkUsageGate(req);
     if (!gate.allowed) {
       const error =
-        gate.reason === "no_credits"
+        gate.reason === "email_unverified"
+          ? "Vérifie ton adresse email avant d'utiliser tes crédits."
+          : gate.reason === "no_credits"
           ? "Tu n'as plus de crédits. Achète un pack pour continuer."
           : "Tu as déjà utilisé ton essai gratuit. Crée un compte pour continuer.";
+      const status = gate.reason === "email_unverified" ? 403 : 401;
       return NextResponse.json(
         { error, redirect: gate.redirect },
-        { status: 401 }
+        { status }
       );
     }
 

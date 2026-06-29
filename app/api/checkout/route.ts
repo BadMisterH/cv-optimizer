@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { PACK_PRICE_ENV, PACKS, isPackKey } from "@/lib/stripe-packs";
 import { STRIPE_ENABLED, isStripeConfigured } from "@/lib/feature-flags";
+import { requireVerifiedSession } from "@/lib/auth-verification";
 
 export const runtime = "nodejs";
 
@@ -25,7 +25,20 @@ export async function POST(req: Request) {
     );
   }
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
+    const { session, response } = await requireVerifiedSession(req);
+    if (response) {
+      if (response.status === 401) {
+        return NextResponse.json(
+          {
+            error: "Tu dois être connecté pour acheter des crédits.",
+            redirect: "/sign-in?redirect=/buy-credits",
+          },
+          { status: 401 }
+        );
+      }
+      return response;
+    }
+
     if (!session?.user) {
       return NextResponse.json(
         {

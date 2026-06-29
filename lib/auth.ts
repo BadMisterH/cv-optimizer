@@ -63,6 +63,35 @@ async function sendVerificationEmail(email: string, url: string) {
   });
 }
 
+type WelcomeBonusUser = {
+  id: string;
+  email?: string | null;
+  emailVerified?: boolean | null;
+};
+
+async function grantWelcomeBonusForVerifiedUser(user: WelcomeBonusUser) {
+  if (user.emailVerified !== true) return;
+
+  const email = typeof user.email === "string" ? user.email : null;
+  if (!email) return;
+
+  try {
+    const granted = await claimWelcomeBonus(user.id, email);
+    if (!granted) {
+      console.log(
+        `[welcome-bonus] email déjà consommé pour ${user.id} → aucun crédit ajouté`
+      );
+      return;
+    }
+
+    sendWelcomeEmail(email).catch((err) =>
+      console.error("[welcome-email] échec envoi:", err)
+    );
+  } catch (err) {
+    console.error("[welcome-bonus] échec claim:", err);
+  }
+}
+
 const productionUrl =
   process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
 
@@ -110,28 +139,10 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Après création du user, on tente de réclamer le bonus de bienvenue.
-        // Si l'email a déjà bénéficié du bonus (compte supprimé puis recréé),
-        // on remet le solde à 0 — anti-fraude.
+        // Bonus uniquement pour un email déjà vérifié (Google, etc.).
+        // Les inscriptions email/password reçoivent le bonus après vérification.
         after: async (user) => {
-          const email = typeof user.email === "string" ? user.email : null;
-          if (!email) return;
-          try {
-            const granted = await claimWelcomeBonus(user.id, email);
-            if (!granted) {
-              console.log(
-                `[welcome-bonus] email déjà consommé pour ${user.id} → credits=0`
-              );
-            } else {
-              // Nouveau compte : envoyer l'email de bienvenue (non bloquant)
-              sendWelcomeEmail(email).catch((err) =>
-                console.error("[welcome-email] échec envoi:", err)
-              );
-            }
-          } catch (err) {
-            console.error("[welcome-bonus] échec claim:", err);
-            // On ne bloque pas l'inscription si la table est inaccessible
-          }
+          await grantWelcomeBonusForVerifiedUser(user);
         },
       },
     },
@@ -147,10 +158,14 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: true,
+    sendOnSignIn: true,
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60, // 1h
     sendVerificationEmail: async ({ user, url }) => {
       await sendVerificationEmail(user.email, url);
+    },
+    afterEmailVerification: async (user) => {
+      await grantWelcomeBonusForVerifiedUser(user);
     },
   },
   socialProviders: googleEnabled

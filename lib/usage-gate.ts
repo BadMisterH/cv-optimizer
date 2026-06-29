@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { isAdminEmail } from "@/lib/admin";
+import { isEmailVerified } from "@/lib/auth-verification";
 
 // Cookie unique partagé entre CV et Lettre — 1 seul essai gratuit global
 export const ANON_COOKIE_NAME = "anon_used";
@@ -21,7 +22,7 @@ export type UsageGateResult =
   | {
       allowed: false;
       redirect: string;
-      reason: "anon_limit" | "no_credits";
+      reason: "anon_limit" | "email_unverified" | "no_credits";
     };
 
 /**
@@ -39,6 +40,14 @@ export async function checkUsageGate(
 
   if (session?.user) {
     const userId = session.user.id;
+
+    if (!isEmailVerified(session.user)) {
+      return {
+        allowed: false,
+        redirect: "/sign-in?verify=email",
+        reason: "email_unverified",
+      };
+    }
 
     // Admin → bypass complet : pas de check, pas de déduction
     if (isAdminEmail(session.user.email)) {
