@@ -32,7 +32,7 @@ const RATE_LIMITS: Array<{ test: (path: string) => boolean; config: LimitConfig 
   },
   // Checkout Stripe (anti spam de créations de sessions)
   {
-    test: (p) => p === "/api/checkout",
+    test: (p) => p === "/api/checkout" || p === "/api/checkout/sync",
     config: { limit: 10, windowMs: 60_000 },
   },
   // Account delete — anti accidental + anti brute-force

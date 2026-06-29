@@ -178,7 +178,7 @@ export default function Page() {
 
           <div className="mt-10 grid gap-6 md:grid-cols-12">
             <p className="md:col-span-6 lg:col-span-5 text-lg leading-relaxed text-ink-soft">
-              Téléverse ton CV en PDF et l&apos;offre que tu vises. Claude
+              Téléverse ton CV en PDF et l&apos;offre que tu vises. Une IA
               reformule, priorise les bonnes expériences et glisse les
               mots-clés ATS sans rien inventer.
             </p>
@@ -553,7 +553,7 @@ function Result({
                   Modifications · {data.modifications.length}
                 </h3>
                 <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
-                  Ce que Claude a changé
+                  Ce que l&apos;IA a changé
                 </p>
                 <ol className="mt-6 space-y-5">
                   {data.modifications.map((m, i) => (

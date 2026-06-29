@@ -120,7 +120,7 @@ export default function LetterPage() {
 
           <div className="mt-10 grid gap-6 md:grid-cols-12">
             <p className="md:col-span-6 lg:col-span-5 text-lg leading-relaxed text-ink-soft">
-              Claude rédige une lettre personnalisée à partir de ton CV et de
+              Une IA rédige une lettre personnalisée à partir de ton CV et de
               l&apos;offre. Mêmes expériences citées, même ton, mots-clés
               alignés. Pas de générique.
             </p>
@@ -223,7 +223,7 @@ export default function LetterPage() {
                   </>
                 )}
                 <p className="mt-1.5 font-mono text-[11px] text-ink-faint">
-                  Claude s&apos;en sert uniquement pour imiter ton style d&apos;écriture.
+                  L&apos;IA s&apos;en sert uniquement pour imiter ton style d&apos;écriture.
                 </p>
               </div>
 
@@ -476,7 +476,7 @@ function LetterResult({
                 Choix éditoriaux · {data.notes.length}
               </h3>
               <p className="mt-2 font-display text-2xl font-medium tracking-tight text-ink">
-                Comment Claude a aligné la lettre
+                Comment l&apos;IA a aligné la lettre
               </p>
               <ol className="mt-6 space-y-5">
                 {data.notes.map((n, i) => (

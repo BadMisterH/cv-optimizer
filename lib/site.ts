@@ -19,7 +19,7 @@ export const SITE_KEYWORDS = [
   "CV PDF",
   "lettre de motivation IA",
   "lettre de motivation personnalisée",
-  "Claude IA CV",
+  "IA CV",
   "CV stage",
   "CV alternance",
   "CV CDI",

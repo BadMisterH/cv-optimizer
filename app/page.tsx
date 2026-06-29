@@ -12,14 +12,14 @@ import { StructuredData } from "./components/StructuredData";
 const FAQ_ITEMS = [
   {
     q: "Est-ce que mes données sont sauvegardées sur vos serveurs ?",
-    a: "Non. Le CV et l'offre transitent vers Claude le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
+    a: "Non. Le CV et l'offre transitent vers notre IA le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
   },
   {
     q: "Combien de temps prend une génération ?",
     a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
   },
   {
-    q: "Est-ce que Claude invente des expériences ?",
+    q: "Est-ce que l'IA invente des expériences ?",
     a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
   },
   {
@@ -328,7 +328,7 @@ export default function Landing() {
               </h1>
 
               <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft">
-                Téléverse ton CV, colle l&apos;offre. Claude reformule, priorise
+                Téléverse ton CV, colle l&apos;offre. Une IA reformule, priorise
                 les bonnes expériences et glisse les mots-clés. Tu récupères un
                 PDF prêt à envoyer.
               </p>
@@ -709,7 +709,7 @@ export default function Landing() {
               {
                 num: "01",
                 title: "Anti-invention",
-                desc: "Claude ne fabrique rien : ni expériences, ni compétences. Tout sort de ton CV original, reformulé pour matcher l'offre.",
+                desc: "L'IA ne fabrique rien : ni expériences, ni compétences. Tout sort de ton CV original, reformulé pour matcher l'offre.",
               },
               {
                 num: "02",

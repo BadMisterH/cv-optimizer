@@ -101,7 +101,7 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
             "@type": "HowToStep",
             position: 3,
             name: "Récupère ton CV optimisé en PDF",
-            text: "Claude reformule, priorise les bonnes expériences et place les mots-clés ATS. Tu récupères un PDF prêt à envoyer en moins de 30 secondes.",
+            text: "Une IA reformule, priorise les bonnes expériences et place les mots-clés ATS. Tu récupères un PDF prêt à envoyer en moins de 30 secondes.",
             url: `${SITE_URL}/optimiser#comment`,
           },
         ],

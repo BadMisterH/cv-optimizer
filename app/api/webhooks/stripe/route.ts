@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import { pool } from "@/lib/db";
+import {
+  grantCreditsForStripeCheckoutSession,
+  StripeCreditError,
+} from "@/lib/stripe-crediting";
 
 export const runtime = "nodejs";
 
@@ -33,61 +36,34 @@ export async function POST(req: Request) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
-  const userId = session.metadata?.userId;
-  const credits = Number(session.metadata?.credits ?? 0);
-  const pack = session.metadata?.pack;
-  const amount = session.amount_total ?? 0;
-  const currency = (session.currency ?? "eur").toLowerCase();
-  const stripeSessionId = session.id;
-
-  if (!userId || !credits || !pack) {
-    console.error("[webhook/stripe] metadata manquantes:", session.metadata);
-    return NextResponse.json({ error: "Metadata invalides" }, { status: 400 });
-  }
-
-  if (session.payment_status !== "paid") {
-    console.warn(
-      `[webhook/stripe] session ${stripeSessionId} not paid (status=${session.payment_status})`
-    );
-    return NextResponse.json({ received: true });
-  }
-
-  // Idempotence : insertion dans purchases avec session_id UNIQUE.
-  // Si déjà présent → on skip la créditation (webhook rejoué par Stripe).
-  const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    const result = await grantCreditsForStripeCheckoutSession(session);
 
-    const insertResult = await client.query(
-      `INSERT INTO purchases (user_id, stripe_session_id, pack, credits, amount_cents, currency)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (stripe_session_id) DO NOTHING
-       RETURNING id`,
-      [userId, stripeSessionId, pack, credits, amount, currency]
-    );
+    if (result.status === "not_paid") {
+      console.warn(
+        `[webhook/stripe] session ${result.stripeSessionId} not paid (status=${session.payment_status})`
+      );
+      return NextResponse.json({ received: true });
+    }
 
-    if (insertResult.rowCount === 0) {
-      // Déjà traité
-      await client.query("ROLLBACK");
-      console.log(`[webhook/stripe] session ${stripeSessionId} déjà traitée, skip`);
+    if (result.status === "duplicate") {
+      console.log(
+        `[webhook/stripe] session ${result.stripeSessionId} déjà traitée, skip`
+      );
       return NextResponse.json({ received: true, duplicate: true });
     }
 
-    await client.query(
-      'UPDATE "user" SET credits = credits + $1 WHERE id = $2',
-      [credits, userId]
-    );
-
-    await client.query("COMMIT");
     console.log(
-      `[webhook/stripe] +${credits} crédits pour user=${userId} (session=${stripeSessionId})`
+      `[webhook/stripe] +${result.credits} crédits pour user=${result.userId} (session=${result.stripeSessionId})`
     );
   } catch (err) {
-    await client.query("ROLLBACK");
+    if (err instanceof StripeCreditError && err.status < 500) {
+      console.error("[webhook/stripe] metadata invalides:", err.message);
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+
     console.error("[webhook/stripe] échec créditation:", err);
     return NextResponse.json({ error: "Échec créditation" }, { status: 500 });
-  } finally {
-    client.release();
   }
 
   return NextResponse.json({ received: true });

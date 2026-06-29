@@ -329,7 +329,7 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       return NextResponse.json(
-        { error: `Erreur API Claude (${err.status}): ${err.message}` },
+        { error: `Erreur API IA (${err.status}): ${err.message}` },
         { status: err.status ?? 500 }
       );
     }

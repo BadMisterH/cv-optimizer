@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
@@ -10,9 +10,12 @@ import { PACKS, type PackKey } from "@/lib/stripe-packs";
 import { Logo } from "../components/Logo";
 
 type SessionUser = {
+  id?: string;
   email?: string;
   credits?: number;
 };
+
+type SyncStatus = "idle" | "syncing" | "done" | "error";
 
 export default function BuyCreditsPage() {
   return (
@@ -23,7 +26,7 @@ export default function BuyCreditsPage() {
 }
 
 function BuyCreditsContent() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending, refetch } = useSession();
   const searchParams = useSearchParams();
   const [loadingPack, setLoadingPack] = useState<PackKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,13 +42,18 @@ function BuyCreditsContent() {
   });
   const [waitlistEmailOpen, setWaitlistEmailOpen] = useState<PackKey | null>(null);
   const [waitlistError, setWaitlistError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncedBalance, setSyncedBalance] = useState<number | null>(null);
 
   const user = session?.user as SessionUser | undefined;
   const credits = user?.credits ?? 0;
+  const displayedCredits = syncedBalance ?? credits;
   const isAdmin = isAdminEmail(user?.email);
 
   const success = searchParams.get("success") === "true";
   const canceled = searchParams.get("canceled") === "true";
+  const checkoutSessionId = searchParams.get("session_id");
 
   async function handleBuy(pack: PackKey) {
     if (!STRIPE_ENABLED) return;
@@ -122,15 +130,62 @@ function BuyCreditsContent() {
   // Récupère le détail du pack acheté (côté client) après retour de Stripe
   type PendingPurchase = { pack: PackKey; label: string; credits: number; price: string };
   const [purchased, setPurchased] = useState<PendingPurchase | null>(null);
-  if (success && purchased === null && typeof window !== "undefined") {
+
+  useEffect(() => {
+    if (!success || purchased !== null || typeof window === "undefined") return;
     try {
-      const raw = sessionStorage.getItem("cv-optimizer:pending-purchase");
-      if (raw) {
-        setPurchased(JSON.parse(raw));
-        sessionStorage.removeItem("cv-optimizer:pending-purchase");
-      }
+      const raw = window.sessionStorage.getItem("cv-optimizer:pending-purchase");
+      if (!raw) return;
+      setPurchased(JSON.parse(raw));
+      window.sessionStorage.removeItem("cv-optimizer:pending-purchase");
     } catch {}
-  }
+  }, [success, purchased]);
+
+  useEffect(() => {
+    if (!success || !STRIPE_ENABLED || !checkoutSessionId || !user?.id) return;
+
+    let cancelled = false;
+
+    async function syncCheckoutSession() {
+      setSyncStatus("syncing");
+      setSyncError(null);
+      try {
+        const res = await fetch("/api/checkout/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: checkoutSessionId }),
+        });
+        const data = await res.json().catch(() => null) as {
+          balance?: number;
+          error?: string;
+        } | null;
+
+        if (!res.ok) {
+          throw new Error(data?.error ?? "Impossible de synchroniser le paiement.");
+        }
+
+        if (cancelled) return;
+        if (typeof data?.balance === "number") {
+          setSyncedBalance(data.balance);
+        }
+        setSyncStatus("done");
+        await refetch({ query: { disableCookieCache: true } });
+      } catch (err) {
+        if (cancelled) return;
+        setSyncStatus("error");
+        setSyncError(
+          err instanceof Error
+            ? err.message
+            : "Paiement confirmé, mais synchronisation des crédits impossible."
+        );
+      }
+    }
+
+    syncCheckoutSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [success, checkoutSessionId, user?.id, refetch]);
 
   // ========== VUE SUCCÈS DÉDIÉE ==========
   if (success && STRIPE_ENABLED) {
@@ -184,12 +239,29 @@ function BuyCreditsContent() {
                 Nouveau solde
               </span>
               <span className="font-display text-3xl font-medium tracking-tight text-ink">
-                {isAdmin ? "∞" : credits}
+                {isAdmin
+                  ? "∞"
+                  : syncStatus === "syncing" && syncedBalance === null
+                    ? "..."
+                    : displayedCredits}
                 <span className="ml-2 text-base font-normal text-ink-muted">
-                  crédit{credits > 1 ? "s" : ""}
+                  crédit{displayedCredits > 1 ? "s" : ""}
                 </span>
               </span>
             </div>
+            {syncStatus === "syncing" && (
+              <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-muted">
+                ● Synchronisation des crédits...
+              </p>
+            )}
+            {syncStatus === "error" && (
+              <p
+                role="alert"
+                className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-danger"
+              >
+                ✕ {syncError}
+              </p>
+            )}
           </section>
 
           {/* CTAs */}

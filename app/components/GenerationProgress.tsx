@@ -26,7 +26,7 @@ const STEPS_BY_VARIANT: Record<Variant, Step[]> = {
 
 const TIPS_BY_VARIANT: Record<Variant, string[]> = {
   cv: [
-    "Claude reformule les bullets pour les ATS sans rien inventer dans ton parcours.",
+    "L'IA reformule les bullets pour les ATS sans rien inventer dans ton parcours.",
     "Les compétences sont réorganisées pour matcher l'offre, pas modifiées.",
     "Le score ATS dépend des mots-clés exacts présents dans l'offre.",
     "Tout est généré pour tenir sur une seule page A4.",
