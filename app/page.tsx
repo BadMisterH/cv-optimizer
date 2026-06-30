@@ -97,13 +97,13 @@ function LandingHeader({ user }: { user: HeaderUser }) {
   const isEmpty = isLogged && !isAdmin && credits <= 0;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
+    <header className="sticky top-0 z-40 overflow-x-clip border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
       <div className="mx-auto flex max-w-360 items-center justify-between gap-4 px-6 py-3.5">
         <Logo size="sm" />
 
         <nav
           aria-label="Sections"
-          className="hidden items-center gap-7 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted lg:flex"
+          className="hidden min-w-0 items-center gap-6 font-mono text-[13px] uppercase tracking-[0.2em] text-ink-muted xl:flex"
         >
           {NAV_LINKS.map((l) => (
             <a
@@ -116,7 +116,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden min-w-0 items-center gap-2 xl:flex">
           {isLogged ? (
             <>
               <CreditChip user={user} />
@@ -146,7 +146,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
           aria-expanded={open}
-          className="relative inline-flex h-10 w-10 items-center justify-center border border-rule transition hover:border-ink lg:hidden"
+          className="relative inline-flex h-10 w-10 items-center justify-center border border-rule transition hover:border-ink xl:hidden"
         >
           <span aria-hidden className="relative block h-3 w-4">
             <span
@@ -169,7 +169,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
       </div>
 
       {open && (
-        <div className="border-t border-rule bg-paper lg:hidden">
+        <div className="border-t border-rule bg-paper xl:hidden">
           <div className="mx-auto max-w-360 px-6 py-6">
             {isLogged && (
               <div className="mb-5 flex items-baseline justify-between gap-3 border border-rule bg-paper-deep px-4 py-3">
@@ -295,12 +295,12 @@ export default function Landing() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen overflow-x-clip">
       <StructuredData faq={FAQ_ITEMS.map((i) => ({ q: i.q, a: i.a }))} />
       <LandingHeader user={(session?.user as HeaderUser) ?? null} />
 
       {/* ============ HERO ============ */}
-      <section className="hero-bg border-b border-rule">
+      <section className="hero-bg overflow-x-clip border-b border-rule">
         <div className="mx-auto max-w-360 px-6 pt-12 pb-20 lg:pt-16 lg:pb-32">
 
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
@@ -1086,8 +1086,8 @@ export default function Landing() {
       <section className="bg-ink text-paper">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-8">
-              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
+            <div className="min-w-0 lg:col-span-8">
+              <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-ink-faint sm:text-[13px] sm:tracking-[0.22em]">
                 ● Ton prochain CV doit parler le langage de l&apos;annonce
               </p>
               <h2 className="mt-4 font-display text-[clamp(2.5rem,6vw,5rem)] font-light leading-[0.95] tracking-[-0.02em] text-paper">
@@ -1096,26 +1096,26 @@ export default function Landing() {
                 <span className="italic font-normal text-warm">Sans mentir.</span>
               </h2>
             </div>
-            <div className="lg:col-span-4 flex flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4 lg:col-span-4">
               <Link
                 href={ctaHref}
-                className="group inline-flex w-full items-center justify-between gap-3 bg-paper px-7 py-5 text-base font-medium tracking-tight text-ink transition hover:bg-warm hover:text-paper"
+                className="group inline-flex w-full min-w-0 items-center justify-between gap-3 bg-paper px-7 py-5 text-base font-medium tracking-tight text-ink transition hover:bg-warm hover:text-paper"
               >
-                <span>Tester avec mon CV</span>
+                <span className="min-w-0">Tester avec mon CV</span>
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </Link>
               <a
                 href="#exemple"
-                className="group inline-flex w-full items-center justify-between gap-3 border border-paper/30 px-7 py-5 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint transition hover:border-paper hover:text-paper"
+                className="group inline-flex w-full min-w-0 items-center justify-between gap-3 border border-paper/30 px-7 py-5 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-faint transition hover:border-paper hover:text-paper sm:text-[13px] sm:tracking-[0.22em]"
               >
-                Voir un exemple avant/après
+                <span className="min-w-0">Voir un exemple avant/après</span>
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </a>
-              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint sm:text-[12px] sm:tracking-[0.22em]">
                 1 essai gratuit · Pas de carte bancaire · CV supprimé après génération
               </p>
             </div>
@@ -1134,7 +1134,7 @@ export default function Landing() {
                 sans inventer ton parcours.
               </p>
             </div>
-            <nav aria-label="Pied de page" className="grid grid-cols-2 gap-x-10 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted sm:grid-cols-3">
+            <nav aria-label="Pied de page" className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-muted sm:grid-cols-3 sm:gap-x-10 sm:text-[13px] sm:tracking-[0.22em]">
               <Link href="/optimiser" className="hover:text-ink transition">
                 Tester CV
               </Link>
@@ -1170,8 +1170,8 @@ export default function Landing() {
               </a>
             </nav>
           </div>
-          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-            <span>© {new Date().getFullYear()} · CV Optimizer · Tous droits réservés</span>
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-3 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-muted sm:text-[13px] sm:tracking-[0.22em]">
+            <span className="min-w-0">© {new Date().getFullYear()} · CV Optimizer · Tous droits réservés</span>
             <span className="text-ink-faint">v.01</span>
           </div>
         </div>

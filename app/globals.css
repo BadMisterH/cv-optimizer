@@ -38,6 +38,8 @@ html,
 body {
   background: var(--color-paper);
   color: var(--color-ink);
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 html {
@@ -187,4 +189,3 @@ body {
   }
   .cv-tilt { transition: none; }
 }
-
