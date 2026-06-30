@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "CV Optimizer · Adapte ton CV à chaque offre d'emploi";
+export const alt = "CV Optimizer · Ton CV est peut-être bon, mais pas pour cette offre";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -52,9 +52,9 @@ export default async function OpengraphImage() {
             marginTop: 16,
           }}
         >
-          <span style={{ color: "#d97247" }}>● ATS-FRIENDLY</span>
-          <span style={{ color: "#1f4bff" }}>● 30 SECONDES</span>
-          <span style={{ color: "#1a8a5a" }}>● UNE PAGE A4</span>
+          <span style={{ color: "#d97247" }}>● CV CIBLÉ PAR OFFRE</span>
+          <span style={{ color: "#1f4bff" }}>● SANS MENSONGE</span>
+          <span style={{ color: "#1a8a5a" }}>● PDF PRÊT À ENVOYER</span>
         </div>
 
         {/* Title block */}
@@ -69,12 +69,13 @@ export default async function OpengraphImage() {
               flexDirection: "column",
             }}
           >
-            <span>Adapte ton CV à</span>
+            <span>Ton CV est peut-être bon.</span>
             <span>
+              Mais{" "}
               <span style={{ fontStyle: "italic", color: "#1f4bff", fontWeight: 400 }}>
-                chaque
+                pas
               </span>{" "}
-              offre.
+              pour cette offre.
             </span>
           </div>
         </div>

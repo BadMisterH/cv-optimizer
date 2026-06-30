@@ -8,7 +8,7 @@ export const SITE_URL =
 export const SITE_NAME = "CV Optimizer";
 
 export const SITE_DESCRIPTION =
-  "CV Optimizer est l'outil français pour adapter ton CV à chaque offre sans mentir, sans abonnement, en 30 secondes. Score CV/offre, mots-clés ATS, modes stage, alternance, premier CDI et reconversion. 2 crédits offerts à l'inscription.";
+  "Ton CV est peut-être bon, mais pas pour cette offre. CV Optimizer transforme ton CV générique en CV ciblé pour une offre précise, sans inventer ton parcours.";
 
 export const SITE_KEYWORDS = [
   "optimisation CV",

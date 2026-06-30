@@ -4,53 +4,49 @@ import Link from "next/link";
 import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
-import { PRICING_PUBLIC } from "@/lib/feature-flags";
 import { Logo } from "./components/Logo";
 import { UserMenu } from "./components/UserMenu";
 import { StructuredData } from "./components/StructuredData";
 
 const FAQ_ITEMS = [
   {
-    q: "Est-ce que mes données sont sauvegardées sur vos serveurs ?",
-    a: "Non. Le CV et l'offre transitent vers notre IA le temps de la génération, puis sont oubliés. Ta photo reste en local dans ton navigateur (localStorage). Seules ton email et ton solde de crédits sont stockés.",
+    q: "En quoi CV Optimizer est différent d'un simple ChatGPT ?",
+    a: "CV Optimizer est pensé pour une candidature précise : ton CV, une offre, puis une version ciblée qui reprend le vocabulaire utile sans sortir de ton parcours. Tu n'as pas à écrire le prompt, trier les réponses ou remettre la mise en page en PDF.",
+  },
+  {
+    q: "Est-ce que l'IA peut inventer des expériences ?",
+    a: "Non. CV Optimizer reformule, priorise et clarifie ce qui existe déjà dans ton CV. Il ne crée pas de poste, de diplôme, de compétence ou de résultat que tu n'as jamais eu.",
+  },
+  {
+    q: "Est-ce que mes données restent confidentielles ?",
+    a: "Oui. Ton CV n'est pas vendu, n'est pas utilisé pour entraîner un modèle et le contenu du CV n'est pas conservé après génération. Seuls les éléments nécessaires au compte et aux crédits sont stockés.",
   },
   {
     q: "Combien de temps prend une génération ?",
-    a: "Environ 30 secondes pour un CV optimisé, 25 secondes pour une lettre. Un loader détaillé t'accompagne pendant l'attente.",
-  },
-  {
-    q: "Pour qui CV Optimizer est-il pensé ?",
-    a: "D'abord pour les alternants, étudiants, jeunes diplômés et profils en reconversion. L'objectif est de rendre ton expérience plus lisible pour l'offre, sans inventer de parcours.",
-  },
-  {
-    q: "Est-ce que l'IA invente des expériences ?",
-    a: "Non. Le prompt système l'interdit explicitement. Le modèle reformule, priorise et glisse des mots-clés issus de l'offre, mais reste fidèle à ton CV source.",
+    a: "Environ 30 secondes pour obtenir une version optimisée en PDF. L'objectif est de t'aider à adapter vite ton CV à une offre précise, sans passer ta soirée à tout réécrire.",
   },
   {
     q: "Quels formats de CV sont acceptés ?",
     a: "PDF uniquement, jusqu'à 25 Mo. Les CV générés depuis Word, Canva, Notion ou LinkedIn fonctionnent tous tant qu'ils sont exportés en PDF.",
   },
   {
-    q: "Que se passe-t-il si je supprime mon compte ?",
-    a: "Ton profil et ton historique sont effacés. Ton email reste tracé de manière anonyme (hash SHA-256) pour éviter qu'une même adresse reçoive plusieurs fois les crédits de bienvenue.",
+    q: "Pour qui CV Optimizer est-il pensé ?",
+    a: "Pour les candidats qui postulent à des offres concrètes : stage, alternance, premier CDI, reconversion ou recherche active. Le point commun : ton CV doit parler le langage de l'annonce.",
   },
   {
     q: "Le PDF est-il vraiment compatible ATS ?",
-    a: "Oui. Texte sélectionnable, structure A4 une colonne, mots-clés issus de l'offre, pas de tableaux ni de mise en page exotique qui font planter les parsers ATS.",
+    a: "Oui. Le PDF généré garde un texte sélectionnable, une structure lisible et des mots-clés issus de l'offre quand ton expérience les justifie.",
   },
 ] as const;
 
-const NAV_LINKS_BASE = [
-  { href: "#comment", label: "Comment" },
+const NAV_LINKS = [
+  { href: "#probleme", label: "Problème" },
+  { href: "#comment", label: "Étapes" },
+  { href: "#exemple", label: "Exemple" },
   { href: "#pourquoi", label: "Pourquoi" },
-  { href: "#cible", label: "Cible" },
-  { href: "#tarifs", label: "Tarifs", requiresPricing: true },
+  { href: "#confidentialite", label: "Données" },
   { href: "#faq", label: "FAQ" },
 ] as const;
-
-const NAV_LINKS = NAV_LINKS_BASE.filter(
-  (link) => !("requiresPricing" in link) || PRICING_PUBLIC
-);
 
 type HeaderUser = {
   name?: string;
@@ -138,7 +134,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
             href="/optimiser"
             className="group inline-flex h-10 items-center gap-2 bg-ink px-5 font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
           >
-            Optimiser
+            Tester
             <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
               →
             </span>
@@ -259,7 +255,7 @@ function LandingHeader({ user }: { user: HeaderUser }) {
                 onClick={() => setOpen(false)}
                 className="group inline-flex h-12 items-center justify-center gap-2 bg-ink font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
               >
-                Optimiser mon CV
+                Tester avec mon CV
                 <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                   →
                 </span>
@@ -276,7 +272,6 @@ export default function Landing() {
   const { data: session } = useSession();
   const isLogged = Boolean(session?.user);
   const ctaHref = "/optimiser";
-  const ctaSecondaryHref = isLogged ? "/lettre" : "/sign-up";
 
   // Tilt souris sur le CV
   const tiltRef = useRef<HTMLDivElement>(null);
@@ -312,30 +307,29 @@ export default function Landing() {
             <div className="lg:col-span-8">
               <p className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 <span className="inline-flex items-center gap-2">
-                  <span className="text-warm">●</span> Outil français
+                  <span className="text-warm">●</span> CV ciblé par offre
                 </span>
                 <span className="hidden h-3 w-px bg-rule sm:inline-block" />
                 <span className="inline-flex items-center gap-2">
-                  <span className="text-accent">●</span> 30 secondes
+                  <span className="text-accent">●</span> Sans fausse expérience
                 </span>
                 <span className="hidden h-3 w-px bg-rule sm:inline-block" />
                 <span className="inline-flex items-center gap-2">
-                  <span className="text-success">●</span> Sans abonnement
+                  <span className="text-success">●</span> PDF prêt à envoyer
                 </span>
               </p>
 
               <h1 className="font-display text-[clamp(2.75rem,8.5vw,7rem)] font-light leading-[0.92] tracking-tight text-ink">
-                Adapte ton CV à{" "}
-                <span className="italic font-normal text-accent">chaque</span>{" "}
-                offre.
+                Ton CV est peut-être bon.
                 <br />
-                Sans rien <span className="italic font-normal text-warm">inventer</span>.
+                Mais <span className="italic font-normal text-accent">pas</span>{" "}
+                pour cette offre.
               </h1>
 
               <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft">
-                CV Optimizer adapte ton CV à chaque offre sans mentir, sans
-                abonnement, en 30 secondes. Pensé d&apos;abord pour alternants,
-                étudiants, jeunes diplômés et profils en reconversion.
+                Colle une offre d&apos;emploi, importe ton CV, et obtiens une
+                version plus claire, plus ciblée et plus adaptée aux recruteurs,
+                sans inventer d&apos;expérience.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -343,16 +337,16 @@ export default function Landing() {
                   href={ctaHref}
                   className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
                 >
-                  <span>Optimiser mon CV</span>
+                  <span>Tester avec mon CV</span>
                   <span aria-hidden className="transition-transform group-hover:translate-x-1">
                     →
                   </span>
                 </Link>
                 <a
-                  href="#comment"
+                  href="#exemple"
                   className="group inline-flex items-center justify-center gap-3 border border-rule px-7 py-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
                 >
-                  Voir comment ça marche
+                  Voir un exemple avant/après
                   <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
                     ↓
                   </span>
@@ -360,8 +354,26 @@ export default function Landing() {
               </div>
 
               <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-faint">
-                ● 2 crédits offerts · Stage · Alternance · Premier CDI · Reconversion
+                1 essai gratuit · Pas de carte bancaire · CV supprimé après génération
               </p>
+
+              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+                {[
+                  "Ton CV reste ton vrai parcours",
+                  "Les mots de l'offre ressortent",
+                  "Le PDF reste lisible recruteur",
+                ].map((proof) => (
+                  <div
+                    key={proof}
+                    className="border border-rule bg-card/70 p-4 text-[13px] leading-snug text-ink-soft"
+                  >
+                    <span className="mb-3 block font-mono text-[11px] uppercase tracking-[0.22em] text-success">
+                      ● preuve
+                    </span>
+                    {proof}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Hero visual : CV 3D flottant avec cartes stratifiées en perspective */}
@@ -653,6 +665,69 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ============ PROBLÈME CANDIDAT ============ */}
+      <section id="probleme" className="border-b border-rule bg-paper">
+        <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-7">
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                ● Le vrai problème
+              </p>
+              <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                Tu postules. Tu relances.{" "}
+                <span className="italic font-normal text-warm">Personne ne répond.</span>
+              </h2>
+            </div>
+            <p className="lg:col-span-5 text-[16px] leading-relaxed text-ink-soft">
+              Le problème n&apos;est pas toujours ton expérience. Souvent, c&apos;est
+              la façon dont ton CV présente cette expérience par rapport à
+              l&apos;offre.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+            {[
+              {
+                title: "Même CV partout",
+                desc: "Beaucoup de candidats envoient le même CV à toutes les offres. Le recruteur, lui, compare ton profil à une annonce précise.",
+              },
+              {
+                title: "Lecture par indices",
+                desc: "Il cherche des mots, des compétences, des outils et des preuves concrètes. Si ces signaux manquent, ton CV paraît moins pertinent.",
+              },
+              {
+                title: "Bon profil, mauvais langage",
+                desc: "Si ton CV ne parle pas le langage de l'offre, il peut être ignoré même quand ton parcours correspond vraiment.",
+              },
+            ].map((item, idx) => (
+              <article
+                key={item.title}
+                className="bg-paper p-8 transition hover:bg-paper-deep lg:p-10"
+              >
+                <p className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-accent">
+                  {String(idx + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-6 font-display text-2xl font-medium tracking-tight text-ink">
+                  {item.title}
+                </h3>
+                <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+                  {item.desc}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-10 border border-warm/35 bg-warm-soft/60 p-6 lg:p-8">
+            <p className="max-w-4xl font-display text-[clamp(1.6rem,3vw,2.5rem)] font-light leading-[1.08] tracking-[-0.01em] text-ink">
+              Arrête d&apos;envoyer le même CV à toutes les offres.{" "}
+              <span className="italic font-normal text-warm">
+                Ton CV doit parler le langage de l&apos;annonce.
+              </span>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ============ COMMENT ÇA MARCHE ============ */}
       <section id="comment" className="border-b border-rule bg-paper">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
@@ -662,12 +737,12 @@ export default function Landing() {
                 ● Comment ça marche
               </p>
               <h2 className="mt-3 max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-                Trois étapes. <span className="italic font-normal">Pas plus.</span>
+                Trois étapes pour passer d&apos;un CV générique à un CV ciblé.
               </h2>
             </div>
             <p className="max-w-sm text-[15px] leading-relaxed text-ink-soft">
-              Tu vois le score CV/offre, les mots-clés à intégrer et la version
-              PDF prête à envoyer.
+              CV Optimizer transforme ton CV générique en CV ciblé pour une
+              offre précise, sans inventer ton parcours.
             </p>
           </div>
 
@@ -675,21 +750,21 @@ export default function Landing() {
             {[
               {
                 num: "01",
-                title: "Téléverse",
-                desc: "PDF de ton CV actuel. L'IA extrait ton parcours réel : formations, expériences, projets et compétences.",
-                meta: "PDF · jusqu'à 25 Mo",
+                title: "Colle l'offre",
+                desc: "Copie l'annonce complète : missions, outils, compétences attendues et vocabulaire du recruteur.",
+                meta: "Offre précise",
               },
               {
                 num: "02",
-                title: "Choisis ton profil",
-                desc: "Stage, alternance, premier CDI ou reconversion : le ton et les priorités changent selon ta situation.",
-                meta: "Profil · ton adapté",
+                title: "Importe ton CV",
+                desc: "Ajoute ton CV PDF actuel. L'outil garde ton vrai parcours : formations, expériences, projets et compétences.",
+                meta: "PDF · jusqu'à 25 Mo",
               },
               {
                 num: "03",
-                title: "Colle l'offre",
-                desc: "Score de matching, mots-clés ajoutés, expériences priorisées. Tu télécharges un PDF A4 en moins de 30 secondes.",
-                meta: "Score · PDF",
+                title: "Télécharge la version ciblée",
+                desc: "Les formulations deviennent plus claires, les bons mots-clés ressortent et tu obtiens un PDF prêt à envoyer.",
+                meta: "PDF · prêt recruteur",
               },
             ].map((step) => (
               <li
@@ -711,255 +786,227 @@ export default function Landing() {
               </li>
             ))}
           </ol>
+
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <Link
+              href={ctaHref}
+              className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
+            >
+              <span>Tester avec mon CV</span>
+              <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+            <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
+              Garde ton vrai parcours, présente-le mieux.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ============ POURQUOI ÇA MARCHE (features) ============ */}
-      <section id="pourquoi" className="border-b border-rule bg-paper-deep">
+      {/* ============ DÉMO / AVANT-APRÈS ============ */}
+      <section id="exemple" className="border-b border-rule bg-paper-deep">
+        <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
+          <div className="mb-14 grid gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-7">
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                ● Exemple avant/après
+              </p>
+              <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                La même expérience.{" "}
+                <span className="italic font-normal text-accent">
+                  Présentée pour l&apos;offre.
+                </span>
+              </h2>
+            </div>
+            <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
+              Le but n&apos;est pas de gonfler ton CV. Le but est de rendre ton
+              expérience plus précise, plus lisible et plus proche de ce que
+              l&apos;annonce demande.
+            </p>
+          </div>
+
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
+            <article className="bg-paper p-8 lg:p-10">
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-warm">
+                ● Avant
+              </p>
+              <h3 className="mt-6 font-display text-2xl font-medium tracking-tight text-ink">
+                CV générique
+              </h3>
+              <p className="mt-6 border-l-2 border-warm bg-warm-soft/55 p-5 text-xl leading-relaxed text-ink">
+                “Développement de fonctionnalités web.”
+              </p>
+              <p className="mt-6 text-[15px] leading-relaxed text-ink-soft">
+                C&apos;est vrai, mais trop large. Le recruteur ne sait pas quels
+                outils, quel contexte ni quelle valeur tu apportes.
+              </p>
+            </article>
+
+            <article className="bg-card p-8 lg:p-10">
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-success">
+                ● Après
+              </p>
+              <h3 className="mt-6 font-display text-2xl font-medium tracking-tight text-ink">
+                CV ciblé pour l&apos;offre
+              </h3>
+              <p className="mt-6 border-l-2 border-success bg-success-soft/60 p-5 text-xl leading-relaxed text-ink">
+                “Développement d&apos;interfaces React responsives, intégration
+                d&apos;API REST et amélioration de l&apos;expérience utilisateur
+                sur une application métier.”
+              </p>
+              <p className="mt-6 text-[15px] leading-relaxed text-ink-soft">
+                Même parcours, mais une formulation plus concrète et plus proche
+                du vocabulaire d&apos;une offre frontend.
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-10 grid gap-6 border border-rule bg-paper p-6 lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
+            <div>
+              <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                Pourquoi c&apos;est mieux ?
+              </p>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+                La phrase reste fidèle au parcours, mais elle donne au recruteur
+                plus de raisons de continuer la lecture.
+              </p>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {[
+                "Plus précis",
+                "Plus proche du vocabulaire de l'offre",
+                "Plus lisible pour un recruteur",
+                "Sans inventer de fausse expérience",
+              ].map((reason) => (
+                <li
+                  key={reason}
+                  className="flex gap-3 border border-rule bg-card p-4 text-[14px] leading-snug text-ink-soft"
+                >
+                  <span aria-hidden className="mt-1.5 inline-block h-px w-3 shrink-0 bg-success" />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ POURQUOI ÇA MARCHE ============ */}
+      <section id="pourquoi" className="border-b border-rule bg-paper">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
           <div className="mb-14 grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 ● Pourquoi ça marche
               </p>
-              <h2 className="mt-3 font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-                Un CV{" "}
-                <span className="italic font-normal text-warm">générique</span>{" "}
-                coûte des réponses.
+              <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
+                Un recruteur ne lit pas ton CV dans le vide.{" "}
+                <span className="italic font-normal text-accent">
+                  Il le lit avec l&apos;offre en tête.
+                </span>
               </h2>
             </div>
             <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
-              CV Optimizer ne remplace pas ton parcours. Il rend visibles les
-              bons éléments pour l&apos;offre que tu vises.
+              CV Optimizer rapproche ton CV de l&apos;annonce : mêmes mots utiles,
+              meilleure hiérarchie, formulations plus concrètes. Sans changer
+              ton histoire.
             </p>
           </div>
 
-          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
-            {[
-              {
-                num: "01",
-                title: "Score CV/offre",
-                desc: "Un indicateur simple te montre le niveau de matching : 62 %, 78 %, 91 %. Tu comprends si ton CV parle vraiment le langage de l'offre.",
-              },
-              {
-                num: "02",
-                title: "Mots-clés ajoutés",
-                desc: "React, SEO, gestion de projet, reporting, relation client : les termes importants sont intégrés naturellement quand ton expérience le permet.",
-              },
-              {
-                num: "03",
-                title: "Modes profil",
-                desc: "Alternance, stage, premier CDI ou reconversion : le ton change. On ne présente pas un étudiant comme un senior.",
-              },
-              {
-                num: "04",
-                title: "Anti-invention",
-                desc: "L'IA ne fabrique rien : ni expériences, ni compétences. Tout sort de ton CV original, reformulé pour matcher l'offre.",
-              },
-              {
-                num: "05",
-                title: "Avant / après lisible",
-                desc: "Tu vois ce qui change : les bullets deviennent plus précis, les mots-clés ressortent et le CV reste prêt à envoyer en PDF.",
-              },
-            ].map((feat) => (
-              <div
-                key={feat.num}
-                className="bg-paper p-8 transition hover:bg-card lg:p-10"
-              >
-                <div className="flex items-baseline gap-4">
-                  <span className="font-mono text-[13px] font-medium uppercase tracking-[0.22em] text-warm">
-                    {feat.num}
-                  </span>
-                  <h3 className="font-display text-2xl font-medium tracking-tight text-ink">
-                    {feat.title}
-                  </h3>
-                </div>
-                <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-soft">
-                  {feat.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <div className="grid gap-8 lg:grid-cols-12">
+            <div className="bg-ink p-8 text-paper lg:col-span-5 lg:p-10">
+              <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-paper/60">
+                Différenciateur
+              </p>
+              <h3 className="mt-6 font-display text-[clamp(2rem,4vw,3.25rem)] font-light leading-[0.98] tracking-[-0.02em] text-paper">
+                Optimisé par IA,{" "}
+                <span className="italic font-normal text-warm">mais sans mensonge.</span>
+              </h3>
+              <p className="mt-6 text-[15px] leading-relaxed text-paper/75">
+                CV Optimizer reformule ton expérience pour mieux la présenter.
+                Il ne crée pas de compétences, de postes ou de résultats que tu
+                n&apos;as jamais eus.
+              </p>
+            </div>
 
-      {/* ============ DÉMO / AVANT-APRÈS ============ */}
-      <section className="border-b border-rule bg-paper">
-        <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
-          <div className="mb-14">
-            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              ● Avant / Après
-            </p>
-            <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-              Une transformation <span className="italic font-normal text-accent">visible</span>, pas juste un PDF.
-            </h2>
-          </div>
-
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12">
-            {[
-              {
-                tag: "Avant",
-                score: "62 %",
-                scoreWidth: "62%",
-                heading: "CV générique",
-                target: "Offre visée · Alternance marketing digital",
-                bullets: [
-                  "A participé à la communication de l'entreprise",
-                  "Création de contenus pour les réseaux sociaux",
-                  "Aide sur différents projets marketing",
-                ],
-                keywords: ["communication", "réseaux sociaux"],
-                note: "Trop vague pour ressortir sur une offre précise.",
-                tone: "warm",
-              },
-              {
-                tag: "Après",
-                score: "91 %",
-                scoreWidth: "91%",
-                heading: "CV adapté à l'offre",
-                target: "Offre visée · Alternance marketing digital",
-                bullets: [
-                  "Animé 5 campagnes Instagram et TikTok avec suivi du taux d'engagement",
-                  "Rédigé 30 contenus SEO alignés sur les mots-clés de l'offre",
-                  "Produit un reporting hebdomadaire sur Looker Studio pour prioriser les actions",
-                ],
-                keywords: ["SEO", "reporting", "Looker Studio", "engagement"],
-                note: "Même parcours, mais vocabulaire et preuves alignés.",
-                tone: "success",
-              },
-            ].map((variant, i) => (
-              <article
-                key={i}
-                className={`relative border p-8 transition hover:shadow-[0_24px_60px_-30px_rgba(15,15,16,0.18)] lg:p-10 ${
-                  variant.tone === "success"
-                    ? "border-success/30 bg-card"
-                    : "border-rule bg-paper-deep"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-6">
-                  <div>
-                    <p
-                      className={`font-mono text-[12px] uppercase tracking-[0.22em] ${
-                        variant.tone === "success" ? "text-success" : "text-warm"
-                      }`}
-                    >
-                      ● {variant.tag}
-                    </p>
-                    <h3 className="mt-5 font-display text-2xl font-medium tracking-tight text-ink">
-                      {variant.heading}
-                    </h3>
-                    <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-muted">
-                      {variant.target}
-                    </p>
-                  </div>
-                  <div className="min-w-24 text-right">
-                    <span
-                      className={`font-display text-4xl font-light leading-none tracking-tight ${
-                        variant.tone === "success" ? "text-success" : "text-warm"
-                      }`}
-                    >
-                      {variant.score}
-                    </span>
-                    <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
-                      match
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 h-1.5 overflow-hidden bg-rule">
-                  <div
-                    className={`h-full ${
-                      variant.tone === "success" ? "bg-success" : "bg-warm"
-                    }`}
-                    style={{ width: variant.scoreWidth }}
-                  />
-                </div>
-                <ul className="mt-5 space-y-2.5">
-                  {variant.bullets.map((b, idx) => (
-                    <li
-                      key={idx}
-                      className="flex gap-3 text-[14px] leading-relaxed text-ink-soft"
-                    >
-                      <span
-                        aria-hidden
-                        className="mt-2 inline-block h-px w-3 shrink-0 bg-ink"
-                      />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 border-t border-rule pt-5">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-                    Mots-clés visibles
+            <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:col-span-7">
+              {[
+                {
+                  title: "Le langage de l'annonce",
+                  desc: "Les termes importants ressortent quand ton CV contient déjà l'expérience correspondante.",
+                },
+                {
+                  title: "Des preuves plus visibles",
+                  desc: "Tes missions vagues deviennent des formulations plus concrètes : outils, contexte, action, impact.",
+                },
+                {
+                  title: "Une lecture plus rapide",
+                  desc: "Le recruteur comprend plus vite pourquoi ton profil mérite d'être regardé pour cette offre.",
+                },
+                {
+                  title: "Un cadre anti-invention",
+                  desc: "Garde ton vrai parcours, mais présente-le mieux. Le CV reste crédible en entretien.",
+                },
+              ].map((item, idx) => (
+                <article key={item.title} className="bg-card p-6 lg:p-8">
+                  <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-warm">
+                    {String(idx + 1).padStart(2, "0")}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {variant.keywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className={`rounded-sm px-2 py-1 font-mono text-[11px] tracking-[0.04em] ${
-                          variant.tone === "success"
-                            ? "bg-success-soft text-success"
-                            : "bg-warm-soft text-warm"
-                        }`}
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <p className="mt-7 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
-                  ↪ {variant.note}
-                </p>
-              </article>
-            ))}
+                  <h3 className="mt-5 font-display text-2xl font-medium tracking-tight text-ink">
+                    {item.title}
+                  </h3>
+                  <p className="mt-4 text-[14px] leading-relaxed text-ink-soft">
+                    {item.desc}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ============ POUR QUI ============ */}
-      <section id="cible" className="border-b border-rule bg-paper-deep">
+      {/* ============ CONFIDENTIALITÉ ============ */}
+      <section id="confidentialite" className="border-b border-rule bg-paper-deep">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
           <div className="mb-14 grid gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-                ● Pour qui
+                ● Confidentialité
               </p>
               <h2 className="mt-3 max-w-3xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-                D&apos;abord pour les candidatures où{" "}
-                <span className="italic font-normal">chaque mot compte</span>.
+                Tes données restent{" "}
+                <span className="italic font-normal text-success">confidentielles</span>.
               </h2>
             </div>
             <p className="lg:col-span-5 lg:col-start-8 self-end text-[15px] leading-relaxed text-ink-soft">
-              Pas un outil généraliste. La page est pensée pour les profils qui
-              doivent prouver vite leur potentiel, même avec peu d&apos;expérience.
+              Ton CV contient ton parcours, ton adresse, parfois ton téléphone.
+              Ce n&apos;est pas une donnée marketing. C&apos;est une donnée sensible.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                k: "Alternants",
-                v: "Valoriser les missions terrain, les outils utilisés et le rythme école / entreprise.",
-                mode: "Mode alternance",
+                k: "Ton CV n'est pas vendu",
+                v: "Aucun usage commercial de ton CV ou du contenu de tes candidatures.",
               },
               {
-                k: "Étudiants",
-                v: "Transformer projets, associations et jobs étudiants en expériences utiles pour un stage.",
-                mode: "Mode stage",
+                k: "Pas d'entraînement modèle",
+                v: "Ton CV n'est pas utilisé pour entraîner un modèle.",
               },
               {
-                k: "Jeunes diplômés",
-                v: "Faire ressortir les bons projets, stages et compétences pour un premier CDI.",
-                mode: "Mode CDI junior",
+                k: "Pas de conservation CV",
+                v: "Le contenu du CV n'est pas conservé après génération.",
               },
               {
-                k: "Reconversion",
-                v: "Traduire les expériences passées en compétences transférables, sans masquer le parcours.",
-                mode: "Mode reconversion",
+                k: "Compte et crédits seulement",
+                v: "Seuls les éléments nécessaires au compte et aux crédits sont stockés.",
               },
             ].map((c, idx) => (
               <div
                 key={c.k}
-                className="border border-rule bg-paper p-6 transition hover:border-ink"
+                className="bg-paper p-6 transition hover:bg-card lg:p-8"
               >
                 <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
                   {String(idx + 1).padStart(2, "0")}
@@ -970,134 +1017,27 @@ export default function Landing() {
                 <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
                   {c.v}
                 </p>
-                <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
-                  {c.mode}
-                </p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ============ PREUVE HUMAINE ============ */}
-      <section className="border-b border-rule bg-paper">
-        <div className="mx-auto grid max-w-360 gap-10 px-6 py-16 lg:grid-cols-12 lg:items-end lg:py-24">
-          <div className="lg:col-span-4">
-            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              ● Preuve humaine
+          <div className="mt-10 flex flex-col gap-4 border border-success/30 bg-success-soft/45 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+            <p className="max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+              Tu peux tester sans carte bancaire. Le CV généré sert à ta
+              candidature, pas à alimenter une base de données cachée.
             </p>
-            <p className="mt-6 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-faint">
-              Candidatures sans réponse · CV trop générique · mots-clés manquants
-            </p>
-          </div>
-          <blockquote className="lg:col-span-8">
-            <p className="font-display text-[clamp(1.8rem,4vw,3.5rem)] font-light leading-[1.02] tracking-[-0.02em] text-ink">
-              “Créé par un candidat qui a connu la galère des candidatures sans réponse.”
-            </p>
-            <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-              L&apos;objectif est simple : aider les profils juniors ou en transition à
-              présenter leur vraie expérience avec les bons mots, sans tricher et
-              sans abonnement.
-            </p>
-          </blockquote>
-        </div>
-      </section>
-
-      {/* ============ TARIFICATION ============ */}
-      {PRICING_PUBLIC && (
-      <section id="tarifs" className="border-b border-rule bg-paper">
-        <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
-          <div className="mb-14">
-            <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              ● Tarification
-            </p>
-            <h2 className="mt-3 max-w-4xl font-display text-[clamp(2rem,4.5vw,3.5rem)] font-light leading-[0.98] tracking-[-0.02em] text-ink">
-              Commence <span className="italic font-normal text-success">gratuitement</span>.
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-              1 essai gratuit par service sans compte, puis 2 crédits offerts
-              à l&apos;inscription. Pas d&apos;abonnement, pas de carte requise pour
-              démarrer.
-            </p>
-          </div>
-
-          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
-            {[
-              {
-                tier: "Découverte",
-                price: "Gratuit",
-                meta: "Sans compte",
-                features: [
-                  "1 CV optimisé offert",
-                  "1 lettre de motivation offerte",
-                  "PDF téléchargeable",
-                ],
-              },
-              {
-                tier: "Inscription",
-                price: "2 crédits",
-                meta: "Offerts à la création",
-                features: [
-                  "2 générations au choix",
-                  "Historique de ton dernier CV",
-                  "Sauvegarde locale photo",
-                ],
-                featured: true,
-              },
-              {
-                tier: "Packs",
-                price: "Dès 4,99 €",
-                meta: "Sans abonnement",
-                features: [
-                  "5, 15 ou 50 crédits",
-                  "Crédits sans expiration",
-                  "Paiement sécurisé Stripe",
-                ],
-                disabled: true,
-              },
-            ].map((p) => (
-              <div
-                key={p.tier}
-                className={`relative bg-paper p-8 lg:p-10 ${
-                  p.featured ? "lg:scale-[1.02]" : ""
-                }`}
-              >
-                {p.featured && (
-                  <span className="absolute right-6 top-6 bg-warm px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-paper">
-                    Recommandé
-                  </span>
-                )}
-                <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
-                  {p.tier}
-                </p>
-                <p className="mt-6 font-display text-4xl font-light tracking-tight text-ink">
-                  {p.price}
-                </p>
-                <p className="mt-1 font-mono text-[13px] tracking-[0.04em] text-ink-muted">
-                  {p.meta}
-                </p>
-                <ul className="mt-6 space-y-2.5 border-t border-rule pt-5">
-                  {p.features.map((f) => (
-                    <li
-                      key={f}
-                      className="flex gap-3 text-[13px] leading-snug text-ink-soft"
-                    >
-                      <span aria-hidden className="mt-1.5 inline-block h-px w-2.5 shrink-0 bg-ink" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                {p.disabled && (
-                  <p className="mt-6 font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
-                    ● Bientôt disponible
-                  </p>
-                )}
-              </div>
-            ))}
+            <Link
+              href={ctaHref}
+              className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-success"
+            >
+              <span>Tester avec mon CV</span>
+              <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
           </div>
         </div>
       </section>
-      )}
 
       {/* ============ FAQ ============ */}
       <section id="faq" className="border-b border-rule bg-paper-deep">
@@ -1148,10 +1088,10 @@ export default function Landing() {
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-8">
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
-                ● Prêt à envoyer un CV moins générique ?
+                ● Ton prochain CV doit parler le langage de l&apos;annonce
               </p>
               <h2 className="mt-4 font-display text-[clamp(2.5rem,6vw,5rem)] font-light leading-[0.95] tracking-[-0.02em] text-paper">
-                Adapte ton prochain CV.
+                Ne laisse pas une offre précise recevoir un CV générique.
                 <br />
                 <span className="italic font-normal text-warm">Sans mentir.</span>
               </h2>
@@ -1161,22 +1101,22 @@ export default function Landing() {
                 href={ctaHref}
                 className="group inline-flex w-full items-center justify-between gap-3 bg-paper px-7 py-5 text-base font-medium tracking-tight text-ink transition hover:bg-warm hover:text-paper"
               >
-                <span>Optimiser mon CV</span>
+                <span>Tester avec mon CV</span>
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </Link>
-              <Link
-                href={ctaSecondaryHref}
+              <a
+                href="#exemple"
                 className="group inline-flex w-full items-center justify-between gap-3 border border-paper/30 px-7 py-5 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint transition hover:border-paper hover:text-paper"
               >
-                {isLogged ? "Générer une lettre" : "Créer un compte gratuit"}
+                Voir un exemple avant/après
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
-              </Link>
+              </a>
               <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
-                ● 2 crédits offerts · Sans abonnement
+                1 essai gratuit · Pas de carte bancaire · CV supprimé après génération
               </p>
             </div>
           </div>
@@ -1190,13 +1130,13 @@ export default function Landing() {
             <div>
               <Logo size="sm" />
               <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-ink-soft">
-                L&apos;outil français pour adapter ton CV à chaque offre sans mentir,
-                sans abonnement, en 30 secondes.
+                Transforme ton CV générique en CV ciblé pour une offre précise,
+                sans inventer ton parcours.
               </p>
             </div>
             <nav aria-label="Pied de page" className="grid grid-cols-2 gap-x-10 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted sm:grid-cols-3">
               <Link href="/optimiser" className="hover:text-ink transition">
-                Optimiser CV
+                Tester CV
               </Link>
               <Link href="/lettre" className="hover:text-ink transition">
                 Lettre
