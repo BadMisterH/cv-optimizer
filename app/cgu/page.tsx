@@ -114,8 +114,8 @@ export default function CGUPage() {
             <h3>Bonus de bienvenue</h3>
             <p>
               Tout nouvel utilisateur reçoit{" "}
-              <strong>2 crédits gratuits</strong> à l&apos;inscription. Ces
-              crédits ne sont attribués qu&apos;une seule fois par adresse
+              <strong>1 crédit gratuit</strong> à l&apos;inscription. Ce
+              crédit n&apos;est attribué qu&apos;une seule fois par adresse
               email, indépendamment des suppressions et recréations de compte.
             </p>
             <h3>Consommation</h3>
@@ -182,7 +182,7 @@ export default function CGUPage() {
             <p>
               Afin d&apos;empêcher l&apos;abus du bonus de bienvenue, {SITE_NAME}{" "}
               conserve une trace anonymisée (hash SHA-256) de toutes les
-              adresses email ayant déjà bénéficié des crédits offerts. Cette
+              adresses email ayant déjà bénéficié du crédit offert. Cette
               trace persiste après suppression du compte.
             </p>
             <p>

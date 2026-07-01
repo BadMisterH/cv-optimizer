@@ -75,7 +75,7 @@ export function AuthBanner() {
     <div className="border-b border-rule bg-paper-deep">
       <div className="mx-auto flex max-w-360 flex-wrap items-center justify-between gap-3 px-6 py-3">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
-          <span className="text-warm">●</span> 1 essai gratuit par service · Crée un compte pour 2 crédits offerts
+          <span className="text-warm">●</span> 1 essai gratuit par service · Crée un compte pour 1 crédit offert
         </p>
         <div className="flex items-center gap-2">
           <Link

@@ -32,12 +32,12 @@ async function sendWelcomeEmail(email: string) {
       : process.env.BETTER_AUTH_URL ?? "https://cv-optimizer.fr";
   await sendEmail({
     to: email,
-    subject: "2 crédits offerts — bienvenue sur CV Optimizer",
+    subject: "1 crédit offert — bienvenue sur CV Optimizer",
     fallbackLabel: "WELCOME EMAIL",
     html: buildEmailHtml({
-      title: "Tu as 2 crédits gratuits.",
+      title: "Tu as 1 crédit gratuit.",
       intro:
-        "Bienvenue sur CV Optimizer ! Ton compte est actif et tu disposes de 2 crédits offerts pour commencer. Utilise-les pour optimiser ton CV face à une offre d'emploi ou générer une lettre de motivation.",
+        "Bienvenue sur CV Optimizer ! Ton compte est actif et tu disposes d'un crédit offert pour commencer. Utilise-le pour optimiser ton CV face à une offre d'emploi ou générer une lettre de motivation.",
       ctaLabel: "Optimiser mon CV maintenant",
       url: `${siteUrl}/optimiser`,
       footer:

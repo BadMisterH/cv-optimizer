@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { pool } from "@/lib/db";
 
-export const WELCOME_BONUS_CREDITS = 2;
+export const WELCOME_BONUS_CREDITS = 1;
 
 /**
  * Normalise une adresse email pour la détection anti-fraude du bonus de bienvenue :

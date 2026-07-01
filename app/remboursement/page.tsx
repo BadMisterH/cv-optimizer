@@ -109,10 +109,10 @@ export default function RemboursementPage() {
           </section>
 
           <section>
-            <h2>04 · Crédits offerts</h2>
+            <h2>04 · Crédit offert</h2>
             <p>
-              Les crédits issus du bonus de bienvenue (attribués gratuitement à
-              l&apos;inscription) ne sont pas remboursables car ils n&apos;ont
+              Le crédit issu du bonus de bienvenue (attribué gratuitement à
+              l&apos;inscription) n&apos;est pas remboursable car il n&apos;a
               pas fait l&apos;objet d&apos;un paiement.
             </p>
           </section>
