@@ -8,6 +8,7 @@ import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { ATSScore } from "../components/ATSScore";
+import { ATSInterpretation } from "../components/ATSInterpretation";
 import { CVEditor } from "../components/editor/CVEditor";
 import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -515,8 +516,14 @@ function Result({
 
         {/* Score ATS — visible dans les 2 modes (preview + édition) */}
         {data.atsScore && (
-          <div className="mb-10">
+          <div className="mb-6">
             <ATSScore score={data.atsScore} />
+          </div>
+        )}
+
+        {data.atsInterpretation && (
+          <div className="mb-10">
+            <ATSInterpretation interpretation={data.atsInterpretation} />
           </div>
         )}
 

@@ -55,6 +55,16 @@ Retourne le résultat dans le format JSON spécifié :
    - "structure" (0-100) : qualité structurelle : bullets avec verbes d'action, format clair, sections appropriées, longueur adaptée. Le CV que TU viens de générer doit scorer 90+ ici.
    - "tips" : 2 à 4 suggestions COURTES et ACTIONNABLES (max 15 mots chacune) pour passer le score à 95+. Exemples : "Ajoute une certification AWS visible en haut", "Quantifie la 2e expérience avec un chiffre". Pas de blabla générique.
    - "missingKeywords" : liste de 3-8 mots-clés/compétences importants de l'offre qui MANQUENT (ou sont sous-représentés) dans le CV. Ces termes doivent être réels et exacts, pas inventés. Si tout est couvert, retourne un tableau vide [].
+- "atsInterpretation" : interprétation ATS ESTIMÉE du CV optimisé. Ne prétends jamais que c'est un scan réel du PDF final. Explique ce qu'un logiciel de recrutement devrait probablement comprendre à partir du CV structuré que tu viens de générer. Décompose en :
+   - "identity.fullName" : nom détectable dans le CV optimisé
+   - "identity.title" : titre/profil détectable dans le CV optimisé
+   - "identity.emailFound" et "identity.phoneFound" : true si l'information existe dans le CV optimisé, sinon false
+   - "detectedSections" : sections que l'ATS devrait reconnaître (ex: Expérience, Formation, Compétences)
+   - "detectedSkills" : 8 à 16 compétences détectables et cohérentes avec le CV optimisé
+   - "matchedKeywords" : 5 à 12 mots-clés de l'offre bien présents dans le CV optimisé
+   - "missingKeywords" : 3 à 8 mots-clés importants encore absents ou sous-représentés. Si rien d'important ne manque, retourne []
+   - "parsingRisks" : 0 à 5 risques concrets de lecture ATS ou de compréhension (ex: "photo ignorée par certains ATS", "impact peu quantifié"). Ne mentionne pas un risque si tu ne peux pas le justifier.
+   - "summary" : 1 à 2 phrases directes pour le candidat : ce que l'ATS devrait comprendre et le principal point à surveiller.
 
 Pour les sections du CV, utilise typiquement : "Expérience", "Formation", "Compétences", "Projets", "Langues", "Centres d'intérêt" selon ce qui est présent dans le CV original. Ne crée jamais de section qui n'existe pas dans le CV source.
 
@@ -142,8 +152,55 @@ const cvSchema = {
       required: ["overall", "keywords", "skills", "structure", "tips", "missingKeywords"],
       additionalProperties: false,
     },
+    atsInterpretation: {
+      type: "object",
+      properties: {
+        identity: {
+          type: "object",
+          properties: {
+            fullName: { type: "string" },
+            title: { type: "string" },
+            emailFound: { type: "boolean" },
+            phoneFound: { type: "boolean" },
+          },
+          required: ["fullName", "title", "emailFound", "phoneFound"],
+          additionalProperties: false,
+        },
+        detectedSections: {
+          type: "array",
+          items: { type: "string" },
+        },
+        detectedSkills: {
+          type: "array",
+          items: { type: "string" },
+        },
+        matchedKeywords: {
+          type: "array",
+          items: { type: "string" },
+        },
+        missingKeywords: {
+          type: "array",
+          items: { type: "string" },
+        },
+        parsingRisks: {
+          type: "array",
+          items: { type: "string" },
+        },
+        summary: { type: "string" },
+      },
+      required: [
+        "identity",
+        "detectedSections",
+        "detectedSkills",
+        "matchedKeywords",
+        "missingKeywords",
+        "parsingRisks",
+        "summary",
+      ],
+      additionalProperties: false,
+    },
   },
-  required: ["cv", "modifications", "atsScore"],
+  required: ["cv", "modifications", "atsScore", "atsInterpretation"],
   additionalProperties: false,
 };
 

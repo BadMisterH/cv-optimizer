@@ -43,10 +43,33 @@ export type ATSScore = {
   missingKeywords: string[];
 };
 
+export type ATSInterpretation = {
+  /** Identité que l'ATS devrait pouvoir extraire du CV optimisé */
+  identity: {
+    fullName: string;
+    title: string;
+    emailFound: boolean;
+    phoneFound: boolean;
+  };
+  /** Sections principales reconnues dans le CV optimisé */
+  detectedSections: string[];
+  /** Compétences détectables par mots-clés ou variations proches */
+  detectedSkills: string[];
+  /** Mots-clés de l'offre présents dans le CV optimisé */
+  matchedKeywords: string[];
+  /** Mots-clés importants encore absents ou sous-représentés */
+  missingKeywords: string[];
+  /** Risques possibles de lecture ATS ou de compréhension recruteur */
+  parsingRisks: string[];
+  /** Synthèse courte en langage candidat */
+  summary: string;
+};
+
 export type OptimizeResponse = {
   cv: OptimizedCV;
   modifications: string[];
   atsScore: ATSScore;
+  atsInterpretation: ATSInterpretation;
 };
 
 // ===== Cover Letter =====
