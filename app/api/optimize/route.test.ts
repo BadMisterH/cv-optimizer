@@ -204,6 +204,33 @@ describe("sourceId manquant ou invalide", () => {
   });
 });
 
+describe("dates manquantes", () => {
+  it("signale des dates manquantes quand la fiche vérité a des années mais le subheading n'en a aucune", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "2023 — 2024" })]);
+    const payload = makePayload([makeExperienceItem({ subheading: "Angoulême" })]);
+
+    const violations = validateExperienceSourceIds(payload, sourceFacts);
+
+    expect(violations.some((v) => v.includes("Dates manquantes"))).toBe(true);
+  });
+
+  it("ne signale rien quand les dates sont bien présentes", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "2023 — 2024" })]);
+    const payload = makePayload([
+      makeExperienceItem({ subheading: "2023 — 2024 · Angoulême" }),
+    ]);
+
+    expect(validateExperienceSourceIds(payload, sourceFacts)).toEqual([]);
+  });
+
+  it("ne signale rien quand la fiche vérité elle-même n'a pas d'année (ex: poste toujours en cours sans date chiffrée)", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "En cours" })]);
+    const payload = makePayload([makeExperienceItem({ subheading: "Angoulême" })]);
+
+    expect(validateExperienceSourceIds(payload, sourceFacts)).toEqual([]);
+  });
+});
+
 describe("même entreprise, expériences distinctes", () => {
   it("distingue deux passages chez le même employeur via sourceId sans les confondre", () => {
     const stage = makeExperience({

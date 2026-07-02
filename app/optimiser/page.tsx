@@ -599,20 +599,29 @@ function DownloadButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [tooLong, setTooLong] = useState(false);
 
   const downloadDisabled = loading;
 
-  async function handleDownload() {
+  async function handleDownload(allowOverflow = false) {
     setLoading(true);
     setErr(null);
+    if (!allowOverflow) setTooLong(false);
     try {
       const res = await fetchWithAuth("/api/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cv, photo, accentColor: ACCENT_HEX[accent], template }),
+        body: JSON.stringify({
+          cv,
+          photo,
+          accentColor: ACCENT_HEX[accent],
+          template,
+          allowOverflow,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (data.tooLong) setTooLong(true);
         throw new Error(data.error ?? "Erreur lors de la génération");
       }
       const blob = await res.blob();
@@ -635,7 +644,7 @@ function DownloadButton({
     <div className="flex flex-col items-end gap-2">
       <button
         type="button"
-        onClick={handleDownload}
+        onClick={() => handleDownload(false)}
         disabled={downloadDisabled}
         className="group inline-flex items-center gap-3 bg-accent px-5 py-3 text-sm font-medium text-paper transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
@@ -648,6 +657,16 @@ function DownloadButton({
         <p role="alert" className="font-mono text-[12px] uppercase tracking-[0.16em] text-danger">
           ✕ {err}
         </p>
+      )}
+      {tooLong && (
+        <button
+          type="button"
+          onClick={() => handleDownload(true)}
+          disabled={downloadDisabled}
+          className="inline-flex items-center gap-2 border border-warm/40 bg-warm-soft px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-warm transition hover:border-warm disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          ⚠ Télécharger quand même (PDF imparfait)
+        </button>
       )}
     </div>
   );

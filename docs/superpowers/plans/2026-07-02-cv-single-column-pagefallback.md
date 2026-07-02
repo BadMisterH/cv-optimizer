@@ -561,7 +561,125 @@ EOF
 
 ---
 
-### Task 4: Full verification pass
+### Task 4: Detect experience dates silently dropped from the generated CV
+
+**Files:**
+- Modify: `app/api/optimize/route.ts` (inside `validateExperienceSourceIds`, ~line 779-786)
+- Modify: `app/api/optimize/route.test.ts` (add a new `describe` block)
+
+**Interfaces:**
+- Consumes: `extractYears(value: string): string[]` (existing, unchanged), `SourceExperience.dates: string` (existing field).
+- Produces: no new exported symbols — this extends the existing exported `validateExperienceSourceIds(payload, sourceFacts): string[]`, which already feeds into `validateOptimizedCV` and the `strongViolations` merge in `checkFidelity`. No caller changes needed.
+
+**Why this task exists:** live testing surfaced a real gap — `validateExperienceSourceIds` already flags an experience subheading that contains a year NOT in the source (invented/contradictory dates), but says nothing when the generated subheading has NO year at all even though the source clearly has one (dates silently dropped, e.g. a subheading like "E-COMMERCE · MAINTENANCE ET ÉVOLUTION" replacing what should have been "2023 — 2024 · Paris"). This is the same class of fidelity bug as the missing-section checks already in this file (`validateRequiredSections`) — presence, not just correctness.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `app/api/optimize/route.test.ts`, add this new `describe` block (anywhere after the existing `describe("sourceId manquant ou invalide", ...)` block is fine — it uses the same `makeSourceFacts`/`makeExperience`/`makePayload`/`makeExperienceItem` helpers already defined at the top of the file):
+
+```ts
+describe("dates manquantes", () => {
+  it("signale des dates manquantes quand la fiche vérité a des années mais le subheading n'en a aucune", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "2023 — 2024" })]);
+    const payload = makePayload([makeExperienceItem({ subheading: "Angoulême" })]);
+
+    const violations = validateExperienceSourceIds(payload, sourceFacts);
+
+    expect(violations.some((v) => v.includes("Dates manquantes"))).toBe(true);
+  });
+
+  it("ne signale rien quand les dates sont bien présentes", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "2023 — 2024" })]);
+    const payload = makePayload([
+      makeExperienceItem({ subheading: "2023 — 2024 · Angoulême" }),
+    ]);
+
+    expect(validateExperienceSourceIds(payload, sourceFacts)).toEqual([]);
+  });
+
+  it("ne signale rien quand la fiche vérité elle-même n'a pas d'année (ex: poste toujours en cours sans date chiffrée)", () => {
+    const sourceFacts = makeSourceFacts([makeExperience({ dates: "En cours" })]);
+    const payload = makePayload([makeExperienceItem({ subheading: "Angoulême" })]);
+
+    expect(validateExperienceSourceIds(payload, sourceFacts)).toEqual([]);
+  });
+});
+```
+
+- [ ] **Step 2: Run the tests to verify the first one fails**
+
+Run: `npx vitest run`
+Expected: the "signale des dates manquantes" test fails (current code has no check for the zero-years case, so no violation is produced and `violations.some(...)` is `false`). The other two tests in this new block already pass (no regression expected from them — they're guarding against over-tightening in a later step).
+
+- [ ] **Step 3: Add the missing-dates check**
+
+In `app/api/optimize/route.ts`, find this exact block inside `validateExperienceSourceIds` (~line 779-786):
+
+```ts
+    const sourceYears = new Set(extractYears(sourceExperience.dates));
+    const generatedYears = extractYears(item.subheading);
+    const unknownYears = generatedYears.filter((year) => !sourceYears.has(year));
+    if (sourceYears.size > 0 && unknownYears.length > 0) {
+      violations.push(
+        `Dates contradictoires pour "${company || sourceExperience.company}" : année(s) ${unknownYears.join(", ")} absente(s) du CV source.`
+      );
+    }
+  }
+```
+
+Replace it with:
+
+```ts
+    const sourceYears = new Set(extractYears(sourceExperience.dates));
+    const generatedYears = extractYears(item.subheading);
+    const unknownYears = generatedYears.filter((year) => !sourceYears.has(year));
+    if (sourceYears.size > 0 && unknownYears.length > 0) {
+      violations.push(
+        `Dates contradictoires pour "${company || sourceExperience.company}" : année(s) ${unknownYears.join(", ")} absente(s) du CV source.`
+      );
+    }
+    if (sourceYears.size > 0 && generatedYears.length === 0) {
+      violations.push(
+        `Dates manquantes pour "${company || sourceExperience.company}" : la fiche vérité indique ${Array.from(sourceYears).join(", ")} mais aucune date n'apparaît dans le CV généré.`
+      );
+    }
+  }
+```
+
+(Only the closing `}` of the `for` loop moves down — everything above it is unchanged, this only adds the new `if` block right after the existing contradictory-dates check.)
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `npx vitest run`
+Expected: all 3 new tests pass, plus the full existing suite still passes (28 pre-existing → 31 total: 25 in `app/api/optimize/route.test.ts` become 28, + 3 in `app/api/pdf/route.test.ts` unchanged).
+
+- [ ] **Step 5: Typecheck and build**
+
+Run: `npx tsc --noEmit`
+Expected: no output, exit code 0.
+
+Run: `npm run build`
+Expected: `✓ Compiled successfully`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add app/api/optimize/route.ts app/api/optimize/route.test.ts
+git commit -m "$(cat <<'EOF'
+fix(optimize): detecte les dates d'experience supprimees silencieusement
+
+validateExperienceSourceIds detectait deja une annee inventee dans le
+subheading genere, mais pas l'absence totale de date quand la fiche verite
+en a. Trouve en testant en conditions reelles (Kocosmetic sans dates,
+remplacees par un descriptif secteur). Meme categorie que
+validateRequiredSections : la presence compte autant que l'exactitude.
+EOF
+)"
+```
+
+---
+
+### Task 5: Full verification pass
 
 **Files:** none (verification only)
 
@@ -570,7 +688,7 @@ EOF
 - [ ] **Step 1: Full test suite**
 
 Run: `corepack pnpm test`
-Expected: all tests pass (25 pre-existing in `app/api/optimize/route.test.ts` + 3 new in `app/api/pdf/route.test.ts` = 28 total).
+Expected: all tests pass (31 total: 28 in `app/api/optimize/route.test.ts` + 3 in `app/api/pdf/route.test.ts`).
 
 - [ ] **Step 2: Typecheck**
 

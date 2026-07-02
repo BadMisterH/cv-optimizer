@@ -14,16 +14,50 @@ type Props = {
 
 const A4_W = 794;
 const A4_H = 1123;
+// Borne purement visuelle du wrapper (scroll au-delà) — jamais appliquée à l'iframe
+// elle-même, qui doit toujours refléter la hauteur réelle du contenu.
+const PREVIEW_MAX_VH = 80;
+
+/**
+ * Mesure la hauteur réelle du contenu d'une iframe déjà chargée (srcDoc same-origin).
+ * Attend un cycle de layout (rAF) puis, si possible, le chargement des web fonts
+ * (document.fonts.ready) avant de lire scrollHeight — mesurer trop tôt sous-estime la
+ * hauteur d'un texte dont la police custom n'a pas fini de charger.
+ */
+async function measureIframeContentHeight(iframe: HTMLIFrameElement): Promise<number> {
+  const doc = iframe.contentDocument;
+  if (!doc) return A4_H;
+
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  const fonts = doc.fonts;
+  if (fonts?.ready) {
+    await fonts.ready.catch(() => undefined);
+  }
+
+  const measured = Math.max(
+    doc.documentElement?.scrollHeight ?? 0,
+    doc.body?.scrollHeight ?? 0
+  );
+  return measured > 0 ? measured : A4_H;
+}
 
 /**
  * Iframe qui rend le HTML EXACT utilisé par /api/pdf — preview pixel-perfect.
  * - Auto-scale par défaut pour tenir dans le parent
+ * - Hauteur mesurée dynamiquement sur le contenu réel (jamais clippée silencieusement) ;
+ *   seul le wrapper visuel est borné (scroll), jamais l'iframe elle-même
  * - Bouton "Plein écran" → modal A4 à 100% (ou max-fit fenêtre)
  * - Debounce 250ms sur srcDoc pour éviter le jank
  */
 export function LivePreview({ cv, photo, accent, template }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fullscreenIframeRef = useRef<HTMLIFrameElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const fullscreenResizeObserverRef = useRef<ResizeObserver | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [contentHeight, setContentHeight] = useState(A4_H);
   const [fullscreen, setFullscreen] = useState(false);
 
   // Mesure la largeur du conteneur
@@ -64,8 +98,50 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
     };
   }, [fullscreen]);
 
+  // Nettoyage des ResizeObserver de contenu au démontage
+  useEffect(() => {
+    return () => {
+      resizeObserverRef.current?.disconnect();
+      fullscreenResizeObserverRef.current?.disconnect();
+    };
+  }, []);
+
+  function handlePreviewIframeLoad() {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    measureIframeContentHeight(iframe).then(setContentHeight);
+
+    resizeObserverRef.current?.disconnect();
+    const body = iframe.contentDocument?.body;
+    if (body) {
+      const observer = new ResizeObserver(() => {
+        measureIframeContentHeight(iframe).then(setContentHeight);
+      });
+      observer.observe(body);
+      resizeObserverRef.current = observer;
+    }
+  }
+
+  function handleFullscreenIframeLoad() {
+    const iframe = fullscreenIframeRef.current;
+    if (!iframe) return;
+
+    measureIframeContentHeight(iframe).then(setContentHeight);
+
+    fullscreenResizeObserverRef.current?.disconnect();
+    const body = iframe.contentDocument?.body;
+    if (body) {
+      const observer = new ResizeObserver(() => {
+        measureIframeContentHeight(iframe).then(setContentHeight);
+      });
+      observer.observe(body);
+      fullscreenResizeObserverRef.current = observer;
+    }
+  }
+
   const scale = containerWidth > 0 ? Math.min(1, containerWidth / A4_W) : 1;
-  const scaledH = A4_H * scale;
+  const scaledH = contentHeight * scale;
   const pct = Math.round(scale * 100);
 
   return (
@@ -90,17 +166,19 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
         </div>
 
         <div
-          className="overflow-hidden border border-rule bg-white shadow-[0_18px_44px_-22px_rgba(15,15,16,0.28)]"
-          style={{ height: `${scaledH}px` }}
+          className="overflow-y-auto border border-rule bg-white shadow-[0_18px_44px_-22px_rgba(15,15,16,0.28)]"
+          style={{ height: `${scaledH}px`, maxHeight: `${PREVIEW_MAX_VH}vh` }}
         >
           <iframe
+            ref={iframeRef}
             srcDoc={debouncedHtml}
+            onLoad={handlePreviewIframeLoad}
             title="Aperçu PDF en direct"
-            sandbox=""
+            sandbox="allow-same-origin"
             className="block border-0 bg-white"
             style={{
               width: `${A4_W}px`,
-              height: `${A4_H}px`,
+              height: `${contentHeight}px`,
               transform: `scale(${scale})`,
               transformOrigin: "top left",
             }}
@@ -151,12 +229,14 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
           <div className="flex-1 overflow-auto p-6 sm:p-10">
             <div
               className="mx-auto bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.5)]"
-              style={{ width: `${A4_W}px`, height: `${A4_H}px` }}
+              style={{ width: `${A4_W}px`, height: `${contentHeight}px` }}
             >
               <iframe
+                ref={fullscreenIframeRef}
                 srcDoc={debouncedHtml}
+                onLoad={handleFullscreenIframeLoad}
                 title="Aperçu PDF plein écran"
-                sandbox=""
+                sandbox="allow-same-origin"
                 className="block h-full w-full border-0 bg-white"
               />
             </div>

@@ -7,7 +7,12 @@ import {
   deductCredit,
 } from "@/lib/usage-gate";
 
-const MODEL = "claude-opus-4-7";
+// Opus réservé à la génération créative du CV (le cœur du travail : priorisation,
+// reformulation, adaptation à l'offre). L'extraction (transcription fidèle, peu de
+// jugement créatif) et l'audit (classification de violations, pas de génération de
+// contenu) tournent sur Sonnet — moins coûteux, suffisant pour ces tâches plus étroites.
+const GENERATION_MODEL = "claude-opus-4-7";
+const SUPPORT_MODEL = "claude-sonnet-4-7";
 
 const SIGNIFICANCE_DEFINITION = `Une expérience source est considérée SIGNIFICATIVE si au moins un des critères suivants est vrai :
 - Durée ≥ 1 mois à temps plein (ou équivalent), ou stage/alternance de toute durée dès lors que la fiche vérité liste des missions concrètes (bullets non vide)
@@ -77,15 +82,15 @@ Méthodologie :
 
 2. Lis la FICHE VÉRITÉ DU CV. Elle est la seule source autorisée pour les faits du candidat. Chaque expérience y porte un "id" stable (ex: "exp-1") — c'est cet id que tu dois référencer, jamais un id inventé.
 
-3. Génère une nouvelle version du CV structurée pour une mise en page A4 deux colonnes (sidebar gauche : Compétences / Langues / Formation / Centres d'intérêt — colonne principale droite : Accroche, Expérience, et optionnellement Projets). **Important : les deux colonnes doivent être à peu près équilibrées en hauteur.** La sidebar doit générer assez de contenu pour ne pas finir mi-page.
+3. Génère une nouvelle version du CV structurée en UNE SEULE COLONNE (format ATS-friendly — de nombreux logiciels de recrutement lisent mal les CV multi-colonnes), dans cet ordre, chaque section uniquement si elle a du contenu dans la fiche vérité : Titre → Accroche → Expérience → Projets → Compétences → Formation → Langues → Centres d'intérêt.
    - Titre adapté à l'offre
    - Accroche personnalisée (3 phrases, 50-65 mots) qui pose le profil, le parcours et la motivation pour l'offre
    - Expériences : couvre TOUTES les expériences significatives (voir définition ci-dessus) et pertinentes pour l'offre. Priorise et condense (1 à 3 bullets selon la place disponible, formulations plus courtes pour les entrées moins prioritaires) plutôt que de supprimer. Chaque bullet fait 12-20 mots avec verbe d'action + contexte factuel. **IMPORTANT** : pour les expériences, mets le NOM DE L'ENTREPRISE SOURCE dans le champ "company" (ex: "Acme Inc.", "BNP Paribas") et UNIQUEMENT le rôle/intitulé du poste source ou légèrement clarifié dans "heading" (ex: "Développeur Full-Stack"). Dans le subheading, garde les dates source et ajoute seulement un secteur/contexte si la fiche vérité le justifie. Renseigne aussi "sourceId" avec l'id exact de l'expérience source correspondante (ex: "exp-2") — jamais un id inventé, jamais vide pour un item d'expérience.
-   - Formations (en sidebar) : **OBLIGATOIRE si la fiche vérité contient au moins une formation** — 3 à 4 entrées récentes/pertinentes, format compact : heading = intitulé court (ex: "Ingénieur Informatique"), subheading = "établissement · années". Si la place manque, réduis à 1-2 entrées plutôt que de supprimer toute la section.
+   - Formations : **OBLIGATOIRE si la fiche vérité contient au moins une formation** — 3 à 4 entrées récentes/pertinentes, format compact : heading = intitulé court (ex: "Ingénieur Informatique"), subheading = "établissement · années". Si la place manque, réduis à 1-2 entrées plutôt que de supprimer toute la section.
    - Section "Projets" : **UNIQUEMENT si la fiche vérité contient des projets distincts des expériences** (champ "projects" non vide). Ne construis JAMAIS une section Projets en dupliquant ou reformulant le contenu d'une expérience — ce n'est pas un vrai projet source, c'est une invention structurelle. Si "projects" est vide, ne crée pas cette section, même pour remplir la page.
    - Compétences : **OBLIGATOIRE si la fiche vérité contient au moins une compétence** — 4 sous-sections regroupées par catégorie, 4-7 tags par sous-section, choisis parmi les compétences de la fiche vérité qui matchent l'offre. Si la place manque, réduis le nombre de tags ou de sous-catégories plutôt que de supprimer toute la section. Le nom de la sous-catégorie va dans "heading" (ex: "Front-end", "CMS & Contenus") — ne le répète jamais dans "tags" : les tags sont uniquement des technologies/compétences spécifiques nommées dans la fiche vérité, jamais le label de regroupement lui-même.
    - Ajout de mots-clés stratégiques issus de l'offre seulement quand ils sont factuellement justifiés par la fiche vérité
-   - **Objectif : tout doit tenir sur UNE seule page A4 en layout 2 colonnes**, et remplir ~90 % de la page. Pour gagner de la place, réduis D'ABORD les bullets/tags/nombre d'items secondaires (Projets, Centres d'intérêt) — les sections Compétences et Formation ne doivent JAMAIS disparaître entièrement si la fiche vérité en contient. Si le nombre d'expériences significatives rend tout ça impossible même en condensant au maximum, privilégie quand même la couverture complète des expériences significatives plutôt qu'une omission silencieuse — mais condense d'abord agressivement avant d'envisager ce cas.
+   - **Objectif : tenir sur UNE seule page A4 en une seule colonne**, et remplir ~90 % de la page. Pour gagner de la place, réduis D'ABORD les bullets/tags/nombre d'items secondaires (Projets, Centres d'intérêt) — les sections Compétences et Formation ne doivent JAMAIS disparaître entièrement si la fiche vérité en contient. Si le contenu significatif ne tient toujours pas sur 1 page même condensé au maximum, une 2ᵉ page propre est acceptable — ça doit rester l'exception, pas la norme.
    - Pour la section "Centres d'intérêt", utilise UN SEUL item avec heading "Centres d'intérêt" et 3 bullets avec brève qualité associée (ex: "Taekwondo (ceinture noire) — rigueur, dépassement de soi") — JAMAIS plusieurs items distincts avec des headings orphelins
    - Pour la section "Langues", utilise UN SEUL item avec heading "Langues" et bullets très courts (ex: "Français — natif", "Anglais — B1") — pas de subheading
    - Règle générale pour TOUTES les sections : un item doit toujours avoir soit des bullets soit des tags. Ne jamais générer un item avec uniquement un heading (sauf formation : heading=intitulé + subheading=établissement/dates accepté sans bullets)
@@ -479,7 +484,7 @@ async function extractSourceFacts(
   pdfBase64: string
 ): Promise<SourceFacts> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: SUPPORT_MODEL,
     max_tokens: 12000,
     thinking: { type: "adaptive" },
     system: [
@@ -532,7 +537,7 @@ async function generateOptimizedCV(
   violations: string[] = []
 ): Promise<GeneratedOptimizeResponse> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: GENERATION_MODEL,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: [
@@ -578,7 +583,7 @@ async function auditSemanticFidelity(
   lowOverlapBullets: LowFidelityBullet[]
 ): Promise<SemanticViolation[]> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: SUPPORT_MODEL,
     max_tokens: 4000,
     thinking: { type: "adaptive" },
     system: [
@@ -782,6 +787,11 @@ export function validateExperienceSourceIds(
     if (sourceYears.size > 0 && unknownYears.length > 0) {
       violations.push(
         `Dates contradictoires pour "${company || sourceExperience.company}" : année(s) ${unknownYears.join(", ")} absente(s) du CV source.`
+      );
+    }
+    if (sourceYears.size > 0 && generatedYears.length === 0) {
+      violations.push(
+        `Dates manquantes pour "${company || sourceExperience.company}" : la fiche vérité indique ${Array.from(sourceYears).join(", ")} mais aucune date n'apparaît dans le CV généré.`
       );
     }
   }
