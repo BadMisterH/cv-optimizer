@@ -7,7 +7,12 @@ import {
   deductCredit,
 } from "@/lib/usage-gate";
 
-const MODEL = "claude-opus-4-7";
+// Opus réservé à la génération créative du CV (le cœur du travail : priorisation,
+// reformulation, adaptation à l'offre). L'extraction (transcription fidèle, peu de
+// jugement créatif) et l'audit (classification de violations, pas de génération de
+// contenu) tournent sur Sonnet — moins coûteux, suffisant pour ces tâches plus étroites.
+const GENERATION_MODEL = "claude-opus-4-7";
+const SUPPORT_MODEL = "claude-sonnet-4-7";
 
 const SIGNIFICANCE_DEFINITION = `Une expérience source est considérée SIGNIFICATIVE si au moins un des critères suivants est vrai :
 - Durée ≥ 1 mois à temps plein (ou équivalent), ou stage/alternance de toute durée dès lors que la fiche vérité liste des missions concrètes (bullets non vide)
@@ -479,7 +484,7 @@ async function extractSourceFacts(
   pdfBase64: string
 ): Promise<SourceFacts> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: SUPPORT_MODEL,
     max_tokens: 12000,
     thinking: { type: "adaptive" },
     system: [
@@ -532,7 +537,7 @@ async function generateOptimizedCV(
   violations: string[] = []
 ): Promise<GeneratedOptimizeResponse> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: GENERATION_MODEL,
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: [
@@ -578,7 +583,7 @@ async function auditSemanticFidelity(
   lowOverlapBullets: LowFidelityBullet[]
 ): Promise<SemanticViolation[]> {
   const response = await client.messages.create({
-    model: MODEL,
+    model: SUPPORT_MODEL,
     max_tokens: 4000,
     thinking: { type: "adaptive" },
     system: [
