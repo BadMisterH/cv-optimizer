@@ -31,11 +31,11 @@ const VALID_CV: OptimizedCV = {
   sections: [],
 };
 
-function makeRequest(cv: unknown): Request {
+function makeRequest(cv: unknown, extra: Record<string, unknown> = {}): Request {
   return new Request("http://localhost/api/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cv }),
+    body: JSON.stringify({ cv, ...extra }),
   });
 }
 
@@ -70,5 +70,14 @@ describe("POST /api/pdf — seuil de pages", () => {
     expect(res.status).toBe(422);
     const data = await res.json();
     expect(data.error).toMatch(/trop long/i);
+    expect(data.tooLong).toBe(true);
+  });
+
+  it("expédie quand même un PDF 3+ pages si allowOverflow est explicitement demandé", async () => {
+    countPdfPages.mockReturnValue(3);
+
+    const res = await POST(makeRequest(VALID_CV, { allowOverflow: true }));
+
+    expect(res.status).toBe(200);
   });
 });
