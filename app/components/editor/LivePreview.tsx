@@ -55,6 +55,7 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fullscreenIframeRef = useRef<HTMLIFrameElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const fullscreenResizeObserverRef = useRef<ResizeObserver | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentHeight, setContentHeight] = useState(A4_H);
   const [fullscreen, setFullscreen] = useState(false);
@@ -97,9 +98,12 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
     };
   }, [fullscreen]);
 
-  // Nettoyage du ResizeObserver de contenu au démontage
+  // Nettoyage des ResizeObserver de contenu au démontage
   useEffect(() => {
-    return () => resizeObserverRef.current?.disconnect();
+    return () => {
+      resizeObserverRef.current?.disconnect();
+      fullscreenResizeObserverRef.current?.disconnect();
+    };
   }, []);
 
   function handlePreviewIframeLoad() {
@@ -122,7 +126,18 @@ export function LivePreview({ cv, photo, accent, template }: Props) {
   function handleFullscreenIframeLoad() {
     const iframe = fullscreenIframeRef.current;
     if (!iframe) return;
+
     measureIframeContentHeight(iframe).then(setContentHeight);
+
+    fullscreenResizeObserverRef.current?.disconnect();
+    const body = iframe.contentDocument?.body;
+    if (body) {
+      const observer = new ResizeObserver(() => {
+        measureIframeContentHeight(iframe).then(setContentHeight);
+      });
+      observer.observe(body);
+      fullscreenResizeObserverRef.current = observer;
+    }
   }
 
   const scale = containerWidth > 0 ? Math.min(1, containerWidth / A4_W) : 1;
