@@ -28,21 +28,32 @@ En combinant les deux corrections, le décalage 2-colonnes-promises/1-colonne-r�
 - Reformuler l'objectif de mise en page : condenser agressivement en premier recours (bullets plus courts, moins de tags par sous-catégorie) ; si le contenu significatif ne tient toujours pas sur 1 page A4 même condensé au maximum, une 2ᵉ page propre est acceptable — ça doit rester l'exception, pas la norme.
 - Retirer la clause ajoutée plus tôt dans la session qui ne protégeait que les expériences de l'omission sous contrainte de place (`"Si le nombre d'expériences significatives rend ça impossible..."`) : elle est maintenant redondante avec la règle générale (toutes les sections avec contenu source doivent être condensées, jamais supprimées) et avec le nouveau fallback 2 pages général.
 
-### 2. `app/api/pdf/route.ts` — retrait du blocage, fallback transparent
+### 2. `app/api/pdf/route.ts` — retrait du blocage strict à 1 page, plafond dur à 2 pages
 
 - La boucle de densité (0 à 4, inchangée) reste le mécanisme de compaction — c'est le "condense d'abord" du prompt, côté rendu.
-- Retirer le bloc ajouté plus tôt dans la session qui renvoie une erreur 422 quand `finalPages > 1` après densité max.
-- Comportement final : si le CV tient sur 1 page à une densité ≤ 4, on l'expédie comme aujourd'hui. Sinon, on expédie quand même le PDF (potentiellement 2 pages, rendu proprement par le flux naturel de `react-pdf` — pas de troncature, pas de contenu coupé).
-- Pas de signal supplémentaire nécessaire dans la réponse (pas de header custom) : la transparence vient de l'aperçu live (§3), qui montre déjà au candidat que son CV dépasse 1 page avant qu'il ne télécharge.
+- Nouveau seuil, sur `finalPages` (comptage réel via `countPdfPages`, inchangé) :
+  - `finalPages === 1` → expédié comme aujourd'hui.
+  - `finalPages === 2` → expédié aussi (nouveau fallback, remplace l'ancien blocage 422 systématique dès qu'on dépassait 1 page).
+  - `finalPages >= 3` → **jamais expédié silencieusement**. Le contenu n'est plus un "CV optimisé" à ce stade, c'est un problème de volume de contenu.
+- **Choix d'architecture pour le cas ≥ 3 pages : renvoyer une erreur claire, pas relancer une réparation IA.** `/api/pdf/route.ts` est un renderer pur (prend un `cv` JSON déjà généré, produit un buffer PDF) — il n'a aucun accès à l'API Anthropic et ne doit pas en avoir (coupler le renderer à la génération de contenu casserait la séparation actuelle des responsabilités entre `/api/optimize` — qui décide QUOI écrire — et `/api/pdf` — qui décide comment le mettre en page). La condensation de contenu est une décision qui appartient au pipeline de génération, pas au renderer. Donc : erreur 422 avec message actionnable (ex: *"Ce CV est trop long pour être exporté proprement (3 pages et plus même à densité maximale). Retire des bullets ou des expériences moins prioritaires dans l'éditeur avant de réessayer."*), sans tentative de réparation automatique depuis cette route.
+- Toujours pas de signal supplémentaire nécessaire pour le cas 2 pages accepté (pas de header custom) : la transparence vient de l'aperçu live (§3), qui montre déjà au candidat que son CV dépasse 1 page avant qu'il ne télécharge.
 
-### 3. `app/components/editor/LivePreview.tsx` — retrait du clip dur
+### 3. `app/components/editor/LivePreview.tsx` — retrait du clip dur, sans en recréer un autre
 
 Constat : le HTML généré par `lib/cv-html.ts` flue naturellement (pas de hauteur fixe ni d'`overflow: hidden` dans son propre CSS) — tout le clipping vient du wrapper React : une `<div>` avec `overflow-hidden` et une hauteur fixe (`scaledH`, calculée pour correspondre exactement à 1 page A4 mise à l'échelle), plus une `<iframe>` elle-même figée à `height: A4_H`.
 
-Deux approches possibles pour "retirer le clip dur, scroll simple" :
-- **Rejetée — doubler la hauteur fixe en permanence** : simple mais dégrade visuellement le cas majoritaire (CV qui tient déjà sur 1 page) avec un grand vide en bas.
-- **Retenue — mesure dynamique de la hauteur réelle** : au chargement de l'iframe (`onLoad`), lire `iframe.contentWindow.document.body.scrollHeight` et ajuster la hauteur du conteneur en conséquence (plafonnée à ~2×`A4_H` pour rester borné), avec `overflow-y: auto` à la place d'`overflow-hidden`. Un CV qui tient sur 1 page garde exactement le rendu actuel (hauteur mesurée ≈ A4_H, aucun changement visible). Un CV plus long affiche tout son contenu, scrollable dans la boîte d'aperçu, jamais coupé silencieusement.
-- Ce n'est pas une vraie pagination visuelle (pas de séparation par page avec marges/ombres propres à chaque page) — seulement une mesure de hauteur qui empêche la perte silencieuse de contenu. Le mode plein écran (déjà scrollable via `overflow-auto` sur son conteneur, lignes 151-152 actuelles) n'a pas besoin de changement.
+**Principe clé : le plafond visuel (scroll) et la hauteur réelle du contenu sont deux choses séparées, il ne faut pas les confondre.**
+- **`<iframe>`** : sa hauteur doit toujours correspondre à la hauteur RÉELLE mesurée du contenu (`scrollHeight`), **sans plafond**. Si on limitait la hauteur de l'iframe elle-même (ex: à 2×`A4_H`), on recréerait exactement le même bug qu'aujourd'hui — juste avec un seuil plus haut : tout contenu au-delà resterait invisible et coupé silencieusement, contrairement à l'objectif de cette spec.
+- **Le conteneur wrapper** (la `<div>` autour de l'iframe) : lui peut avoir un `max-height` (borne purement visuelle/ergonomique, pour éviter qu'une boîte d'aperçu ne prenne toute la page — par exemple liée au viewport, `max-height: 80vh`) combiné à `overflow-y: auto`. La hauteur de l'iframe à l'intérieur reste celle du contenu réel ; si elle dépasse le `max-height` du wrapper, une scrollbar apparaît sur le wrapper — mais rien n'est caché, tout reste atteignable en scrollant.
+- Rejeté : doubler/plafonner la hauteur fixe de l'iframe en permanence à une valeur arbitraire — dégraderait visuellement le cas majoritaire (CV qui tient sur 1 page, gros vide en bas) ET recréerait un clip caché pour tout contenu dépassant ce plafond.
+
+**Mesure robuste de la hauteur** (l'iframe contient des web fonts et un flux de blocs — une mesure prise trop tôt sous-estime la hauteur réelle) :
+1. Mesure initiale sur l'évènement `onLoad` de l'iframe (`iframe.contentDocument.documentElement.scrollHeight` ou `.body.scrollHeight`).
+2. Re-mesure via `requestAnimationFrame` après le `onLoad`, pour laisser le navigateur terminer un cycle de layout avant de lire la valeur.
+3. Si disponible, attendre `iframe.contentDocument.fonts.ready` avant une mesure finale — les web fonts (polices custom du CV) peuvent finir de charger après le `onLoad` et changer la hauteur du texte.
+4. Mettre en place un `ResizeObserver` sur `iframe.contentDocument.body` (ou `documentElement`) pour capter tout changement de hauteur ultérieur (chargement différé, changement de contenu) et remettre à jour la hauteur du conteneur en continu, pas seulement au chargement initial.
+
+Ce n'est pas une vraie pagination visuelle (pas de séparation par page avec marges/ombres propres à chaque page) — seulement une mesure de hauteur fiable qui empêche la perte silencieuse de contenu. Le mode plein écran (déjà scrollable via `overflow-auto` sur son conteneur, lignes 151-152 actuelles) n'a pas besoin de changement structurel, seulement de bénéficier de la même mesure de hauteur si l'iframe y est aussi contrainte à une taille fixe.
 
 ---
 
@@ -56,6 +67,9 @@ Deux approches possibles pour "retirer le clip dur, scroll simple" :
 
 ## Tests à couvrir (pour le plan d'implémentation)
 
-- `app/api/pdf/route.ts` : un CV qui reste à 2 pages même à densité 4 est désormais expédié avec un statut 200 (pas de 422), contenu PDF non tronqué.
-- Test manuel/visuel (pas d'automatisation) : `LivePreview.tsx` avec un CV court (1 page) — hauteur du conteneur inchangée par rapport à avant. Avec un CV long (2 pages) — contenu entièrement visible via scroll, pas de coupure nette au niveau d'1 page.
+- `app/api/pdf/route.ts` :
+  - `finalPages === 1` → statut 200, comportement inchangé.
+  - `finalPages === 2` → statut 200 (nouveau), contenu PDF non tronqué.
+  - `finalPages >= 3` → statut 422 avec message actionnable, PDF jamais expédié.
+- Test manuel/visuel (pas d'automatisation, composant client avec iframe/mesure DOM difficilement testable unitairement) : `LivePreview.tsx` avec un CV court (1 page) — hauteur du conteneur inchangée par rapport à avant. Avec un CV moyen (2 pages) — contenu entièrement visible via scroll, pas de coupure nette au niveau d'1 page. Vérifier explicitement que l'iframe elle-même n'est jamais plus petite que le contenu réel (inspecter en DevTools que `scrollHeight` de l'iframe correspond à sa hauteur CSS appliquée, pas seulement à ce qui est visible dans le wrapper).
 - Prompt : relecture manuelle du `SYSTEM_PROMPT`/`REPAIR_PROMPT` mis à jour pour confirmer l'absence de toute référence résiduelle à "2 colonnes"/"sidebar".
