@@ -523,7 +523,10 @@ function Result({
 
         {data.atsInterpretation && (
           <div className="mb-10">
-            <ATSInterpretation interpretation={data.atsInterpretation} />
+            <ATSInterpretation
+              interpretation={data.atsInterpretation}
+              reviewFlags={data.reviewFlags}
+            />
           </div>
         )}
 

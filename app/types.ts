@@ -70,6 +70,8 @@ export type OptimizeResponse = {
   modifications: string[];
   atsScore: ATSScore;
   atsInterpretation: ATSInterpretation;
+  /** Points de fidélité/complétude ambigus détectés par l'audit sémantique, à vérifier par le candidat avant envoi. Vide si rien à signaler. */
+  reviewFlags: string[];
 };
 
 // ===== Cover Letter =====

@@ -2,10 +2,12 @@ import type { ATSInterpretation as ATSInterpretationType } from "@/app/types";
 
 type Props = {
   interpretation: ATSInterpretationType;
+  reviewFlags?: string[];
 };
 
-export function ATSInterpretation({ interpretation }: Props) {
+export function ATSInterpretation({ interpretation, reviewFlags = [] }: Props) {
   const risks = interpretation.parsingRisks.filter(Boolean);
+  const flags = reviewFlags.filter(Boolean);
 
   return (
     <section
@@ -70,6 +72,19 @@ export function ATSInterpretation({ interpretation }: Props) {
               </p>
             )}
           </InterpretationBlock>
+
+          {flags.length > 0 && (
+            <InterpretationBlock title="À vérifier avant envoi">
+              <ul className="space-y-2">
+                {flags.map((flag, idx) => (
+                  <li key={idx} className="flex gap-3 text-[13px] leading-relaxed text-ink-soft">
+                    <span aria-hidden className="mt-2 inline-block h-px w-3 shrink-0 bg-warm" />
+                    <span className="min-w-0 break-words">{flag}</span>
+                  </li>
+                ))}
+              </ul>
+            </InterpretationBlock>
+          )}
         </div>
       </div>
 
