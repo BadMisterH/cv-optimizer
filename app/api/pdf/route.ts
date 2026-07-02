@@ -58,13 +58,16 @@ export async function POST(req: Request) {
 
     console.log(`[api/pdf] final: density=${usedDensity}, pages=${finalPages}`);
 
-    // Ne jamais expédier silencieusement un PDF qui dépasse 1 page même à densité
-    // maximale : le candidat croirait avoir un CV conforme au format annoncé.
-    if (finalPages > 1) {
+    // 1 page = idéal, 2 pages = fallback accepté (contenu légitime qui ne tient pas en
+    // 1 colonne même condensé au maximum). Au-delà, ce n'est plus un CV optimisé — on ne
+    // l'expédie jamais silencieusement. Pas de réparation IA ici : cette route est un
+    // renderer pur sans accès au modèle, la condensation de contenu est décidée par
+    // /api/optimize, pas ici.
+    if (finalPages >= 3) {
       return NextResponse.json(
         {
           error:
-            "Le CV dépasse une page même à la densité maximale. Réduis le contenu (bullets, nombre d'expériences) avant de générer le PDF.",
+            "Ce CV est trop long pour être exporté proprement (3 pages ou plus même à densité maximale). Retire des bullets ou des expériences moins prioritaires dans l'éditeur avant de réessayer.",
         },
         { status: 422 }
       );
