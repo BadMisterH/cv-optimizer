@@ -43,3 +43,6 @@ next-env.d.ts
 # local sqlite (better-auth dev)
 *.db
 *.db-journal
+
+# superpowers brainstorming companion (local mockups, not for commit)
+.superpowers/
