@@ -5,6 +5,7 @@ import {
   findLowFidelityBullets,
   findOmittedExperiences,
   stripInternalFields,
+  stripUnjustifiedSkillTags,
   validateExperienceSourceIds,
   validateOptimizedCV,
   validateProjectsProvenance,
@@ -566,5 +567,75 @@ describe("chiffres d'ancienneté calculés à partir des dates", () => {
 
     const violations = validateOptimizedCV(payload, sourceFacts);
     expect(violations.some((v) => v.includes('"40"'))).toBe(true);
+  });
+});
+
+describe("strip déterministe des compétences non justifiées", () => {
+  it("retire un tag absent de la source et garde les tags justifiés", () => {
+    const sourceFacts = makeSourceFacts([makeExperience()]); // technologies: React, Node.js
+    const payload = makePayloadWithSections([
+      { title: "Compétences", items: [makeSkillItem({ heading: "Stack", tags: ["React", "Python"] })] },
+    ]);
+
+    const { payload: cleaned, removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
+
+    expect(removed).toEqual(["Python"]);
+    const skills = cleaned.cv.sections.find((s) => s.title === "Compétences");
+    expect(skills?.items[0].tags).toEqual(["React"]);
+  });
+
+  it("garde un tag qui reprend le libellé de sa propre sous-catégorie", () => {
+    const sourceFacts = makeSourceFacts([makeExperience()]); // skills: []
+    const payload = makePayloadWithSections([
+      { title: "Compétences", items: [makeSkillItem({ heading: "Marketing digital", tags: ["Marketing"] })] },
+    ]);
+
+    const { removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
+
+    expect(removed).toEqual([]);
+  });
+
+  it("supprime une sous-catégorie vidée de tous ses tags", () => {
+    const sourceFacts = makeSourceFacts([makeExperience()]);
+    const payload = makePayloadWithSections([
+      {
+        title: "Compétences",
+        items: [
+          makeSkillItem({ heading: "Réel", tags: ["React"] }),
+          makeSkillItem({ heading: "Inventé", tags: ["Kubernetes", "Terraform"] }),
+        ],
+      },
+    ]);
+
+    const { payload: cleaned, removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
+
+    expect(removed).toEqual(["Kubernetes", "Terraform"]);
+    const skills = cleaned.cv.sections.find((s) => s.title === "Compétences");
+    expect(skills?.items).toHaveLength(1);
+    expect(skills?.items[0].heading).toBe("Réel");
+  });
+
+  it("ne touche pas aux tags d'une section non-compétences", () => {
+    const sourceFacts = makeSourceFacts([makeExperience()]);
+    const payload = makePayloadWithSections([
+      { title: "Expérience", items: [makeExperienceItem({ tags: ["Python"] })] },
+    ]);
+
+    const { payload: cleaned, removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
+
+    expect(removed).toEqual([]);
+    const exp = cleaned.cv.sections.find((s) => s.title === "Expérience");
+    expect(exp?.items[0].tags).toEqual(["Python"]);
+  });
+
+  it("ne retire rien quand tous les tags sont justifiés", () => {
+    const sourceFacts = makeSourceFacts([makeExperience()]);
+    const payload = makePayloadWithSections([
+      { title: "Compétences", items: [makeSkillItem({ heading: "Stack", tags: ["React", "Node.js"] })] },
+    ]);
+
+    const { removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
+
+    expect(removed).toEqual([]);
   });
 });

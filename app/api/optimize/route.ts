@@ -830,6 +830,39 @@ function validateSkills(payload: GeneratedOptimizeResponse, sourceFacts: SourceF
   return violations;
 }
 
+/**
+ * Filet de sécurité déterministe sur les compétences. La génération invente parfois des
+ * tags par inférence de secteur (depuis un nom d'employeur) ou par contamination des
+ * mots-clés de l'offre. Plutôt que de bloquer tout le CV (règle : ne jamais laisser
+ * l'utilisateur sans sortie), on retire chirurgicalement ces tags non justifiés — un tag
+ * est une feuille, le supprimer n'invente rien et ne casse pas la structure. Mêmes règles
+ * de justification que validateSkills. Les vraies fabrications structurelles (expérience
+ * inventée, bullet mal attribué, relocalisation) restent bloquantes ailleurs.
+ */
+export function stripUnjustifiedSkillTags(
+  payload: GeneratedOptimizeResponse,
+  sourceFacts: SourceFacts
+): { payload: GeneratedOptimizeResponse; removed: string[] } {
+  const removed: string[] = [];
+  const sections = payload.cv.sections.map((section) => {
+    if (!isSkillsSection(section.title)) return section;
+    const items = section.items
+      .map((item) => {
+        const tags = item.tags.filter((tag) => {
+          if (tagMatchesOwnHeading(tag, item.heading)) return true;
+          if (isAllowedSkill(tag, sourceFacts)) return true;
+          removed.push(tag);
+          return false;
+        });
+        return { ...item, tags };
+      })
+      // Une sous-catégorie de compétences vidée de tous ses tags n'a plus de raison d'être.
+      .filter((item) => item.tags.length > 0 || item.bullets.length > 0);
+    return { ...section, items };
+  });
+  return { payload: { ...payload, cv: { ...payload.cv, sections } }, removed };
+}
+
 const DURATION_KEYWORDS = /\b(an|ans|ann[ée]e|ann[ée]es|year|years|yrs?)\b/i;
 
 /**
@@ -1169,10 +1202,21 @@ export async function POST(req: Request) {
       "[api/optimize] generated sections:",
       JSON.stringify(parsed.cv.sections.map((s) => ({ title: s.title, items: s.items.length })))
     );
+
+    // Filet de sécurité déterministe sur les compétences, appliqué AVANT validation : une
+    // skill inventée par la génération est retirée (règle 1 : rien d'inventé ne passe) sans
+    // déclencher ni réparation ni 422 (règle 12 : jamais l'utilisateur sans sortie). Seules
+    // les vraies fabrications structurelles restent bloquantes plus bas.
+    let strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
+    parsed = strip.payload;
+    let removedSkills = strip.removed;
     let { strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts);
 
     if (strongViolations.length > 0) {
       parsed = await generateOptimizedCV(client, sourceFacts, offerText, strongViolations);
+      strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
+      parsed = strip.payload;
+      removedSkills = strip.removed;
       ({ strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts));
     }
 
@@ -1187,6 +1231,14 @@ export async function POST(req: Request) {
       );
     }
 
+    const reviewFlags = [...ambiguousNotes];
+    if (removedSkills.length > 0) {
+      const unique = Array.from(new Set(removedSkills));
+      reviewFlags.push(
+        `Compétences retirées car absentes de ton CV source : ${unique.join(", ")}. Ajoute-les à ton CV d'origine si tu les maîtrises réellement, puis relance.`
+      );
+    }
+
     const cleaned = stripInternalFields(parsed);
     const finalResponse: OptimizeResponse = {
       ...cleaned,
@@ -1194,7 +1246,7 @@ export async function POST(req: Request) {
         ...cleaned.modifications,
         "Audit anti-invention validé : coordonnées, localisation, entreprises, dates, compétences, chiffres et complétude des expériences contrôlés par rapport au CV source.",
       ],
-      reviewFlags: ambiguousNotes,
+      reviewFlags,
     };
 
     if (gate.isAuthenticated && !gate.isAdmin) {
