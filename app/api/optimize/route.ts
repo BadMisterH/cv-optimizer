@@ -784,6 +784,11 @@ export function validateExperienceSourceIds(
         `Dates contradictoires pour "${company || sourceExperience.company}" : année(s) ${unknownYears.join(", ")} absente(s) du CV source.`
       );
     }
+    if (sourceYears.size > 0 && generatedYears.length === 0) {
+      violations.push(
+        `Dates manquantes pour "${company || sourceExperience.company}" : la fiche vérité indique ${Array.from(sourceYears).join(", ")} mais aucune date n'apparaît dans le CV généré.`
+      );
+    }
   }
 
   return violations;
