@@ -12,7 +12,7 @@ import {
 // jugement créatif) et l'audit (classification de violations, pas de génération de
 // contenu) tournent sur Sonnet — moins coûteux, suffisant pour ces tâches plus étroites.
 const GENERATION_MODEL = "claude-opus-4-7";
-const SUPPORT_MODEL = "claude-sonnet-4-7";
+const SUPPORT_MODEL = "claude-sonnet-5";
 
 const SIGNIFICANCE_DEFINITION = `Une expérience source est considérée SIGNIFICATIVE si au moins un des critères suivants est vrai :
 - Durée ≥ 1 mois à temps plein (ou équivalent), ou stage/alternance de toute durée dès lors que la fiche vérité liste des missions concrètes (bullets non vide)
