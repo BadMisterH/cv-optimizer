@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -79,6 +80,20 @@ export function UserMenu() {
               {session.user.email}
             </p>
           </div>
+          <Link
+            href="/buy-credits"
+            onClick={() => setOpen(false)}
+            role="menuitem"
+            className="group flex w-full items-center justify-between border-b border-rule px-5 py-4 font-mono text-[13px] uppercase tracking-[0.2em] text-ink transition hover:bg-paper-deep hover:text-accent"
+          >
+            <span>Recharger des crédits</span>
+            <span
+              aria-hidden
+              className="text-ink-muted transition group-hover:translate-x-0.5 group-hover:text-accent"
+            >
+              →
+            </span>
+          </Link>
           <button
             type="button"
             onClick={handleSignOut}
