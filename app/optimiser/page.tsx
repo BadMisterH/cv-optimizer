@@ -14,7 +14,7 @@ import { ATSInterpretation } from "../components/ATSInterpretation";
 import { CVEditor } from "../components/editor/CVEditor";
 import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
+import { readPhoto, saveLastCV, savePhoto, incrementGenerationCount } from "../lib/cvStore";
 import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
 import { gateRedirectLabel } from "../lib/gateRedirect";
 import type { OptimizeResponse, OptimizedCV } from "../types";
@@ -30,11 +30,6 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<SubmitError | null>(null);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
-  // Hydration-safe : null tant que pas monté, lit localStorage en useEffect
-  const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
-  useEffect(() => {
-    setCanGenerateFree(canGenerateWithoutAuth("cv"));
-  }, []);
 
   const sessionUser = session?.user as { email?: string; credits?: number } | undefined;
   const isAdmin = isAdminEmail(sessionUser?.email);
@@ -126,13 +121,13 @@ export default function Page() {
     e.preventDefault();
     if (!cvFile) return;
 
-    // Check free tier limit (lit le state, qui a été initialisé en useEffect après mount)
-    const stillFree = canGenerateFree ?? canGenerateWithoutAuth("cv");
-    if (!stillFree && !session?.user) {
+    // Auth obligatoire (miroir du gate serveur) : l'essai gratuit = crédit de bienvenue
+    // à l'inscription, plus d'essai anonyme.
+    if (!session?.user) {
       setError({
-        message: "Tu as déjà utilisé ton essai gratuit.",
-        redirectHref: "/sign-in?redirect=/optimiser",
-        redirectLabel: "Se connecter",
+        message: "Crée un compte gratuit pour générer ton CV — 1 génération offerte.",
+        redirectHref: "/sign-up?redirect=/optimiser",
+        redirectLabel: "Créer un compte",
       });
       return;
     }
@@ -185,9 +180,9 @@ export default function Page() {
             <Logo size="md" />
             <ServiceNav />
             <div className="flex items-center gap-6">
-              {!session?.user && canGenerateFree !== null && (
+              {!session?.user && (
                 <span className="hidden sm:inline text-ink-soft">
-                  {canGenerateFree ? "1 gratuit restant" : "Connectez-vous pour continuer"}
+                  1 génération offerte à l&apos;inscription
                 </span>
               )}
               <span className="hidden sm:inline">v.01</span>

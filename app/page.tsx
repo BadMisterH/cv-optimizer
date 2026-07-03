@@ -354,7 +354,7 @@ export default function Landing() {
               </div>
 
               <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-faint">
-                1 essai gratuit · Pas de carte bancaire · CV supprimé après génération
+                1 génération offerte à l'inscription · Pas de carte bancaire · CV supprimé après génération
               </p>
 
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
@@ -1116,7 +1116,7 @@ export default function Landing() {
                 </span>
               </a>
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint sm:text-[12px] sm:tracking-[0.22em]">
-                1 essai gratuit · Pas de carte bancaire · CV supprimé après génération
+                1 génération offerte à l'inscription · Pas de carte bancaire · CV supprimé après génération
               </p>
             </div>
           </div>

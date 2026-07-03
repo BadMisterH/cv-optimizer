@@ -59,7 +59,7 @@ export function StructuredData({ faq }: { faq: FAQItem[] }) {
           "@type": "Offer",
           price: "0",
           priceCurrency: "EUR",
-          description: "1 essai gratuit, sans carte bancaire",
+          description: "1 génération offerte à l'inscription, sans carte bancaire",
           availability: "https://schema.org/InStock",
         },
         featureList: [

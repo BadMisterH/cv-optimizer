@@ -3,11 +3,7 @@ import { NextResponse } from "next/server";
 import type { CVItem, OptimizedCV, OptimizeResponse } from "@/app/types";
 import { alertAnthropicApiError } from "@/lib/alerting";
 import { extractPdfText } from "@/lib/pdf-text";
-import {
-  ANON_COOKIE_MAX_AGE,
-  checkUsageGate,
-  deductCredit,
-} from "@/lib/usage-gate";
+import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
 
 // Opus réservé à la génération créative du CV (le cœur du travail : priorisation,
 // reformulation, adaptation à l'offre). L'extraction (transcription fidèle, peu de
@@ -1242,14 +1238,17 @@ export async function checkFidelity(
 
 export async function POST(req: Request) {
   try {
-    const gate = await checkUsageGate(req);
+    // Auth obligatoire : l'essai gratuit passe par le crédit de bienvenue à l'inscription
+    // (email vérifié + anti-fraude), plus par un cookie anonyme — un anonyme coûtait du
+    // budget API sans laisser aucun moyen de le recontacter.
+    const gate = await checkUsageGate(req, { requireAuth: true, anonRedirectPath: "/optimiser" });
     if (!gate.allowed) {
       const error =
         gate.reason === "email_unverified"
           ? "Vérifie ton adresse email avant d'utiliser tes crédits."
           : gate.reason === "no_credits"
           ? "Tu n'as plus de crédits. Achète un pack pour continuer."
-          : "Tu as déjà utilisé ton essai gratuit. Crée un compte pour continuer.";
+          : "Crée un compte gratuit pour générer ton CV — 1 génération offerte à l'inscription.";
       const status = gate.reason === "email_unverified" ? 403 : 401;
       return NextResponse.json(
         { error, redirect: gate.redirect },
@@ -1383,17 +1382,8 @@ export async function POST(req: Request) {
       await deductCredit(gate.userId);
     }
 
-    const res = NextResponse.json(finalResponse);
-    if (!gate.isAuthenticated && gate.cookieToSet) {
-      res.cookies.set(gate.cookieToSet, "1", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: ANON_COOKIE_MAX_AGE,
-      });
-    }
-    return res;
+    // requireAuth garantit gate.isAuthenticated ici — plus de cookie anonyme à poser.
+    return NextResponse.json(finalResponse);
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       await alertAnthropicApiError(err.status ?? 0, err.message, "/api/optimize");

@@ -186,9 +186,10 @@ export default function CGUPage() {
               trace persiste après suppression du compte.
             </p>
             <p>
-              Les utilisateurs anonymes (non connectés) sont également limités
-              à un essai gratuit par service via cookies. Cette mesure est
-              décrite dans la <Link href="/rgpd" className="text-accent hover:underline">politique de confidentialité</Link>.
+              La génération de documents nécessite un compte : l&apos;essai
+              gratuit correspond au crédit de bienvenue offert à
+              l&apos;inscription, soumis à la mesure anti-fraude décrite
+              ci-dessus.
             </p>
           </section>
 

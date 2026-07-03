@@ -73,10 +73,10 @@ export default function RGPDPage() {
               <li><span><strong>Photo de profil</strong> — stockée localement dans votre navigateur (localStorage), jamais transmise à nos serveurs</span></li>
               <li><span><strong>Historique d&apos;achats</strong> (si applicable) — date, montant, pack, identifiant Stripe (table <code>purchases</code>)</span></li>
             </ul>
-            <h3>Cookies anti-fraude (sans connexion)</h3>
+            <h3>Cookies</h3>
             <ul>
-              <li><span><code>anon_used</code> — cookie httpOnly, durée 30 jours, posé après le premier essai gratuit pour limiter à 1 génération (tous services confondus) par navigateur non-connecté</span></li>
               <li><span>Cookies de session better-auth — strictement nécessaires au fonctionnement de l&apos;authentification</span></li>
+              <li><span><code>anon_used</code> — ancien cookie d&apos;essai anonyme, plus posé ni lu par le service ; les cookies résiduels expirent d&apos;eux-mêmes sous 30 jours</span></li>
             </ul>
           </section>
 
@@ -181,7 +181,6 @@ export default function RGPDPage() {
             </p>
             <ul>
               <li><span><code>better-auth.session_token</code> — cookie de session, indispensable à l&apos;authentification</span></li>
-              <li><span><code>anon_used</code> — limitation anti-abus pour l&apos;essai gratuit sans compte</span></li>
             </ul>
           </section>
 
