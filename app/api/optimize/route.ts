@@ -14,6 +14,24 @@ import {
 const GENERATION_MODEL = "claude-opus-4-7";
 const SUPPORT_MODEL = "claude-sonnet-5";
 
+// Budgets de raisonnement BORNÉS au lieu de `thinking: adaptive` (non plafonné). Le
+// raisonnement est facturé comme des tokens de sortie ; adaptive peut en générer beaucoup,
+// surtout sur Opus. On borne : peu pour l'extraction (transcription) et l'audit
+// (classification), plus généreux mais capé pour la génération (cœur créatif). Doit rester
+// ≥ 1024 et < max_tokens de l'appel. Ajuster ici si la qualité baisse.
+const EXTRACTION_THINKING_BUDGET = 2048;
+const GENERATION_THINKING_BUDGET = 4096;
+const AUDIT_THINKING_BUDGET = 1536;
+
+/**
+ * Journalise la consommation réelle de tokens d'un appel modèle (in / out / cache). Permet
+ * de connaître le coût effectif d'un CV plutôt que de le deviner. Cherche `[api/optimize][cost]`
+ * dans les logs serveur : additionner les lignes d'une même requête = coût d'un CV.
+ */
+function logUsage(label: string, model: string, usage: unknown): void {
+  console.log(`[api/optimize][cost] ${label} (${model}):`, JSON.stringify(usage ?? {}));
+}
+
 const SIGNIFICANCE_DEFINITION = `Une expérience source est considérée SIGNIFICATIVE si au moins un des critères suivants est vrai :
 - Durée ≥ 1 mois à temps plein (ou équivalent), ou stage/alternance de toute durée dès lors que la fiche vérité liste des missions concrètes (bullets non vide)
 - Elle est directement pertinente pour l'offre (compétences/technologies qui recoupent des mots-clés de l'offre)
@@ -486,7 +504,7 @@ async function extractSourceFacts(
   const response = await client.messages.create({
     model: SUPPORT_MODEL,
     max_tokens: 12000,
-    thinking: { type: "adaptive" },
+    thinking: { type: "enabled", budget_tokens: EXTRACTION_THINKING_BUDGET },
     system: [
       {
         type: "text",
@@ -518,6 +536,7 @@ async function extractSourceFacts(
     },
   });
 
+  logUsage("extraction", SUPPORT_MODEL, response.usage);
   const extracted = parseMessageJson<ExtractedSourceFacts>(response as AnthropicTextResponse);
 
   // Les id sont générés côté serveur (jamais par le modèle) pour servir d'ancre stable et fiable.
@@ -539,7 +558,7 @@ async function generateOptimizedCV(
   const response = await client.messages.create({
     model: GENERATION_MODEL,
     max_tokens: 16000,
-    thinking: { type: "adaptive" },
+    thinking: { type: "enabled", budget_tokens: GENERATION_THINKING_BUDGET },
     system: [
       {
         type: "text",
@@ -572,6 +591,7 @@ async function generateOptimizedCV(
     },
   });
 
+  logUsage(violations.length > 0 ? "generation (repair)" : "generation", GENERATION_MODEL, response.usage);
   return parseMessageJson<GeneratedOptimizeResponse>(response as AnthropicTextResponse);
 }
 
@@ -585,7 +605,7 @@ async function auditSemanticFidelity(
   const response = await client.messages.create({
     model: SUPPORT_MODEL,
     max_tokens: 4000,
-    thinking: { type: "adaptive" },
+    thinking: { type: "enabled", budget_tokens: AUDIT_THINKING_BUDGET },
     system: [
       {
         type: "text",
@@ -624,6 +644,7 @@ async function auditSemanticFidelity(
     },
   });
 
+  logUsage("audit", SUPPORT_MODEL, response.usage);
   const result = parseMessageJson<{ violations: SemanticViolation[] }>(
     response as AnthropicTextResponse
   );
