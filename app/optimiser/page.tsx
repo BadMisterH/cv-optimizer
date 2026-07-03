@@ -574,6 +574,23 @@ function Result({
           </div>
         </header>
 
+        {/* Relance crédits : montrée au moment de plus haute satisfaction (le CV vient
+            d'être généré), avant que le candidat ne parte sans jamais revenir. */}
+        {data.remainingCredits === 0 && (
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border border-rule bg-card px-6 py-5">
+            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
+              Il te reste <span className="text-ink">0 crédit</span> — prépare ta prochaine candidature
+            </p>
+            <Link
+              href="/buy-credits"
+              className="group inline-flex items-center gap-2 bg-ink px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-paper transition hover:bg-accent"
+            >
+              Acheter des crédits
+              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+            </Link>
+          </div>
+        )}
+
         {/* Score ATS — visible dans les 2 modes (preview + édition) */}
         {data.atsScore && (
           <div className="mb-6">

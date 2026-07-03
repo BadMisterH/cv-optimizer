@@ -470,8 +470,8 @@ export type GeneratedCVItem = CVItem & { sourceId: string };
 
 type GeneratedCVSection = { title: string; items: GeneratedCVItem[] };
 
-/** Réponse brute du modèle de génération, avant nettoyage des champs internes et ajout de reviewFlags. */
-export type GeneratedOptimizeResponse = Omit<OptimizeResponse, "cv" | "reviewFlags"> & {
+/** Réponse brute du modèle de génération, avant nettoyage des champs internes et ajout de reviewFlags/remainingCredits (tous deux calculés côté serveur après la génération, jamais par le modèle). */
+export type GeneratedOptimizeResponse = Omit<OptimizeResponse, "cv" | "reviewFlags" | "remainingCredits"> & {
   cv: Omit<OptimizedCV, "sections"> & { sections: GeneratedCVSection[] };
 };
 
@@ -1182,7 +1182,9 @@ export function dedupeItemHeadings(payload: GeneratedOptimizeResponse): Generate
   };
 }
 
-export function stripInternalFields(payload: GeneratedOptimizeResponse): Omit<OptimizeResponse, "reviewFlags"> {
+export function stripInternalFields(
+  payload: GeneratedOptimizeResponse
+): Omit<OptimizeResponse, "reviewFlags" | "remainingCredits"> {
   return {
     ...payload,
     cv: {
@@ -1368,6 +1370,12 @@ export async function POST(req: Request) {
       );
     }
 
+    // Déduit AVANT de construire la réponse : remainingCredits doit être la valeur
+    // serveur fraîche juste après déduction, jamais le cache client de la session (qui
+    // ne reflète pas encore cette génération au moment où le front l'affichera).
+    const remainingCredits =
+      gate.isAuthenticated && !gate.isAdmin ? await deductCredit(gate.userId) : null;
+
     const cleaned = stripInternalFields(dedupeItemHeadings(parsed));
     const finalResponse: OptimizeResponse = {
       ...cleaned,
@@ -1376,11 +1384,8 @@ export async function POST(req: Request) {
         "Audit anti-invention validé : coordonnées, localisation, entreprises, dates, compétences, chiffres et complétude des expériences contrôlés par rapport au CV source.",
       ],
       reviewFlags,
+      remainingCredits,
     };
-
-    if (gate.isAuthenticated && !gate.isAdmin) {
-      await deductCredit(gate.userId);
-    }
 
     // requireAuth garantit gate.isAuthenticated ici — plus de cookie anonyme à poser.
     return NextResponse.json(finalResponse);

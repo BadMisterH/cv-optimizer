@@ -72,6 +72,8 @@ export type OptimizeResponse = {
   atsInterpretation: ATSInterpretation;
   /** Points de fidélité/complétude ambigus détectés par l'audit sémantique, à vérifier par le candidat avant envoi. Vide si rien à signaler. */
   reviewFlags: string[];
+  /** Solde de crédits juste après déduction (valeur serveur fraîche, jamais le cache client de la session). null pour un admin ou un compte sans notion de crédits. */
+  remainingCredits: number | null;
 };
 
 // ===== Cover Letter =====
