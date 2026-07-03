@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import {
   checkFidelity,
+  dedupeItemHeadings,
+  filterUnverifiedTechnologies,
   findLowFidelityBullets,
   findOmittedExperiences,
   stripInternalFields,
@@ -637,5 +639,109 @@ describe("strip déterministe des compétences non justifiées", () => {
     const { removed } = stripUnjustifiedSkillTags(payload, sourceFacts);
 
     expect(removed).toEqual([]);
+  });
+});
+
+describe("vérification extraction-vs-PDF (hallucinations d'extraction)", () => {
+  // Simule le cas réel : le CV dit SQLite, l'extraction hallucine PostgreSQL/Python.
+  const PDF_TEXT = [
+    "KHAZZANI Badr — Webmaster",
+    "Gestion de catalogues produits sur WordPress / WooCommerce.",
+    "Projet RelanceWork : application TypeScript, Node.js, Express, SQLite.",
+    "Compétences : SQL, MySQL, WordPress, WooCommerce, Make, n8n.",
+    "Formation Ingénieur Informatique, CNAM.",
+  ].join("\n");
+
+  function factsWithSkills(skills: string[]): SourceFacts {
+    return { ...makeSourceFacts([makeExperience({ technologies: [] })]), skills };
+  }
+
+  it("retire une compétence extraite absente du texte du PDF", () => {
+    const facts = factsWithSkills(["MySQL", "PostgreSQL", "Python", "Webflow"]);
+
+    const { sourceFacts, removed } = filterUnverifiedTechnologies(facts, PDF_TEXT);
+
+    expect(sourceFacts.skills).toEqual(["MySQL"]);
+    expect(removed).toEqual(["PostgreSQL", "Python", "Webflow"]);
+  });
+
+  it("retire aussi les technos hallucinées des projets et expériences", () => {
+    const facts: SourceFacts = {
+      ...factsWithSkills([]),
+      experiences: [makeExperience({ technologies: ["WordPress", "Python"] })],
+      projects: [
+        {
+          name: "RelanceWork",
+          context: "",
+          dates: "",
+          bullets: [],
+          technologies: ["TypeScript", "Express", "PostgreSQL"],
+        },
+      ],
+    };
+
+    const { sourceFacts, removed } = filterUnverifiedTechnologies(facts, PDF_TEXT);
+
+    expect(sourceFacts.experiences[0].technologies).toEqual(["WordPress"]);
+    expect(sourceFacts.projects[0].technologies).toEqual(["TypeScript", "Express"]);
+    expect(removed).toEqual(["Python", "PostgreSQL"]);
+  });
+
+  it("tolère les césures et espacements du rendu PDF (Node .js)", () => {
+    const facts = factsWithSkills(["Node.js"]);
+
+    const { sourceFacts, removed } = filterUnverifiedTechnologies(
+      facts,
+      `${"x".repeat(150)} plateforme Node .js en production`
+    );
+
+    expect(sourceFacts.skills).toEqual(["Node.js"]);
+    expect(removed).toEqual([]);
+  });
+
+  it("garde une compétence multi-mots dont les tokens sont dispersés dans le PDF", () => {
+    const facts = factsWithSkills(["CRM Salesforce"]);
+    const text = `${"x".repeat(150)} pilotage du CRM interne — outil Salesforce déployé`;
+
+    const { removed } = filterUnverifiedTechnologies(facts, text);
+
+    expect(removed).toEqual([]);
+  });
+
+  it("ne touche à rien si le PDF n'a pas de couche texte exploitable (scan)", () => {
+    const facts = factsWithSkills(["PostgreSQL", "Python"]);
+
+    const { sourceFacts, removed } = filterUnverifiedTechnologies(facts, "");
+
+    expect(sourceFacts.skills).toEqual(["PostgreSQL", "Python"]);
+    expect(removed).toEqual([]);
+  });
+});
+
+describe("dédoublonnage heading d'item = titre de section", () => {
+  it("vide le heading qui répète le titre de sa section (Langues dans Langues)", () => {
+    const payload = makePayloadWithSections([
+      {
+        title: "Langues",
+        items: [
+          makeSkillItem({ heading: "Langues", tags: [], bullets: ["Français — natif"] }),
+        ],
+      },
+    ]);
+
+    const result = dedupeItemHeadings(payload);
+
+    expect(result.cv.sections[0].items[0].heading).toBe("");
+    expect(result.cv.sections[0].items[0].bullets).toEqual(["Français — natif"]);
+  });
+
+  it("garde un heading distinct du titre de section", () => {
+    const payload = makePayloadWithSections([
+      { title: "Compétences", items: [makeSkillItem({ heading: "Front-end" })] },
+    ]);
+
+    const result = dedupeItemHeadings(payload);
+
+    expect(result.cv.sections[0].items[0].heading).toBe("Front-end");
   });
 });

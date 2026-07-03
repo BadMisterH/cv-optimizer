@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { CVItem, OptimizedCV, OptimizeResponse } from "@/app/types";
+import { extractPdfText } from "@/lib/pdf-text";
 import {
   ANON_COOKIE_MAX_AGE,
   checkUsageGate,
@@ -52,8 +53,8 @@ Règles non négociables :
 - Ne corrige pas les dates, villes, entreprises, intitulés, diplômes ou coordonnées.
 - Conserve toutes les expériences significatives, même si elles semblent anciennes ou moins pertinentes.
 - Si une information est absente ou illisible, retourne une chaîne vide ou un tableau vide.
-- Les compétences doivent venir du CV : compétences explicitement listées ou clairement justifiées par les missions/projets du CV.
-- N'ajoute jamais de compétence uniquement parce qu'elle serait utile pour une candidature.
+- Les compétences et technologies doivent être recopiées VERBATIM : uniquement des termes littéralement écrits dans le CV. Jamais un synonyme, un équivalent ou un outil "plausible" (ex : si le CV dit "SQLite", n'écris jamais "PostgreSQL" ; si le CV ne mentionne pas "Python", ne l'ajoute pas même si les missions ressemblent à du scripting).
+- N'ajoute jamais de compétence uniquement parce qu'elle serait utile pour une candidature ou cohérente avec le profil.
 - Pour chaque expérience, fournis aussi "rawText" : le texte quasi-verbatim de ce bloc d'expérience tel qu'il apparaît dans le CV (avant toute reformulation ou résumé), utilisé plus tard pour vérifier la fidélité du CV optimisé. Si le texte est illisible, retourne une chaîne vide.
 
 Retourne uniquement le JSON demandé.`;
@@ -719,6 +720,69 @@ function isAllowedSkill(tag: string, sourceFacts: SourceFacts): boolean {
   return tokens.length > 0 && tokens.every((token) => sourceText.includes(token));
 }
 
+const MIN_PDF_TEXT_CHARS = 150;
+
+/**
+ * Vérifie la fiche vérité contre le texte réel du PDF (vérité terrain déterministe, pas
+ * d'IA). L'extraction par le modèle peut halluciner des technos "plausibles" jamais
+ * écrites dans le CV (ex : PostgreSQL à la place de SQLite) — et comme TOUS les contrôles
+ * avals font confiance à la fiche vérité, c'est ici, et uniquement ici, qu'on peut les
+ * attraper. Retire des skills/technologies tout terme introuvable dans le texte du PDF.
+ * Conservateur : ne touche à rien si le PDF n'a pas de couche texte exploitable (scan),
+ * garde les termes trop courts pour être jugés, et supprime seulement — on ne réinjecte
+ * jamais un terme que l'extraction aurait oublié.
+ */
+export function filterUnverifiedTechnologies(
+  sourceFacts: SourceFacts,
+  pdfText: string
+): { sourceFacts: SourceFacts; removed: string[] } {
+  const normalizedPdf = normalizeText(pdfText);
+  if (normalizedPdf.length < MIN_PDF_TEXT_CHARS) {
+    return { sourceFacts, removed: [] };
+  }
+
+  // Version "collapsée" (sans séparateurs) pour tolérer les césures et espacements du
+  // rendu PDF ("Web-flow", "Node .js") sans relâcher la vérification.
+  const collapse = (value: string): string => value.replace(/[^a-z0-9+#]/g, "");
+  const collapsedPdf = collapse(normalizedPdf);
+
+  const removed: string[] = [];
+  const isInPdf = (term: string): boolean => {
+    const normalized = normalizeText(term);
+    if (normalized.length < 3) return true; // trop court pour juger — on garde
+    if (normalizedPdf.includes(normalized)) return true;
+    const collapsed = collapse(normalized);
+    if (collapsed.length >= 3 && collapsedPdf.includes(collapsed)) return true;
+    // Multi-mots ("CRM Salesforce") : chaque token significatif présent suffit,
+    // le PDF pouvant les séparer par la mise en page.
+    const tokens = normalized.split(" ").map(collapse).filter((token) => token.length >= 4);
+    return tokens.length > 0 && tokens.every((token) => collapsedPdf.includes(token));
+  };
+
+  const filterList = (list: string[]): string[] =>
+    list.filter((term) => {
+      if (isInPdf(term)) return true;
+      removed.push(term);
+      return false;
+    });
+
+  return {
+    sourceFacts: {
+      ...sourceFacts,
+      skills: filterList(sourceFacts.skills),
+      experiences: sourceFacts.experiences.map((experience) => ({
+        ...experience,
+        technologies: filterList(experience.technologies),
+      })),
+      projects: sourceFacts.projects.map((project) => ({
+        ...project,
+        technologies: filterList(project.technologies),
+      })),
+    },
+    removed,
+  };
+}
+
 export function getExperienceItems(payload: GeneratedOptimizeResponse): GeneratedCVItem[] {
   return payload.cv.sections
     .filter((section) => isExperienceSection(section.title))
@@ -1094,6 +1158,32 @@ export function findLowFidelityBullets(
 }
 
 /** Retire les champs internes (sourceId) avant de renvoyer le CV au client. */
+/**
+ * Vide le heading d'un item quand il ne fait que répéter le titre de sa section (le
+ * modèle génère parfois un item "Langues" dans la section "Langues") : les renderers
+ * (aperçu HTML et PDF) affichent sinon le libellé deux fois. Corrigé une fois ici, à la
+ * source, plutôt que dans chaque renderer.
+ */
+export function dedupeItemHeadings(payload: GeneratedOptimizeResponse): GeneratedOptimizeResponse {
+  return {
+    ...payload,
+    cv: {
+      ...payload.cv,
+      sections: payload.cv.sections.map((section) => {
+        const sectionTitle = normalizeText(section.title);
+        return {
+          ...section,
+          items: section.items.map((item) =>
+            item.heading && normalizeText(item.heading) === sectionTitle
+              ? { ...item, heading: "" }
+              : item
+          ),
+        };
+      }),
+    },
+  };
+}
+
 export function stripInternalFields(payload: GeneratedOptimizeResponse): Omit<OptimizeResponse, "reviewFlags"> {
   return {
     ...payload,
@@ -1204,12 +1294,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const pdfBase64 = Buffer.from(await cvEntry.arrayBuffer()).toString("base64");
+    const pdfBuffer = Buffer.from(await cvEntry.arrayBuffer());
+    const pdfBase64 = pdfBuffer.toString("base64");
 
     const client = new Anthropic();
     const offerText = offer.trim();
 
-    const sourceFacts = await extractSourceFacts(client, pdfBase64);
+    const extractedFacts = await extractSourceFacts(client, pdfBase64);
+
+    // Vérité terrain : l'extraction (IA) est confrontée au texte réel du PDF (déterministe).
+    // Toute techno/compétence extraite mais introuvable dans le PDF est une hallucination
+    // d'extraction — retirée AVANT génération pour que rien en aval ne lui fasse confiance.
+    const pdfText = await extractPdfText(pdfBuffer);
+    const verification = filterUnverifiedTechnologies(extractedFacts, pdfText);
+    const sourceFacts = verification.sourceFacts;
+    if (verification.removed.length > 0) {
+      console.log(
+        "[api/optimize] hallucinations d'extraction retirées:",
+        JSON.stringify(verification.removed)
+      );
+    }
     console.log(
       "[api/optimize] source counts:",
       JSON.stringify({
@@ -1256,14 +1360,14 @@ export async function POST(req: Request) {
     }
 
     const reviewFlags = [...ambiguousNotes];
-    if (removedSkills.length > 0) {
-      const unique = Array.from(new Set(removedSkills));
+    const allRemovedSkills = Array.from(new Set([...verification.removed, ...removedSkills]));
+    if (allRemovedSkills.length > 0) {
       reviewFlags.push(
-        `Compétences retirées car absentes de ton CV source : ${unique.join(", ")}. Ajoute-les à ton CV d'origine si tu les maîtrises réellement, puis relance.`
+        `Compétences retirées car absentes de ton CV source : ${allRemovedSkills.join(", ")}. Ajoute-les à ton CV d'origine si tu les maîtrises réellement, puis relance.`
       );
     }
 
-    const cleaned = stripInternalFields(parsed);
+    const cleaned = stripInternalFields(dedupeItemHeadings(parsed));
     const finalResponse: OptimizeResponse = {
       ...cleaned,
       modifications: [
