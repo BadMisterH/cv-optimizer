@@ -14,7 +14,15 @@ import { ATSInterpretation } from "../components/ATSInterpretation";
 import { CVEditor } from "../components/editor/CVEditor";
 import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { readPhoto, saveLastCV, savePhoto, incrementGenerationCount } from "../lib/cvStore";
+import {
+  clearOfferDraft,
+  incrementGenerationCount,
+  readOfferDraft,
+  readPhoto,
+  saveLastCV,
+  saveOfferDraft,
+  savePhoto,
+} from "../lib/cvStore";
 import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
 import { gateRedirectLabel } from "../lib/gateRedirect";
 import type { OptimizeResponse, OptimizedCV } from "../types";
@@ -30,6 +38,12 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<SubmitError | null>(null);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
+
+  // Restaure le brouillon d'offre (survit à la redirection inscription / au refresh)
+  useEffect(() => {
+    const draft = readOfferDraft();
+    if (draft) setOffer(draft);
+  }, []);
 
   const sessionUser = session?.user as { email?: string; credits?: number } | undefined;
   const isAdmin = isAdminEmail(sessionUser?.email);
@@ -160,6 +174,8 @@ export default function Page() {
       setResult(data);
       // Persist for the cover letter service
       saveLastCV(data.cv, offer);
+      // Le brouillon a servi : une prochaine visite repart d'un champ vierge
+      clearOfferDraft();
       // Increment generation counter
       incrementGenerationCount("cv");
     } catch (err) {
@@ -230,7 +246,10 @@ export default function Page() {
             <Field number="02" label="L'offre d'emploi">
               <textarea
                 value={offer}
-                onChange={(e) => setOffer(e.target.value)}
+                onChange={(e) => {
+                  setOffer(e.target.value);
+                  saveOfferDraft(e.target.value);
+                }}
                 placeholder="Colle ici l'intitulé, les missions, le profil recherché…"
                 rows={11}
                 className="w-full resize-none border border-rule bg-card px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint shadow-[0_1px_0_0_rgba(15,15,16,0.04)] outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"

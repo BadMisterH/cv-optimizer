@@ -46,6 +46,39 @@ export function canGenerateWithoutAuth(type: "cv" | "letter"): boolean {
   return getGenerationCount(type) === 0;
 }
 
+// Brouillon d'offre : survit à la redirection vers l'inscription et au refresh
+// accidentel. Le fichier CV, lui, ne peut pas être persisté proprement (objet File) —
+// il devra être re-sélectionné au retour.
+const OFFER_DRAFT_KEY = "cv-optimizer:offer-draft";
+
+export function saveOfferDraft(offer: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (offer.trim()) localStorage.setItem(OFFER_DRAFT_KEY, offer);
+    else localStorage.removeItem(OFFER_DRAFT_KEY);
+  } catch {
+    // localStorage indisponible — silently ignore
+  }
+}
+
+export function readOfferDraft(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(OFFER_DRAFT_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function clearOfferDraft(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(OFFER_DRAFT_KEY);
+  } catch {
+    // localStorage indisponible — silently ignore
+  }
+}
+
 export function saveLastCV(cv: OptimizedCV, offer: string): void {
   if (typeof window === "undefined") return;
   try {
