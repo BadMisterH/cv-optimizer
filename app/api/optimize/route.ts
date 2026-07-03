@@ -14,14 +14,14 @@ import {
 const GENERATION_MODEL = "claude-opus-4-7";
 const SUPPORT_MODEL = "claude-sonnet-5";
 
-// Budgets de raisonnement BORNÉS au lieu de `thinking: adaptive` (non plafonné). Le
-// raisonnement est facturé comme des tokens de sortie ; adaptive peut en générer beaucoup,
-// surtout sur Opus. On borne : peu pour l'extraction (transcription) et l'audit
-// (classification), plus généreux mais capé pour la génération (cœur créatif). Doit rester
-// ≥ 1024 et < max_tokens de l'appel. Ajuster ici si la qualité baisse.
-const EXTRACTION_THINKING_BUDGET = 2048;
-const GENERATION_THINKING_BUDGET = 4096;
-const AUDIT_THINKING_BUDGET = 1536;
+// Ces modèles n'acceptent QUE `thinking: adaptive` (pas de budget_tokens). L'intensité du
+// raisonnement — facturé en tokens de sortie, donc le gros poste de coût sur Opus — se
+// contrôle via `output_config.effort`. Plus l'effort est bas, moins le modèle raisonne et
+// moins ça coûte. Bas pour l'extraction (transcription) et l'audit (classification), medium
+// pour la génération (cœur créatif). Ajuster ici si la qualité baisse.
+const EXTRACTION_EFFORT = "low" as const;
+const GENERATION_EFFORT = "medium" as const;
+const AUDIT_EFFORT = "low" as const;
 
 /**
  * Journalise la consommation réelle de tokens d'un appel modèle (in / out / cache). Permet
@@ -504,7 +504,7 @@ async function extractSourceFacts(
   const response = await client.messages.create({
     model: SUPPORT_MODEL,
     max_tokens: 12000,
-    thinking: { type: "enabled", budget_tokens: EXTRACTION_THINKING_BUDGET },
+    thinking: { type: "adaptive" },
     system: [
       {
         type: "text",
@@ -532,6 +532,7 @@ async function extractSourceFacts(
       },
     ],
     output_config: {
+      effort: EXTRACTION_EFFORT,
       format: { type: "json_schema", schema: sourceFactsSchema },
     },
   });
@@ -558,7 +559,7 @@ async function generateOptimizedCV(
   const response = await client.messages.create({
     model: GENERATION_MODEL,
     max_tokens: 16000,
-    thinking: { type: "enabled", budget_tokens: GENERATION_THINKING_BUDGET },
+    thinking: { type: "adaptive" },
     system: [
       {
         type: "text",
@@ -587,6 +588,7 @@ async function generateOptimizedCV(
       },
     ],
     output_config: {
+      effort: GENERATION_EFFORT,
       format: { type: "json_schema", schema: cvSchema },
     },
   });
@@ -605,7 +607,7 @@ async function auditSemanticFidelity(
   const response = await client.messages.create({
     model: SUPPORT_MODEL,
     max_tokens: 4000,
-    thinking: { type: "enabled", budget_tokens: AUDIT_THINKING_BUDGET },
+    thinking: { type: "adaptive" },
     system: [
       {
         type: "text",
@@ -640,6 +642,7 @@ async function auditSemanticFidelity(
       },
     ],
     output_config: {
+      effort: AUDIT_EFFORT,
       format: { type: "json_schema", schema: auditSchema },
     },
   });
