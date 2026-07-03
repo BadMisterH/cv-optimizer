@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { CVItem, OptimizedCV, OptimizeResponse } from "@/app/types";
+import { alertAnthropicApiError } from "@/lib/alerting";
 import { extractPdfText } from "@/lib/pdf-text";
 import {
   ANON_COOKIE_MAX_AGE,
@@ -1394,6 +1395,7 @@ export async function POST(req: Request) {
     return res;
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
+      await alertAnthropicApiError(err.status ?? 0, err.message, "/api/optimize");
       return NextResponse.json(
         { error: `Erreur API IA (${err.status}): ${err.message}` },
         { status: err.status ?? 500 }

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { OptimizedCV } from "@/app/types";
+import { alertAnthropicApiError } from "@/lib/alerting";
 import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
 
 export const runtime = "nodejs";
@@ -331,6 +332,7 @@ export async function POST(req: Request) {
     return NextResponse.json(parsed);
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
+      await alertAnthropicApiError(err.status ?? 0, err.message, "/api/cover-letter");
       return NextResponse.json(
         { error: `Erreur API IA (${err.status}): ${err.message}` },
         { status: err.status ?? 500 }
