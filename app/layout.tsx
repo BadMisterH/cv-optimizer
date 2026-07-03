@@ -96,11 +96,6 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
-  icons: {
-    icon: "/CV-optimize-logo.png",
-    shortcut: "/CV-optimize-logo.png",
-    apple: "/CV-optimize-logo.png",
-  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

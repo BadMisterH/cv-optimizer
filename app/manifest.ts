@@ -15,12 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["productivity", "business", "education"],
     icons: [
       {
-        src: "/favicon.png",
-        sizes: "any",
-        type: "image/png",
-      },
-      {
-        src: "/CV-optimize-logo.png",
+        src: "/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
