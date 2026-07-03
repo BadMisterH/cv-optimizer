@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { isAdminEmail } from "@/lib/admin";
 import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
 import { ServiceNav } from "../components/ServiceNav";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readLastCV } from "../lib/cvStore";
+import { gateRedirectLabel } from "../lib/gateRedirect";
 import type { CoverLetter, LetterResponse, OptimizedCV } from "../types";
 
 type Source = "upload" | "stored";
+type SubmitError = { message: string; redirectHref?: string; redirectLabel?: string };
 
 export default function LetterPage() {
   const router = useRouter();
@@ -27,8 +31,12 @@ export default function LetterPage() {
   const [prevLetterFile, setPrevLetterFile] = useState<File | null>(null);
   const [offer, setOffer] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<SubmitError | null>(null);
   const [result, setResult] = useState<LetterResponse | null>(null);
+
+  const sessionUser = session?.user as { email?: string; credits?: number } | undefined;
+  const isAdmin = isAdminEmail(sessionUser?.email);
+  const outOfCredits = !!sessionUser && !isAdmin && (sessionUser.credits ?? 0) <= 0;
 
   useEffect(() => {
     const stored = readLastCV();
@@ -43,7 +51,11 @@ export default function LetterPage() {
     e.preventDefault();
 
     if (!session?.user) {
-      router.push("/sign-up?redirect=/lettre");
+      setError({
+        message: "Crée un compte pour générer une lettre de motivation.",
+        redirectHref: "/sign-up?redirect=/lettre",
+        redirectLabel: "Créer un compte",
+      });
       return;
     }
 
@@ -52,6 +64,8 @@ export default function LetterPage() {
     setResult(null);
     try {
       let res: Response;
+      // autoRedirect: false — on affiche le blocage (crédits...) inline avec un CTA
+      // plutôt que de faire disparaître le formulaire déjà rempli.
       if (prevLetterFile) {
         // Toujours FormData quand une ancienne lettre est fournie
         const body = new FormData();
@@ -59,7 +73,7 @@ export default function LetterPage() {
           body.append("cvJson", JSON.stringify(storedCv.cv));
         } else {
           if (!cvFile) {
-            setError("Téléverse d'abord ton CV (PDF).");
+            setError({ message: "Téléverse d'abord ton CV (PDF)." });
             setLoading(false);
             return;
           }
@@ -67,32 +81,40 @@ export default function LetterPage() {
         }
         body.append("offer", offer);
         body.append("prevLetter", prevLetterFile);
-        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body });
+        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body }, { autoRedirect: false });
       } else if (source === "stored" && storedCv) {
-        res = await fetchWithAuth("/api/cover-letter", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cv: storedCv.cv, offer }),
-        });
+        res = await fetchWithAuth(
+          "/api/cover-letter",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cv: storedCv.cv, offer }),
+          },
+          { autoRedirect: false }
+        );
       } else {
         if (!cvFile) {
-          setError("Téléverse d'abord ton CV (PDF).");
+          setError({ message: "Téléverse d'abord ton CV (PDF)." });
           setLoading(false);
           return;
         }
         const body = new FormData();
         body.append("cv", cvFile);
         body.append("offer", offer);
-        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body });
+        res = await fetchWithAuth("/api/cover-letter", { method: "POST", body }, { autoRedirect: false });
       }
       const data = await res.json();
       if (!res.ok) {
-        if (data.redirect) { router.push(data.redirect); return; }
-        throw new Error(data.error ?? "Erreur inconnue");
+        setError(
+          data.redirect
+            ? { message: data.error ?? "Action requise.", redirectHref: data.redirect, redirectLabel: gateRedirectLabel(data.redirect) }
+            : { message: data.error ?? "Erreur inconnue" }
+        );
+        return;
       }
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError({ message: err instanceof Error ? err.message : "Erreur inconnue" });
     } finally {
       setLoading(false);
     }
@@ -297,34 +319,57 @@ export default function LetterPage() {
 
             <div className="md:col-span-2 flex flex-col gap-6 border-t border-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
               <div className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-                {(source === "stored" || cvFile) && offer.trim()
+                {outOfCredits
+                  ? "Solde de crédits épuisé"
+                  : (source === "stored" || cvFile) && offer.trim()
                   ? "Prêt à rédiger →"
                   : "Renseigne CV + offre"}
               </div>
-              <div className="flex items-center gap-5">
+              <div className="flex flex-wrap items-center gap-4">
                 {error && (
-                  <p
-                    role="alert"
-                    className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
-                  >
-                    ✕ {error}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p
+                      role="alert"
+                      className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
+                    >
+                      ✕ {error.message}
+                    </p>
+                    {error.redirectHref && (
+                      <Link
+                        href={error.redirectHref}
+                        className="group inline-flex items-center gap-2 border border-rule px-4 py-2 font-mono text-[12px] uppercase tracking-[0.16em] text-ink transition hover:border-ink"
+                      >
+                        {error.redirectLabel}
+                        <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                      </Link>
+                    )}
+                  </div>
                 )}
-                <button
-                  type="submit"
-                  disabled={
-                    loading ||
-                    !offer.trim() ||
-                    (source === "upload" && !cvFile) ||
-                    (source === "stored" && !storedCv)
-                  }
-                  className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-warm disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
-                >
-                  <span>{loading ? "Rédaction en cours…" : "Générer la lettre"}</span>
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">
-                    →
-                  </span>
-                </button>
+                {outOfCredits ? (
+                  <Link
+                    href="/buy-credits"
+                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-warm"
+                  >
+                    <span>Acheter des crédits</span>
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={
+                      loading ||
+                      !offer.trim() ||
+                      (source === "upload" && !cvFile) ||
+                      (source === "stored" && !storedCv)
+                    }
+                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-warm disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
+                  >
+                    <span>{loading ? "Rédaction en cours…" : "Générer la lettre"}</span>
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </form>

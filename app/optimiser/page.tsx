@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { isAdminEmail } from "@/lib/admin";
 import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
@@ -14,7 +16,10 @@ import { LivePreview } from "../components/editor/LivePreview";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { readPhoto, saveLastCV, savePhoto, canGenerateWithoutAuth, incrementGenerationCount } from "../lib/cvStore";
 import { ACCENT_HEX, type AccentKey, type EditorState, type TemplateKey } from "../lib/editorState";
+import { gateRedirectLabel } from "../lib/gateRedirect";
 import type { OptimizeResponse, OptimizedCV } from "../types";
+
+type SubmitError = { message: string; redirectHref?: string; redirectLabel?: string };
 
 export default function Page() {
   const router = useRouter();
@@ -23,13 +28,17 @@ export default function Page() {
   const [offer, setOffer] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<SubmitError | null>(null);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   // Hydration-safe : null tant que pas monté, lit localStorage en useEffect
   const [canGenerateFree, setCanGenerateFree] = useState<boolean | null>(null);
   useEffect(() => {
     setCanGenerateFree(canGenerateWithoutAuth("cv"));
   }, []);
+
+  const sessionUser = session?.user as { email?: string; credits?: number } | undefined;
+  const isAdmin = isAdminEmail(sessionUser?.email);
+  const outOfCredits = !!sessionUser && !isAdmin && (sessionUser.credits ?? 0) <= 0;
 
   useEffect(() => {
     const stored = readPhoto();
@@ -120,7 +129,11 @@ export default function Page() {
     // Check free tier limit (lit le state, qui a été initialisé en useEffect après mount)
     const stillFree = canGenerateFree ?? canGenerateWithoutAuth("cv");
     if (!stillFree && !session?.user) {
-      router.push("/sign-in?redirect=/optimiser");
+      setError({
+        message: "Tu as déjà utilisé ton essai gratuit.",
+        redirectHref: "/sign-in?redirect=/optimiser",
+        redirectLabel: "Se connecter",
+      });
       return;
     }
 
@@ -133,11 +146,21 @@ export default function Page() {
       body.append("cv", cvFile);
       body.append("offer", offer);
 
-      const res = await fetchWithAuth("/api/optimize", { method: "POST", body });
+      // autoRedirect: false — on affiche le blocage (crédits, essai gratuit...) inline
+      // avec un CTA plutôt que de faire disparaître le formulaire déjà rempli.
+      const res = await fetchWithAuth(
+        "/api/optimize",
+        { method: "POST", body },
+        { autoRedirect: false }
+      );
       const data = await res.json();
       if (!res.ok) {
-        if (data.redirect) { router.push(data.redirect); return; }
-        throw new Error(data.error ?? "Erreur inconnue");
+        setError(
+          data.redirect
+            ? { message: data.error ?? "Action requise.", redirectHref: data.redirect, redirectLabel: gateRedirectLabel(data.redirect) }
+            : { message: data.error ?? "Erreur inconnue" }
+        );
+        return;
       }
       setResult(data);
       // Persist for the cover letter service
@@ -145,7 +168,7 @@ export default function Page() {
       // Increment generation counter
       incrementGenerationCount("cv");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError({ message: err instanceof Error ? err.message : "Erreur inconnue" });
     } finally {
       setLoading(false);
     }
@@ -227,32 +250,55 @@ export default function Page() {
 
             <div className="md:col-span-2 flex flex-col gap-6 border-t border-rule pt-8 sm:flex-row sm:items-center sm:justify-between">
               <div className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-                {cvFile && offer.trim()
+                {outOfCredits
+                  ? "Solde de crédits épuisé"
+                  : cvFile && offer.trim()
                   ? "Prêt à optimiser →"
                   : "Complète les deux champs pour démarrer"}
               </div>
-              <div className="flex items-center gap-5">
+              <div className="flex flex-wrap items-center gap-4">
                 {error && (
-                  <p
-                    role="alert"
-                    className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
-                  >
-                    ✕ {error}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p
+                      role="alert"
+                      className="font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
+                    >
+                      ✕ {error.message}
+                    </p>
+                    {error.redirectHref && (
+                      <Link
+                        href={error.redirectHref}
+                        className="group inline-flex items-center gap-2 border border-rule px-4 py-2 font-mono text-[12px] uppercase tracking-[0.16em] text-ink transition hover:border-ink"
+                      >
+                        {error.redirectLabel}
+                        <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                      </Link>
+                    )}
+                  </div>
                 )}
-                <button
-                  type="submit"
-                  disabled={loading || !cvFile || !offer.trim()}
-                  className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
-                >
-                  <span>{loading ? "Optimisation en cours…" : "Optimiser mon CV"}</span>
-                  <span
-                    aria-hidden
-                    className="transition-transform group-hover:translate-x-1"
+                {outOfCredits ? (
+                  <Link
+                    href="/buy-credits"
+                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
                   >
-                    →
-                  </span>
-                </button>
+                    <span>Acheter des crédits</span>
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={loading || !cvFile || !offer.trim()}
+                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
+                  >
+                    <span>{loading ? "Optimisation en cours…" : "Optimiser mon CV"}</span>
+                    <span
+                      aria-hidden
+                      className="transition-transform group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </form>
