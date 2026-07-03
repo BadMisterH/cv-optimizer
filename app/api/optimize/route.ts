@@ -75,6 +75,7 @@ Objectif :
 - Maximiser la pertinence du CV pour cette offre spécifique
 - Mettre en avant les compétences et expériences les plus alignées
 - Reformuler certains éléments pour correspondre aux mots-clés de l'offre (sans mentir)
+- Priorise les faits VRAIMENT différenciants du candidat (chiffre précis, combinaison d'outils ou de responsabilités inhabituelle, résultat concret) pour matcher les mots-clés de l'offre, plutôt qu'une reformulation générique qui gommerait ce qui distingue ce candidat des autres. Deux candidats différents doivent produire deux CV reconnaissablement différents, pas des variantes du même texte optimisé.
 - Condenser (moins de bullets, formulations plus courtes) les éléments moins prioritaires quand la place manque, sans jamais supprimer silencieusement une expérience significative
 - Ajouter des formulations professionnelles et impactantes uniquement si elles restent factuellement justifiées par le CV source
 
