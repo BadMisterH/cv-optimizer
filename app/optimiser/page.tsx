@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import { isLaunchOfferActive, LAUNCH_OFFER } from "@/lib/stripe-packs";
 import { AuthBanner } from "../components/AuthBanner";
 import { GenerationProgress } from "../components/GenerationProgress";
 import { Logo } from "../components/Logo";
@@ -511,6 +512,7 @@ function Result({
   data: OptimizeResponse;
   photo: string | null;
 }) {
+  const launchOfferActive = isLaunchOfferActive();
   // L'éditeur maintient son propre state (initialisé depuis data.cv).
   // Result le mirroir pour que DownloadButton puisse PDF la version éditée.
   const [editorState, setEditorState] = useState<EditorState>({
@@ -577,15 +579,26 @@ function Result({
         {/* Relance crédits : montrée au moment de plus haute satisfaction (le CV vient
             d'être généré), avant que le candidat ne parte sans jamais revenir. */}
         {data.remainingCredits === 0 && (
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border border-rule bg-card px-6 py-5">
-            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
-              Il te reste <span className="text-ink">0 crédit</span> — prépare ta prochaine candidature
-            </p>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-5 border border-success/30 bg-success-soft/60 px-6 py-5">
+            <div>
+              <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-success">
+                ● CV prêt à envoyer
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                Il te reste <span className="font-medium text-ink">0 crédit</span>. Garde de quoi adapter
+                ta prochaine candidature pendant que ton CV est encore frais.
+              </p>
+              {launchOfferActive && (
+                <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-warm">
+                  {LAUNCH_OFFER.headline} jusqu'au {LAUNCH_OFFER.endsOnLabel}
+                </p>
+              )}
+            </div>
             <Link
               href="/buy-credits"
-              className="group inline-flex items-center gap-2 bg-ink px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-paper transition hover:bg-accent"
+              className="group inline-flex items-center gap-2 bg-ink px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-paper transition hover:bg-success"
             >
-              Acheter des crédits
+              Recharger maintenant
               <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
@@ -801,7 +814,7 @@ function CVPreview({
               00
             </span>
             <h4 className="font-display text-sm font-medium uppercase tracking-[0.16em] text-ink">
-              À propos
+              Profil
             </h4>
           </div>
           <p className="text-[15px] leading-relaxed text-ink-soft">

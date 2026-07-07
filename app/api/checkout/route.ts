@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { PACK_PRICE_ENV, PACKS, isPackKey } from "@/lib/stripe-packs";
+import {
+  getPackBonusCredits,
+  getPackTotalCredits,
+  PACK_PRICE_ENV,
+  PACKS,
+  isPackKey,
+} from "@/lib/stripe-packs";
 import { STRIPE_ENABLED, isStripeConfigured } from "@/lib/feature-flags";
 import { requireVerifiedSession } from "@/lib/auth-verification";
 
@@ -59,6 +65,8 @@ export async function POST(req: Request) {
     }
 
     const pack = PACKS[packKey];
+    const totalCredits = getPackTotalCredits(packKey);
+    const bonusCredits = getPackBonusCredits(packKey);
     const priceId = process.env[PACK_PRICE_ENV[packKey]];
     if (!priceId) {
       return NextResponse.json(
@@ -81,7 +89,9 @@ export async function POST(req: Request) {
       metadata: {
         userId: session.user.id,
         pack: packKey,
-        credits: String(pack.credits),
+        credits: String(totalCredits),
+        baseCredits: String(pack.credits),
+        launchBonusCredits: String(bonusCredits),
       },
       success_url: `${origin}/buy-credits?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/buy-credits?canceled=true`,

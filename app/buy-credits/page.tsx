@@ -6,7 +6,14 @@ import { useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import { STRIPE_ENABLED } from "@/lib/feature-flags";
-import { PACKS, type PackKey } from "@/lib/stripe-packs";
+import {
+  getPackBonusCredits,
+  getPackTotalCredits,
+  isLaunchOfferActive,
+  LAUNCH_OFFER,
+  PACKS,
+  type PackKey,
+} from "@/lib/stripe-packs";
 import { Logo } from "../components/Logo";
 
 type SessionUser = {
@@ -50,6 +57,7 @@ function BuyCreditsContent() {
   const credits = user?.credits ?? 0;
   const displayedCredits = syncedBalance ?? credits;
   const isAdmin = isAdminEmail(user?.email);
+  const launchOfferActive = isLaunchOfferActive();
 
   const success = searchParams.get("success") === "true";
   const canceled = searchParams.get("canceled") === "true";
@@ -64,6 +72,8 @@ function BuyCreditsContent() {
     setError(null);
     setLoadingPack(pack);
     try {
+      const bonusCredits = getPackBonusCredits(pack);
+      const totalCredits = getPackTotalCredits(pack);
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,7 +86,14 @@ function BuyCreditsContent() {
         try {
           sessionStorage.setItem(
             "cv-optimizer:pending-purchase",
-            JSON.stringify({ pack, label: PACKS[pack].label, credits: PACKS[pack].credits, price: PACKS[pack].price })
+            JSON.stringify({
+              pack,
+              label: PACKS[pack].label,
+              credits: PACKS[pack].credits,
+              bonusCredits,
+              totalCredits,
+              price: PACKS[pack].price,
+            })
           );
         } catch {}
         window.location.href = data.url;
@@ -128,7 +145,14 @@ function BuyCreditsContent() {
   }
 
   // Récupère le détail du pack acheté (côté client) après retour de Stripe
-  type PendingPurchase = { pack: PackKey; label: string; credits: number; price: string };
+  type PendingPurchase = {
+    pack: PackKey;
+    label: string;
+    credits?: number;
+    bonusCredits?: number;
+    totalCredits?: number;
+    price: string;
+  };
   const [purchased, setPurchased] = useState<PendingPurchase | null>(null);
 
   useEffect(() => {
@@ -220,7 +244,7 @@ function BuyCreditsContent() {
             <h1 className="mt-4 font-display text-[clamp(2.5rem,6vw,4.5rem)] font-light leading-[0.95] tracking-tight text-ink">
               {purchased ? (
                 <>
-                  + {purchased.credits}{" "}
+                  + {purchased.totalCredits ?? purchased.credits ?? 0}{" "}
                   <span className="italic font-normal text-accent">crédits</span>
                 </>
               ) : (
@@ -230,9 +254,16 @@ function BuyCreditsContent() {
               )}
             </h1>
             {purchased && (
-              <p className="mt-4 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
-                Pack {purchased.label} · {purchased.price}
-              </p>
+              <div className="mt-4 space-y-2">
+                <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
+                  Pack {purchased.label} · {purchased.price}
+                </p>
+                {(purchased.bonusCredits ?? 0) > 0 && (
+                  <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-success">
+                    +{purchased.bonusCredits} crédits offerts avec l'offre de lancement
+                  </p>
+                )}
+              </div>
             )}
             <div className="mt-8 flex items-baseline justify-between border-t border-rule pt-6">
               <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
@@ -342,6 +373,19 @@ function BuyCreditsContent() {
           Paiement sécurisé via Stripe. Pas d'abonnement.
         </p>
 
+        {launchOfferActive && (
+          <div className="mt-8 border border-warm bg-warm-soft px-5 py-4">
+            <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-warm">
+              ● {LAUNCH_OFFER.label}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-ink">
+              {LAUNCH_OFFER.headline} sur tous les packs, jusqu'au{" "}
+              {LAUNCH_OFFER.endsOnLabel}. Le bonus est ajouté automatiquement
+              après paiement.
+            </p>
+          </div>
+        )}
+
         {!isPending && (
           <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
             Solde actuel : {isAdmin ? "∞ (admin)" : `${credits} crédit${credits > 1 ? "s" : ""}`}
@@ -371,6 +415,8 @@ function BuyCreditsContent() {
             const pack = PACKS[key];
             const featured = "featured" in pack && pack.featured;
             const isLoading = loadingPack === key;
+            const bonusCredits = getPackBonusCredits(key);
+            const totalCredits = getPackTotalCredits(key);
             return (
               <div
                 key={key}
@@ -385,11 +431,16 @@ function BuyCreditsContent() {
                   {pack.label}
                 </p>
                 <p className="mt-4 font-display text-4xl font-light tracking-tight text-ink">
-                  {pack.credits}
+                  {totalCredits}
                   <span className="ml-2 text-base font-normal text-ink-muted">
                     crédits
                   </span>
                 </p>
+                {bonusCredits > 0 && (
+                  <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-success">
+                    {pack.credits} + {bonusCredits} offerts
+                  </p>
+                )}
                 <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
                 {STRIPE_ENABLED ? (
                   <button
@@ -399,9 +450,13 @@ function BuyCreditsContent() {
                       featured
                         ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
                         : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
-                    } disabled:cursor-not-allowed`}
+                      } disabled:cursor-not-allowed`}
                   >
-                    {isLoading ? "Redirection…" : "Acheter"}
+                    {isLoading
+                      ? "Redirection…"
+                      : launchOfferActive
+                      ? "Profiter de l'offre"
+                      : "Acheter"}
                   </button>
                 ) : (
                   <>
@@ -452,6 +507,33 @@ function BuyCreditsContent() {
               </div>
             );
           })}
+        </section>
+
+        <section className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
+          {[
+            {
+              tone: "text-success",
+              label: "Paiement sécurisé",
+              text: "Stripe traite la carte. CV Optimizer ne stocke aucune donnée bancaire.",
+            },
+            {
+              tone: "text-accent",
+              label: "Sans abonnement",
+              text: "Tu achètes un pack une fois. Aucun renouvellement automatique.",
+            },
+            {
+              tone: "text-warm",
+              label: "Crédits automatiques",
+              text: "Le solde est ajouté après paiement et utilisable sur CV ou lettre.",
+            },
+          ].map((item) => (
+            <article key={item.label} className="bg-card p-5">
+              <p className={`font-mono text-[12px] uppercase tracking-[0.18em] ${item.tone}`}>
+                ● {item.label}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-ink-soft">{item.text}</p>
+            </article>
+          ))}
         </section>
 
         <p className="mt-10 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">

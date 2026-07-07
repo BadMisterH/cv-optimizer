@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { isPackKey, PACKS } from "@/lib/stripe-packs";
+import {
+  getPackBonusCredits,
+  getPackTotalCredits,
+  isPackKey,
+  PACKS,
+} from "@/lib/stripe-packs";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendEmail, buildEmailHtml } from "@/lib/email";
 import { ADMIN_EMAILS } from "@/lib/admin";
@@ -17,6 +22,9 @@ async function notifyAdmin(email: string, pack: string) {
   const total = rows[0]?.count ?? "?";
   const label = PACKS[pack as keyof typeof PACKS].label;
   const price = PACKS[pack as keyof typeof PACKS].price;
+  const bonusCredits = getPackBonusCredits(pack as keyof typeof PACKS);
+  const totalCredits = getPackTotalCredits(pack as keyof typeof PACKS);
+  const offerLabel = bonusCredits > 0 ? `, ${totalCredits} crédits dont ${bonusCredits} offerts` : "";
 
   for (const adminEmail of ADMIN_EMAILS) {
     await sendEmail({
@@ -25,7 +33,7 @@ async function notifyAdmin(email: string, pack: string) {
       fallbackLabel: "WAITLIST NOTIFY",
       html: buildEmailHtml({
         title: "Nouveau lead sur la liste d'attente",
-        intro: `${email} veut acheter le pack ${label} (${price}). Total liste d'attente : ${total} inscrit(s).`,
+        intro: `${email} veut acheter le pack ${label} (${price}${offerLabel}). Total liste d'attente : ${total} inscrit(s).`,
         ctaLabel: "Voir la page de vente",
         url: "https://cv-optimizer.fr/buy-credits",
         footer: "Notification automatique — liste d'attente /buy-credits.",
