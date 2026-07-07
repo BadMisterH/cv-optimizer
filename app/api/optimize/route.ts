@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import type { CVItem, OptimizedCV, OptimizeResponse } from "@/app/types";
+import {
+  alertAnthropicBudgetBlocked,
+  checkAnthropicBudgetGate,
+} from "@/lib/anthropic-budget";
 import { alertAnthropicApiError } from "@/lib/alerting";
 import { extractPdfText } from "@/lib/pdf-text";
 import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
@@ -52,6 +56,7 @@ Règles non négociables :
 - Si une information est absente ou illisible, retourne une chaîne vide ou un tableau vide.
 - Les compétences et technologies doivent être recopiées VERBATIM : uniquement des termes littéralement écrits dans le CV. Jamais un synonyme, un équivalent ou un outil "plausible" (ex : si le CV dit "SQLite", n'écris jamais "PostgreSQL" ; si le CV ne mentionne pas "Python", ne l'ajoute pas même si les missions ressemblent à du scripting).
 - N'ajoute jamais de compétence uniquement parce qu'elle serait utile pour une candidature ou cohérente avec le profil.
+- Repère tous les chiffres, volumes, fréquences, résultats, périmètres et indicateurs explicitement écrits dans le CV (ex : nombre de clients/patients/utilisateurs, portefeuille, budget, stock, références, tickets, délai, taux, équipe, fréquence). Conserve-les dans rawText/context/bullets de l'expérience ou du projet concerné au lieu de les résumer vaguement.
 - Pour chaque expérience, fournis aussi "rawText" : le texte quasi-verbatim de ce bloc d'expérience tel qu'il apparaît dans le CV (avant toute reformulation ou résumé), utilisé plus tard pour vérifier la fidélité du CV optimisé. Si le texte est illisible, retourne une chaîne vide.
 
 Retourne uniquement le JSON demandé.`;
@@ -71,9 +76,11 @@ Objectif :
 - Maximiser la pertinence du CV pour cette offre spécifique
 - Mettre en avant les compétences et expériences les plus alignées
 - Reformuler certains éléments pour correspondre aux mots-clés de l'offre (sans mentir)
+- Transformer les missions descriptives en preuves de valeur : action menée, périmètre, contexte, résultat ou effet utile, uniquement quand ces éléments sont prouvés par la fiche vérité
 - Priorise les faits VRAIMENT différenciants du candidat (chiffre précis, combinaison d'outils ou de responsabilités inhabituelle, résultat concret) pour matcher les mots-clés de l'offre, plutôt qu'une reformulation générique qui gommerait ce qui distingue ce candidat des autres. Deux candidats différents doivent produire deux CV reconnaissablement différents, pas des variantes du même texte optimisé.
 - Condenser (moins de bullets, formulations plus courtes) les éléments moins prioritaires quand la place manque, sans jamais supprimer silencieusement une expérience significative
 - Ajouter des formulations professionnelles et impactantes uniquement si elles restent factuellement justifiées par le CV source
+- Quand un KPI utile manque dans le CV source, ne l'invente jamais : signale-le dans atsScore.tips sous forme de question concrète à compléter (ex : "Ajoute le volume de patients/jour si tu l'as", "Quantifie le nombre de références stock suivies")
 
 Définition d'une expérience "significative" (à utiliser pour décider ce qui doit apparaître dans le CV optimisé) :
 ${SIGNIFICANCE_DEFINITION}
@@ -84,6 +91,7 @@ Contraintes importantes :
 - Ne jamais faire croire que le candidat a travaillé dans l'entreprise citée dans l'offre si cette entreprise n'existe pas déjà dans ses expériences source
 - Ne jamais relocaliser le candidat pour le rapprocher du site de l'offre
 - Ne jamais transformer une mission en résultat chiffré si le chiffre n'est pas présent dans la fiche vérité
+- Ne jamais maquiller une tâche passive en impact mesurable sans preuve. Les verbes comme "optimisé", "amélioré", "réduit", "augmenté", "sécurisé" ou "fiabilisé" exigent un fait source qui les justifie.
 - Ne jamais ajouter une compétence demandée dans l'offre si elle n'est pas présente ou clairement justifiée dans la fiche vérité ; mets-la plutôt dans missingKeywords
 - Ne jamais exagérer le niveau de responsabilité, le périmètre ou l'impact d'une mission au-delà de ce qu'indiquent "rawText", "bullets" et "context" de l'expérience source
 - Rester fidèle au parcours initial extrait du PDF
@@ -96,13 +104,14 @@ Méthodologie :
    - Les compétences clés demandées
    - Les mots-clés importants
    - Le type de profil recherché
+   - Les enjeux employeur derrière l'offre (délais, qualité de service, relation client/patient, stock, conformité, outils, charge opérationnelle, contexte international si mentionné)
 
 2. Lis la FICHE VÉRITÉ DU CV. Elle est la seule source autorisée pour les faits du candidat. Chaque expérience y porte un "id" stable (ex: "exp-1") — c'est cet id que tu dois référencer, jamais un id inventé.
 
-3. Génère une nouvelle version du CV structurée en UNE SEULE COLONNE (format ATS-friendly — de nombreux logiciels de recrutement lisent mal les CV multi-colonnes), dans cet ordre, chaque section uniquement si elle a du contenu dans la fiche vérité : Titre → Accroche → Expérience → Projets → Compétences → Formation → Langues → Centres d'intérêt.
+3. Génère une nouvelle version du CV structurée en UNE SEULE COLONNE (format ATS-friendly — de nombreux logiciels de recrutement lisent mal les CV multi-colonnes), dans cet ordre, chaque section uniquement si elle a du contenu dans la fiche vérité : Titre → Profil → Expérience → Projets → Compétences → Formation → Langues → Centres d'intérêt.
    - Titre adapté à l'offre
-   - Accroche personnalisée (3 phrases, 50-65 mots) qui pose le profil, le parcours et la motivation pour l'offre
-   - Expériences : couvre TOUTES les expériences significatives (voir définition ci-dessus) et pertinentes pour l'offre. Priorise et condense (1 à 3 bullets selon la place disponible, formulations plus courtes pour les entrées moins prioritaires) plutôt que de supprimer. Chaque bullet fait 12-20 mots avec verbe d'action + contexte factuel. **IMPORTANT** : pour les expériences, mets le NOM DE L'ENTREPRISE SOURCE dans le champ "company" (ex: "Acme Inc.", "BNP Paribas") et UNIQUEMENT le rôle/intitulé du poste source ou légèrement clarifié dans "heading" (ex: "Développeur Full-Stack"). Dans le subheading, garde les dates source et ajoute seulement un secteur/contexte si la fiche vérité le justifie. Renseigne aussi "sourceId" avec l'id exact de l'expérience source correspondante (ex: "exp-2") — jamais un id inventé, jamais vide pour un item d'expérience.
+   - Profil (champ JSON "accroche") : OBLIGATOIRE, 3 phrases, 50-70 mots, placé tout en haut. Phrase 1 : positionnement professionnel clair. Phrase 2 : 2 ou 3 preuves issues du CV source (secteur, outils, responsabilités, chiffre si disponible). Phrase 3 : alignement avec l'offre et, seulement si la source ou l'offre le justifie, projet de mobilité internationale. Zéro formule creuse ("motivé", "dynamique", "polyvalent") sans preuve.
+   - Expériences : couvre TOUTES les expériences significatives (voir définition ci-dessus) et pertinentes pour l'offre. Priorise et condense (1 à 3 bullets selon la place disponible, formulations plus courtes pour les entrées moins prioritaires) plutôt que de supprimer. Chaque bullet fait 12-22 mots et suit ce modèle : verbe d'action + périmètre/contexte factuel + résultat, effet utile ou objectif métier. Si un chiffre existe dans la fiche vérité, intègre-le au bullet le plus pertinent. Si aucun chiffre n'existe, formule une contribution vérifiable sans KPI inventé et ajoute dans atsScore.tips le KPI concret à demander au candidat. Bannis les bullets purement descriptifs du type "Gestion de...", "Participation à..." ou "Responsable de..." sans action ni contexte. **IMPORTANT** : pour les expériences, mets le NOM DE L'ENTREPRISE SOURCE dans le champ "company" (ex: "Acme Inc.", "BNP Paribas") et UNIQUEMENT le rôle/intitulé du poste source ou légèrement clarifié dans "heading" (ex: "Développeur Full-Stack"). Dans le subheading, garde les dates source et ajoute seulement un secteur/contexte si la fiche vérité le justifie. Renseigne aussi "sourceId" avec l'id exact de l'expérience source correspondante (ex: "exp-2") — jamais un id inventé, jamais vide pour un item d'expérience.
    - Formations : **OBLIGATOIRE si la fiche vérité contient au moins une formation** — 3 à 4 entrées récentes/pertinentes, format compact : heading = intitulé court (ex: "Ingénieur Informatique"), subheading = "établissement · années". Si la place manque, réduis à 1-2 entrées plutôt que de supprimer toute la section.
    - Section "Projets" : **UNIQUEMENT si la fiche vérité contient des projets distincts des expériences** (champ "projects" non vide). Ne construis JAMAIS une section Projets en dupliquant ou reformulant le contenu d'une expérience — ce n'est pas un vrai projet source, c'est une invention structurelle. Si "projects" est vide, ne crée pas cette section, même pour remplir la page.
    - Compétences : **OBLIGATOIRE si la fiche vérité contient au moins une compétence** — 4 sous-sections regroupées par catégorie, 4-7 tags par sous-section, choisis parmi les compétences de la fiche vérité qui matchent l'offre. Si la place manque, réduis le nombre de tags ou de sous-catégories plutôt que de supprimer toute la section. Le nom de la sous-catégorie va dans "heading" (ex: "Front-end", "CMS & Contenus") — ne le répète jamais dans "tags" : les tags sont uniquement des technologies/compétences spécifiques nommées dans la fiche vérité, jamais le label de regroupement lui-même.
@@ -120,7 +129,7 @@ Retourne le résultat dans le format JSON spécifié :
    - "keywords" (0-100) : % des mots-clés importants de l'offre présents dans le CV (exact match ou variations proches). Identifie les 10-15 mots-clés critiques de l'offre (technos, compétences, soft skills, certifications, méthodologies) et compte la proportion qui apparaît dans le CV.
    - "skills" (0-100) : densité et pertinence des compétences. Si la section Compétences couvre bien le périmètre de l'offre avec des tags variés et précis → 85-95. Si vague ou incomplète → 50-70.
    - "structure" (0-100) : qualité structurelle : bullets avec verbes d'action, format clair, sections appropriées, longueur adaptée. Le CV que TU viens de générer doit scorer 90+ ici.
-   - "tips" : 2 à 4 suggestions COURTES et ACTIONNABLES (max 15 mots chacune) pour passer le score à 95+. Exemples : "Ajoute une certification AWS si tu l'as réellement", "Quantifie la 2e expérience avec un chiffre réel". Pas de blabla générique.
+   - "tips" : 2 à 4 suggestions COURTES et ACTIONNABLES (max 15 mots chacune) pour passer le score à 95+. Exemples : "Ajoute une certification AWS si tu l'as réellement", "Quantifie la 2e expérience avec un chiffre réel". Si le CV source manque de chiffres d'impact, au moins une suggestion doit demander un KPI précis adapté au métier/offre. Pas de blabla générique.
    - "missingKeywords" : liste de 3-8 mots-clés/compétences importants de l'offre qui MANQUENT (ou sont sous-représentés) dans le CV. Ces termes doivent être réels et exacts, pas inventés. Si tout est couvert, retourne un tableau vide [].
 - "atsInterpretation" : interprétation ATS ESTIMÉE du CV optimisé. Ne prétends jamais que c'est un scan réel du PDF final. Explique ce qu'un logiciel de recrutement devrait probablement comprendre à partir du CV structuré que tu viens de générer. Décompose en :
    - "identity.fullName" : nom détectable dans le CV optimisé
@@ -133,7 +142,7 @@ Retourne le résultat dans le format JSON spécifié :
    - "parsingRisks" : 0 à 5 risques concrets de lecture ATS ou de compréhension (ex: "photo ignorée par certains ATS", "impact peu quantifié"). Ne mentionne pas un risque si tu ne peux pas le justifier.
    - "summary" : 1 à 2 phrases directes pour le candidat : ce que l'ATS devrait comprendre et le principal point à surveiller.
 
-Pour les sections du CV, utilise typiquement : "Expérience", "Formation", "Compétences", "Projets", "Langues", "Centres d'intérêt" selon ce qui est présent dans la fiche vérité. Ne crée jamais de section qui n'existe pas dans le CV source.
+Pour les sections du CV, utilise typiquement : "Expérience", "Formation", "Compétences", "Projets", "Langues", "Centres d'intérêt" selon ce qui est présent dans la fiche vérité. Ne crée jamais de section qui n'existe pas dans le CV source. Ne crée jamais une section "Profil" dans sections : le profil est le champ top-level "accroche".
 
 Pour chaque item :
 - "heading" : titre principal — POUR LES EXPÉRIENCES, met uniquement le rôle (ex: "Développeur Full-Stack"). POUR LES FORMATIONS, l'intitulé (ex: "Master en Informatique")
@@ -1010,6 +1019,29 @@ function validateNumbers(payload: GeneratedOptimizeResponse, sourceFacts: Source
 }
 
 /**
+ * Le champ "accroche" est rendu comme la section Profil. Une sortie vide ou symbolique
+ * donne un CV daté, même si le reste du document est fidèle. On la bloque donc comme un
+ * défaut de structure, puis le retry de génération peut la reconstruire avec la fiche
+ * vérité sans inventer de fait.
+ */
+export function validateProfile(payload: GeneratedOptimizeResponse): string[] {
+  const profile = payload.cv.accroche.trim();
+  const wordCount = normalizeText(profile).split(" ").filter(Boolean).length;
+
+  if (!profile) {
+    return ["Section Profil manquante : le CV doit commencer par une accroche ciblée."];
+  }
+
+  if (wordCount < 25) {
+    return [
+      `Section Profil trop courte (${wordCount} mots) : elle doit synthétiser le positionnement, les preuves et l'alignement avec l'offre.`,
+    ];
+  }
+
+  return [];
+}
+
+/**
  * Vérifie que les sections dont la fiche vérité a du contenu existent bien dans le CV
  * généré. Contrairement aux expériences (où une omission peut être une priorisation
  * légitime), il n'y a pas de raison valable de faire disparaître entièrement la section
@@ -1081,6 +1113,7 @@ export function validateOptimizedCV(
 ): string[] {
   return [
     ...validateContact(payload, sourceFacts),
+    ...validateProfile(payload),
     ...validateExperienceSourceIds(payload, sourceFacts),
     ...validateRequiredSections(payload, sourceFacts),
     ...validateProjectsProvenance(payload, sourceFacts),
@@ -1294,6 +1327,18 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "ANTHROPIC_API_KEY n'est pas configurée. Crée un fichier .env.local." },
         { status: 500 }
+      );
+    }
+
+    const budgetGate = await checkAnthropicBudgetGate();
+    if (!budgetGate.allowed) {
+      await alertAnthropicBudgetBlocked(budgetGate, "/api/optimize");
+      return NextResponse.json(
+        {
+          error:
+            "La génération de CV est temporairement suspendue : le budget IA restant est trop bas. Réessaie plus tard.",
+        },
+        { status: 503 }
       );
     }
 

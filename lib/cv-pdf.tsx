@@ -251,7 +251,7 @@ function CVAccroche({ text, accent, d }: { text: string; accent: string; d: Dens
             color: COLORS.ink,
           }}
         >
-          À propos
+          Profil
         </Text>
       </View>
       <Text

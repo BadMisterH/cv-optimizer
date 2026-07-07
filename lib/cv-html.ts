@@ -113,7 +113,7 @@ export function buildHtml(
   const containerClass = `container template-${template}`;
 
   const accrocheHtml = cv.accroche?.trim()
-    ? `<section class="cv-section"><h2 class="section-title">À propos</h2><p class="accroche">${escapeHtml(cv.accroche.trim())}</p></section>`
+    ? `<section class="cv-section"><h2 class="section-title">Profil</h2><p class="accroche">${escapeHtml(cv.accroche.trim())}</p></section>`
     : "";
 
   const photoHtml = photoDataUrl

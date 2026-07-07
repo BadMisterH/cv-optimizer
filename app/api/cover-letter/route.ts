@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import type { OptimizedCV } from "@/app/types";
+import type { LetterResponse, OptimizedCV } from "@/app/types";
+import {
+  alertAnthropicBudgetBlocked,
+  checkAnthropicBudgetGate,
+} from "@/lib/anthropic-budget";
 import { alertAnthropicApiError } from "@/lib/alerting";
 import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
 
@@ -8,7 +12,7 @@ export const runtime = "nodejs";
 
 const SYSTEM_PROMPT = `Tu es un rédacteur de lettres de motivation pour le marché français. Tu écris des lettres qui sonnent humaines, jamais corporate ni générique.
 
-OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'appuyant sur des éléments concrets du CV et de l'offre.
+OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'appuyant sur des éléments concrets du CV et de l'offre. La lettre doit suivre une stratégie moderne "Vous-Moi-Nous" : commencer par le besoin de l'employeur, apporter une preuve du candidat, puis projeter une collaboration concrète.
 
 == RÈGLES D'ÉCRITURE (non négociables) ==
 
@@ -16,8 +20,9 @@ OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'a
 - Écris comme un candidat sincère qui veut vraiment ce poste, pas comme une IA polie.
 - Phrases courtes et variées (en moyenne 12 à 22 mots), alterne phrases simples et composées.
 - Concret toujours préféré à l'abstrait. Exemple : "j'ai mené 3 audits clients en stage" est meilleur que "j'ai développé mes compétences en relation client".
-- Bannis les formules-types et clichés : "fort de mon expérience", "passionné par votre secteur", "représente une opportunité unique", "j'ai à cœur de", "vivement intéressé", "votre dynamisme", "challenge", "synergie", "écosystème", "leverage", "saisir l'opportunité", "rejoindre vos équipes".
+- Bannis les formules-types et clichés : "Votre annonce a retenu mon attention", "Actuellement à la recherche", "C'est avec grand intérêt", "Je me permets de vous adresser ma candidature", "Je vous adresse ma candidature", "fort de mon expérience", "passionné par votre secteur", "représente une opportunité unique", "j'ai à cœur de", "vivement intéressé", "votre dynamisme", "challenge", "synergie", "écosystème", "leverage", "saisir l'opportunité", "rejoindre vos équipes".
 - Pas d'auto-flagornerie ("très motivé", "extrêmement rigoureux", "force de proposition"). Montre-le par les faits.
+- Le premier paragraphe ne doit pas commencer par "Je", "J'", "Mon parcours", "Ma candidature" ou une déclaration d'intérêt. Il commence par l'enjeu concret du recruteur.
 
 2. INTERDICTION ABSOLUE DES TIRETS DU MILIEU
 - Aucun caractère "—" (tiret cadratin / em dash).
@@ -32,17 +37,24 @@ OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'a
 - Cite au moins UN élément précis et nommé tiré du CV (un projet, une mission, un chiffre, une techno, un secteur).
 - Cite au moins UN élément précis de l'offre (une mission, un produit, une valeur affichée par l'entreprise, un défi cité).
 - Le lien entre ces deux éléments doit être explicite, pas implicite.
+- Si l'offre concerne une officine, une pharmacie, un commerce de centre-ville, un service client ou un environnement opérationnel, pars d'un enjeu réaliste du poste (flux, conseil, stocks, qualité de service, conformité, coordination) uniquement s'il est cohérent avec le texte de l'offre. N'invente jamais une situation précise sur l'entreprise.
 
 4. STRUCTURE
 - 3 ou 4 paragraphes, 280 à 340 mots au total dans le corps (paragraphs).
-- § 1 (40-60 mots) : pourquoi cette boîte, ce poste. Angle personnel, pas générique.
-- § 2 (90-120 mots) : 1 ou 2 expériences pertinentes du CV, avec verbes d'action et résultats concrets si possible.
-- § 3 (60-90 mots) : ce que tu vas apporter au poste. Concret, pas des mots creux.
-- § 4 optionnel (30-50 mots) : disponibilité, demande d'entretien.
+- § 1 "Vous" (45-65 mots) : commence par le problème, l'enjeu ou la priorité de l'employeur. Montre que tu as compris le poste avant de parler du candidat. Interdit de commencer par une formule d'intérêt.
+- § 2 "Moi" (90-120 mots) : sélectionne 1 ou 2 preuves du CV qui répondent directement à cet enjeu. Ce paragraphe ne paraphrase pas le CV : il explique pourquoi ces expériences sont utiles pour ce poste.
+- § 3 "Nous" (70-95 mots) : projette la contribution concrète du candidat dans le contexte de l'entreprise : premières priorités, manière de travailler, bénéfice attendu pour l'équipe ou les clients/patients/usagers.
+- § 4 optionnel (30-45 mots) : disponibilité, demande d'entretien, sobre et directe.
 
 5. VOCABULAIRE
 - Verbes d'action : conçu, piloté, lancé, débogué, présenté, négocié, recruté, animé, structuré, déployé.
-- "Je" plutôt que "j'aimerais" ou "j'aurais" (on n'est pas dans le conditionnel poli mou).
+- "Je" est bienvenu à partir du deuxième paragraphe. Évite "j'aimerais" ou "j'aurais" (on n'est pas dans le conditionnel poli mou).
+
+6. STRATÉGIE ÉDITORIALE
+- Ne raconte pas le CV dans l'ordre chronologique.
+- Choisis un angle unique, lié à l'offre, puis sélectionne les preuves CV qui servent cet angle.
+- Toute phrase doit répondre à une de ces questions : quel besoin employeur ? quelle preuve candidat ? quelle collaboration concrète ?
+- Si le CV manque de chiffres, ne fabrique pas de KPI. Utilise une preuve qualitative et mentionne dans les notes le KPI qui renforcerait la lettre.
 
 == CHAMPS JSON ATTENDUS ==
 
@@ -57,7 +69,7 @@ OBJECTIF : produire une lettre qui donne envie de rencontrer le candidat, en s'a
 - "closing" : formule de politesse française classique (ex: "Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.").
 - "signature" : nom complet du candidat.
 
-Retourne aussi "notes" : 3 à 5 puces concrètes expliquant tes choix éditoriaux (quel élément CV mis en avant, quel mot-clé offre repris, ton choisi). Pas de meta-blabla, juste des faits.
+Retourne aussi "notes" : 3 à 5 puces concrètes expliquant tes choix éditoriaux (enjeu employeur choisi, preuve CV mise en avant, projection "Nous", mot-clé offre repris, KPI manquant éventuel). Pas de meta-blabla, juste des faits.
 
 == ANCIENNE LETTRE DE MOTIVATION (si fournie) ==
 Si un document intitulé "Ancienne lettre de motivation" est présent, utilise-le UNIQUEMENT pour calibrer le style du candidat :
@@ -151,6 +163,156 @@ function stripDashesFromLetter<T extends Record<string, unknown>>(letter: T): T 
     );
   }
   return out as T;
+}
+
+function normalizeLetterText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
+    .replace(/[’']/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const FORBIDDEN_LETTER_CLICHES = [
+  "votre annonce a retenu mon attention",
+  "actuellement a la recherche",
+  "c est avec grand interet",
+  "je me permets de vous adresser ma candidature",
+  "je vous adresse ma candidature",
+  "je souhaite vous soumettre ma candidature",
+  "fort de mon experience",
+  "passionne par votre secteur",
+  "represente une opportunite unique",
+  "j ai a coeur de",
+  "vivement interesse",
+  "votre dynamisme",
+  "challenge",
+  "synergie",
+  "ecosysteme",
+  "leverage",
+  "saisir l opportunite",
+  "rejoindre vos equipes",
+];
+
+const EMPLOYER_FIRST_SIGNALS = [
+  "vous",
+  "votre",
+  "vos",
+  "entreprise",
+  "poste",
+  "mission",
+  "enjeu",
+  "besoin",
+  "priorite",
+  "objectif",
+  "clients",
+  "patients",
+  "equipe",
+  "officine",
+  "pharmacie",
+  "service",
+  "stock",
+  "qualite",
+  "activite",
+  "operationnel",
+  "centre ville",
+  "croissance",
+];
+
+export function validateLetterStrategy(payload: LetterResponse): string[] {
+  const violations: string[] = [];
+  const paragraphs = payload.letter.paragraphs.filter((p) => p.trim().length > 0);
+  const first = paragraphs[0] ?? "";
+  const normalizedFirst = normalizeLetterText(first);
+  const normalizedBody = normalizeLetterText(paragraphs.join(" "));
+
+  if (!normalizedFirst) {
+    violations.push("Premier paragraphe vide : la lettre doit commencer par un enjeu employeur.");
+  }
+
+  for (const cliche of FORBIDDEN_LETTER_CLICHES) {
+    if (normalizedBody.includes(cliche)) {
+      violations.push(`Formule cliché interdite détectée : "${cliche}".`);
+    }
+  }
+
+  if (/^(je|j|mon|ma|mes|actuellement|candidat|candidate)\b/.test(normalizedFirst)) {
+    violations.push(
+      "Accroche trop centrée candidat : le premier paragraphe doit commencer par le besoin employeur."
+    );
+  }
+
+  if (
+    normalizedFirst &&
+    !EMPLOYER_FIRST_SIGNALS.some((signal) => normalizedFirst.includes(signal))
+  ) {
+    violations.push(
+      "Accroche insuffisamment orientée employeur : elle doit nommer un enjeu, une mission ou un contexte du poste."
+    );
+  }
+
+  return Array.from(new Set(violations));
+}
+
+function parseLetterResponse(response: { content: Array<{ type: string; text?: string }> }): LetterResponse {
+  const textBlock = response.content.find(
+    (block): block is { type: "text"; text: string } =>
+      block.type === "text" && typeof block.text === "string"
+  );
+  if (!textBlock) {
+    throw new Error("Pas de réponse texte du modèle.");
+  }
+
+  const parsed = JSON.parse(textBlock.text) as LetterResponse;
+  parsed.letter = stripDashesFromLetter(parsed.letter);
+  return parsed;
+}
+
+async function generateCoverLetter(
+  client: Anthropic,
+  userContent: Anthropic.Messages.ContentBlockParam[],
+  strategyViolations: string[] = []
+): Promise<LetterResponse> {
+  const content =
+    strategyViolations.length > 0
+      ? [
+          ...userContent,
+          {
+            type: "text",
+            text: [
+              "=== CONTRÔLE QUALITÉ À CORRIGER ===",
+              "La version précédente a été rejetée pour ces raisons :",
+              ...strategyViolations.map((v) => `- ${v}`),
+              "",
+              "Réécris entièrement la lettre en respectant la structure Vous-Moi-Nous. Ne réutilise aucune formule rejetée.",
+            ].join("\n"),
+          } satisfies Anthropic.Messages.ContentBlockParam,
+        ]
+      : userContent;
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-7",
+    max_tokens: 8000,
+    thinking: { type: "adaptive" },
+    system: [
+      {
+        type: "text",
+        text: SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [{ role: "user", content }],
+    output_config: {
+      format: { type: "json_schema", schema: letterSchema },
+    },
+  });
+
+  return parseLetterResponse(response);
 }
 
 function todayInFrench(): string {
@@ -264,6 +426,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const budgetGate = await checkAnthropicBudgetGate();
+    if (!budgetGate.allowed) {
+      await alertAnthropicBudgetBlocked(budgetGate, "/api/cover-letter");
+      return NextResponse.json(
+        {
+          error:
+            "La génération de lettre est temporairement suspendue : le budget IA restant est trop bas. Réessaie plus tard.",
+        },
+        { status: 503 }
+      );
+    }
+
     const today = todayInFrench();
 
     const userContent: Anthropic.Messages.ContentBlockParam[] = [];
@@ -295,34 +469,23 @@ export async function POST(req: Request) {
 
     const client = new Anthropic();
 
-    const response = await client.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 8000,
-      thinking: { type: "adaptive" },
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [{ role: "user", content: userContent }],
-      output_config: {
-        format: { type: "json_schema", schema: letterSchema },
-      },
-    });
+    let parsed = await generateCoverLetter(client, userContent);
+    let strategyViolations = validateLetterStrategy(parsed);
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      return NextResponse.json(
-        { error: "Pas de réponse texte du modèle." },
-        { status: 500 }
-      );
+    if (strategyViolations.length > 0) {
+      parsed = await generateCoverLetter(client, userContent, strategyViolations);
+      strategyViolations = validateLetterStrategy(parsed);
     }
 
-    const parsed = JSON.parse(textBlock.text);
-    if (parsed?.letter) {
-      parsed.letter = stripDashesFromLetter(parsed.letter);
+    if (strategyViolations.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "La lettre a été bloquée car son accroche reste trop générique. Réessaie avec une offre plus détaillée.",
+          details: strategyViolations.slice(0, 6),
+        },
+        { status: 422 }
+      );
     }
 
     if (gate.isAuthenticated && !gate.isAdmin) {

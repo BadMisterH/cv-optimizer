@@ -124,19 +124,19 @@ export function CVEditor({ cv, photo, onChange }: Props) {
         )}
       </header>
 
-      {/* Accroche */}
+      {/* Profil */}
       <div>
         <div className="mb-3 flex items-baseline gap-3 border-b border-rule pb-1">
           <span className="font-mono text-[12px] font-medium uppercase tracking-[0.22em] text-accent">00</span>
-          <h4 className="font-display text-sm font-medium uppercase tracking-[0.16em] text-ink">À propos</h4>
+          <h4 className="font-display text-sm font-medium uppercase tracking-[0.16em] text-ink">Profil</h4>
         </div>
         <p className="text-[15px] leading-relaxed text-ink-soft">
           <EditableText
             value={state.cv.accroche}
             onChange={(value) => dispatch({ type: "EDIT_ACCROCHE", value })}
-            placeholder="Une accroche en 2-3 phrases qui pose ton profil et ta motivation"
+            placeholder="Un profil en 3 phrases qui pose ton positionnement, tes preuves et ton objectif"
             multiline
-            ariaLabel="Accroche"
+            ariaLabel="Profil"
           />
         </p>
       </div>

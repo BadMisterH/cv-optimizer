@@ -10,6 +10,7 @@ import {
   stripUnjustifiedSkillTags,
   validateExperienceSourceIds,
   validateOptimizedCV,
+  validateProfile,
   validateProjectsProvenance,
   validateRequiredSections,
   type GeneratedCVItem,
@@ -74,7 +75,8 @@ function makePayloadWithSections(
     cv: {
       fullName: "Jean Dupont",
       title: "Développeur Full-Stack",
-      accroche: "Accroche.",
+      accroche:
+        "Développeur full-stack orienté plateformes e-commerce, avec une expérience concrète sur React et Node.js. Habitué à relier catalogue, paiements et contraintes produit. Cible des postes où livrer des interfaces fiables et lisibles compte autant que la technique.",
       contact: {
         email: "jean@example.com",
         phone: "0600000000",
@@ -165,6 +167,26 @@ describe("cas propre", () => {
     expect(result.strongViolations).toEqual([]);
     expect(result.ambiguousNotes).toEqual([]);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("profil obligatoire", () => {
+  it("signale une section Profil vide", () => {
+    const payload = makePayload([makeExperienceItem()]);
+    payload.cv.accroche = "";
+
+    const violations = validateProfile(payload);
+
+    expect(violations.some((v) => v.includes("Profil manquante"))).toBe(true);
+  });
+
+  it("signale une section Profil trop courte", () => {
+    const payload = makePayload([makeExperienceItem()]);
+    payload.cv.accroche = "Développeur motivé.";
+
+    const violations = validateProfile(payload);
+
+    expect(violations.some((v) => v.includes("Profil trop courte"))).toBe(true);
   });
 });
 
