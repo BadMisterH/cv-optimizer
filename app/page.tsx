@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import Image from "next/image";
+import { useState } from "react";
 import { signOut, useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import {
+  getPackBonusCredits,
+  getPackTotalCredits,
+  isLaunchOfferActive,
+  LAUNCH_OFFER,
+  PACKS,
+  type PackKey,
+} from "@/lib/stripe-packs";
 import { Logo } from "./components/Logo";
 import { UserMenu } from "./components/UserMenu";
 import { StructuredData } from "./components/StructuredData";
@@ -37,16 +46,33 @@ const FAQ_ITEMS = [
     q: "Le PDF est-il vraiment compatible ATS ?",
     a: "Oui. Le PDF généré garde un texte sélectionnable, une structure lisible et des mots-clés issus de l'offre quand ton expérience les justifie.",
   },
+  {
+    q: "Combien coûte CV Optimizer après l'essai offert ?",
+    a: "Les packs commencent à 4,99 €. Il n'y a aucun abonnement : un crédit sert à générer un CV optimisé ou une lettre de motivation.",
+  },
+  {
+    q: "Est-ce que les crédits expirent ?",
+    a: "Non. Les crédits achetés n'expirent pas. Tu peux les utiliser au rythme de tes candidatures.",
+  },
 ] as const;
 
 const NAV_LINKS = [
-  { href: "#probleme", label: "Problème" },
   { href: "#comment", label: "Étapes" },
   { href: "#exemple", label: "Exemple" },
-  { href: "#pourquoi", label: "Pourquoi" },
+  { href: "#tarifs", label: "Tarifs" },
   { href: "#confidentialite", label: "Données" },
   { href: "#faq", label: "FAQ" },
 ] as const;
+
+const PACK_POSITIONING: Record<PackKey, string> = {
+  starter: "Pour quelques candidatures ciblées",
+  pro: "Pour une recherche active",
+  premium: "Pour candidater sur la durée",
+};
+
+function formatUnitPrice(amountCents: number, credits: number) {
+  return `${(amountCents / 100 / credits).toFixed(2).replace(".", ",")} €`;
+}
 
 type HeaderUser = {
   name?: string;
@@ -95,6 +121,8 @@ function LandingHeader({ user }: { user: HeaderUser }) {
   const isAdmin = isAdminEmail(user?.email);
   const credits = user?.credits ?? 0;
   const isEmpty = isLogged && !isAdmin && credits <= 0;
+  const actionHref = isEmpty ? "/buy-credits" : "/optimiser";
+  const actionLabel = isEmpty ? "Recharger" : isLogged ? "Optimiser" : "Essayer gratuitement";
 
   return (
     <header className="sticky top-0 z-40 overflow-x-clip border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
@@ -131,10 +159,10 @@ function LandingHeader({ user }: { user: HeaderUser }) {
             </Link>
           )}
           <Link
-            href="/optimiser"
-            className="group inline-flex h-10 items-center gap-2 bg-ink px-5 font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
+            href={actionHref}
+            className="cta-primary group inline-flex h-10 items-center gap-2 px-5 font-mono text-[13px] uppercase tracking-[0.18em]"
           >
-            Tester
+            {actionLabel}
             <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
               →
             </span>
@@ -251,11 +279,11 @@ function LandingHeader({ user }: { user: HeaderUser }) {
                 </Link>
               )}
               <Link
-                href="/optimiser"
+                href={actionHref}
                 onClick={() => setOpen(false)}
-                className="group inline-flex h-12 items-center justify-center gap-2 bg-ink font-mono text-[13px] uppercase tracking-[0.22em] text-paper transition hover:bg-accent"
+                className="cta-primary group inline-flex h-12 items-center justify-center gap-2 font-mono text-[13px] uppercase tracking-[0.18em]"
               >
-                Tester avec mon CV
+                {isEmpty ? "Recharger mes crédits" : isLogged ? "Optimiser mon CV" : "Essayer gratuitement"}
                 <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                   →
                 </span>
@@ -270,81 +298,67 @@ function LandingHeader({ user }: { user: HeaderUser }) {
 
 export default function Landing() {
   const { data: session } = useSession();
-  const isLogged = Boolean(session?.user);
-  const ctaHref = "/optimiser";
-
-  // Tilt souris sur le CV
-  const tiltRef = useRef<HTMLDivElement>(null);
-  function handleTiltMove(e: ReactMouseEvent<HTMLDivElement>) {
-    const el = tiltRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width;
-    const y = (e.clientY - r.top) / r.height;
-    // base: rx=4, ry=-6 ; on permet ±5° en X et ±5° en Y autour de cette base
-    const ry = -6 + (x - 0.5) * 10;
-    const rx = 4 - (y - 0.5) * 10;
-    el.style.setProperty("--rx", rx.toFixed(2));
-    el.style.setProperty("--ry", ry.toFixed(2));
-  }
-  function handleTiltLeave() {
-    const el = tiltRef.current;
-    if (!el) return;
-    el.style.setProperty("--rx", "4");
-    el.style.setProperty("--ry", "-6");
-  }
+  const sessionUser = session?.user as HeaderUser;
+  const isLogged = Boolean(sessionUser);
+  const isAdmin = isAdminEmail(sessionUser?.email);
+  const isOutOfCredits = isLogged && !isAdmin && (sessionUser?.credits ?? 0) <= 0;
+  const ctaHref = isOutOfCredits ? "/buy-credits" : "/optimiser";
+  const ctaLabel = isOutOfCredits
+    ? "Recharger mes crédits"
+    : isLogged
+      ? "Optimiser mon CV"
+      : "Optimiser mon CV gratuitement";
+  const launchOfferActive = isLaunchOfferActive();
 
   return (
-    <main className="min-h-screen overflow-x-clip">
+    <main className="marketing-page min-h-screen overflow-x-clip">
       <StructuredData faq={FAQ_ITEMS.map((i) => ({ q: i.q, a: i.a }))} />
-      <LandingHeader user={(session?.user as HeaderUser) ?? null} />
+      <LandingHeader user={sessionUser ?? null} />
 
       {/* ============ HERO ============ */}
       <section className="hero-bg overflow-x-clip border-b border-rule">
-        <div className="mx-auto max-w-360 px-6 pt-12 pb-20 lg:pt-16 lg:pb-32">
+        <div className="mx-auto max-w-360 px-6 pb-14 pt-10 lg:py-14 xl:py-16">
 
-          <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
-            <div className="lg:col-span-8">
-              <p className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+          <div className="grid items-center gap-12 xl:grid-cols-12 xl:gap-x-16">
+            <div className="xl:col-span-7">
+              <div className="mb-7 inline-flex max-w-full flex-wrap items-center gap-x-4 gap-y-2 border border-rule bg-card/75 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted shadow-[0_1px_0_0_rgba(15,15,16,0.04)]">
                 <span className="inline-flex items-center gap-2">
                   <span className="text-warm">●</span> CV ciblé par offre
                 </span>
-                <span className="hidden h-3 w-px bg-rule sm:inline-block" />
+                <span className="hidden h-3 w-px bg-rule sm:inline-block" aria-hidden />
                 <span className="inline-flex items-center gap-2">
                   <span className="text-accent">●</span> Sans fausse expérience
                 </span>
-                <span className="hidden h-3 w-px bg-rule sm:inline-block" />
+                <span className="hidden h-3 w-px bg-rule sm:inline-block" aria-hidden />
                 <span className="inline-flex items-center gap-2">
                   <span className="text-success">●</span> PDF prêt à envoyer
                 </span>
-              </p>
+              </div>
 
-              <h1 className="font-display text-[clamp(2.75rem,8.5vw,7rem)] font-light leading-[0.92] tracking-tight text-ink">
-                Ton CV est peut-être bon.
-                <br />
-                Mais <span className="italic font-normal text-accent">pas</span>{" "}
-                pour cette offre.
+              <h1 className="max-w-4xl font-display text-[clamp(3rem,5.7vw,5.6rem)] font-light leading-[0.94] tracking-[-0.03em] text-ink">
+                Adapte ton CV au langage de{" "}
+                <span className="italic font-normal text-accent">l&apos;offre</span>.
               </h1>
 
-              <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft">
-                Colle une offre d&apos;emploi, importe ton CV, et obtiens une
-                version plus claire, plus ciblée et plus adaptée aux recruteurs,
-                sans inventer d&apos;expérience.
+              <p className="mt-8 max-w-2xl text-[18px] leading-relaxed text-ink-soft">
+                Colle l&apos;annonce, importe ton PDF, et obtiens une version
+                plus claire pour le recruteur : mots-clés utiles, score ATS,
+                mise en page propre, sans inventer d&apos;expérience.
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <Link
                   href={ctaHref}
-                  className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
+                  className="cta-primary group inline-flex min-h-14 items-center justify-center gap-3 px-7 py-4 text-base font-medium tracking-tight"
                 >
-                  <span>Tester avec mon CV</span>
+                  <span>{ctaLabel}</span>
                   <span aria-hidden className="transition-transform group-hover:translate-x-1">
                     →
                   </span>
                 </Link>
                 <a
                   href="#exemple"
-                  className="group inline-flex items-center justify-center gap-3 border border-rule px-7 py-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted transition hover:border-ink hover:text-ink"
+                  className="group inline-flex min-h-14 items-center justify-center gap-3 border border-rule bg-card/60 px-7 py-4 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted transition hover:border-ink hover:bg-card hover:text-ink"
                 >
                   Voir un exemple avant/après
                   <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
@@ -353,312 +367,86 @@ export default function Landing() {
                 </a>
               </div>
 
-              <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-faint">
-                1 génération offerte à l'inscription · Pas de carte bancaire · CV supprimé après génération
-              </p>
-
-              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-                {[
-                  "Ton CV reste ton vrai parcours",
-                  "Les mots de l'offre ressortent",
-                  "Le PDF reste lisible recruteur",
-                ].map((proof) => (
-                  <div
-                    key={proof}
-                    className="border border-rule bg-card/70 p-4 text-[13px] leading-snug text-ink-soft"
-                  >
-                    <span className="mb-3 block font-mono text-[11px] uppercase tracking-[0.22em] text-success">
-                      ● preuve
-                    </span>
-                    {proof}
-                  </div>
-                ))}
+              <div className="mt-6 flex max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-muted">
+                <span>● 1 génération offerte</span>
+                <span>● Sans carte bancaire</span>
+                <span>● CV supprimé après génération</span>
+                <a
+                  href="#tarifs"
+                  className="inline-flex whitespace-nowrap text-accent transition hover:text-accent-hover hover:underline"
+                >
+                  Packs dès 4,99 € ↓
+                </a>
               </div>
             </div>
 
-            {/* Hero visual : CV 3D flottant avec cartes stratifiées en perspective */}
-            <aside className="lg:col-span-4 lg:self-end">
-              <div className="cv-stage relative">
-                {/* Déco : grille de points en haut à gauche */}
+            {/* Hero visual : aperçu réel du CV final généré */}
+            <aside className="hero-result relative xl:col-span-5 xl:pl-2">
+              <div className="relative mx-auto max-w-[500px]">
                 <div
                   aria-hidden
-                  className="absolute -left-4 -top-6 hidden grid-cols-5 gap-1.5 sm:grid"
-                  style={{ gridTemplateRows: "repeat(5, 1fr)" }}
-                >
-                  {Array.from({ length: 25 }).map((_, i) => (
-                    <span
-                      key={i}
-                      className="h-1 w-1 rounded-full bg-ink-faint"
-                      style={{ opacity: 0.15 + ((i * 37) % 60) / 100 }}
+                  className="absolute inset-0 translate-x-3 translate-y-3 border border-accent/25 bg-accent-soft/45"
+                />
+
+                <figure className="relative overflow-hidden border border-rule bg-card shadow-[0_34px_90px_-48px_rgba(16,19,26,0.5)]">
+                  <figcaption className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-5 py-4">
+                    <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-success">
+                      <span aria-hidden className="h-1.5 w-1.5 bg-success" />
+                      Résultat final
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                      Exemple généré
+                    </span>
+                  </figcaption>
+
+                  <div className="relative h-[430px] overflow-hidden bg-white sm:h-[610px] xl:h-[590px]">
+                    <Image
+                      src="/ResultCV.png"
+                      alt="Aperçu d'un CV optimisé généré par CV Optimizer"
+                      width={1654}
+                      height={2339}
+                      priority
+                      sizes="(max-width: 639px) calc(100vw - 48px), (max-width: 1279px) 500px, 460px"
+                      className="h-auto w-full"
                     />
-                  ))}
-                </div>
-
-                {/* Déco : loupe line-art (ATS scanning) en bas à gauche */}
-                <svg
-                  aria-hidden
-                  viewBox="0 0 48 48"
-                  className="absolute -bottom-8 -left-6 h-14 w-14 text-warm cv-pulse"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                >
-                  <circle cx="20" cy="20" r="13" />
-                  <line x1="29.5" y1="29.5" x2="42" y2="42" strokeLinecap="round" />
-                </svg>
-
-                {/* Déco : "+" scintillants */}
-                <span
-                  aria-hidden
-                  className="absolute right-8 -top-4 font-mono text-lg text-accent cv-pulse"
-                  style={{ animationDelay: "-1.2s" }}
-                >
-                  +
-                </span>
-                <span
-                  aria-hidden
-                  className="absolute -right-4 top-1/3 font-mono text-lg text-warm cv-pulse"
-                  style={{ animationDelay: "-0.6s" }}
-                >
-                  +
-                </span>
-
-                {/* Carte arrière #2 (rotation statique outer, float inner) */}
-                <div
-                  aria-hidden
-                  className="absolute right-0 top-0 -z-10 hidden h-full w-full origin-bottom-left sm:block"
-                  style={{
-                    transform: "rotateY(-12deg) rotateX(6deg) translateX(28px) translateY(28px)",
-                  }}
-                >
-                  <div className="cv-float-back h-full border border-rule bg-paper-deep shadow-[0_20px_40px_-30px_rgba(15,15,16,0.25)]">
-                    <div className="border-b border-rule p-3">
-                      <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-faint">
-                        Offre · Marketing
-                      </p>
-                    </div>
-                    <div className="space-y-1.5 p-3">
-                      {[80, 65, 75, 50].map((w, i) => (
-                        <div key={i} className="h-1.5 bg-rule" style={{ width: `${w}%` }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Carte arrière #1 (rotation statique outer, float inner) */}
-                <div
-                  aria-hidden
-                  className="absolute right-0 top-0 -z-10 hidden h-full w-full origin-bottom-left sm:block"
-                  style={{
-                    transform: "rotateY(-9deg) rotateX(5deg) translateX(14px) translateY(14px)",
-                  }}
-                >
-                  <div className="cv-float-slow h-full border border-rule bg-card shadow-[0_24px_50px_-30px_rgba(15,15,16,0.3)]">
-                    <div className="border-b border-rule p-3">
-                      <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-faint">
-                        Offre · Growth
-                      </p>
-                    </div>
-                    <div className="space-y-1.5 p-3">
-                      {[85, 70, 60, 78, 45].map((w, i) => (
-                        <div key={i} className="h-1.5 bg-rule" style={{ width: `${w}%` }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Carte avant : tilt souris (outer) + float (middle) + carte (inner) */}
-                <div
-                  ref={tiltRef}
-                  onMouseMove={handleTiltMove}
-                  onMouseLeave={handleTiltLeave}
-                  className="cv-tilt origin-bottom-left"
-                >
-                <div className="cv-float">
-                <div className="relative origin-bottom-left overflow-hidden border border-rule bg-card shadow-[0_40px_90px_-30px_rgba(15,15,16,0.4),0_8px_20px_-12px_rgba(15,15,16,0.2)]">
-                  {/* Tag ATS en coin */}
-                  <span className="absolute right-0 top-0 z-10 bg-success px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-paper">
-                    ✓ ATS
-                  </span>
-
-                  <div className="p-5">
-                    {/* Header avec photo placeholder + nom */}
-                    <div className="flex items-start gap-3">
-                      <div className="relative h-12 w-10 shrink-0 overflow-hidden bg-paper-deep">
-                        {/* Silhouette stylisée */}
-                        <svg
-                          viewBox="0 0 40 48"
-                          className="absolute inset-0 h-full w-full text-ink-faint"
-                          fill="currentColor"
-                          aria-hidden
-                        >
-                          <circle cx="20" cy="18" r="7" />
-                          <path d="M6 48c0-8 6-14 14-14s14 6 14 14H6Z" />
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-muted">
-                          Curriculum Vitæ
+                    <div
+                      aria-label="Informations personnelles anonymisées"
+                      className="absolute inset-x-0 top-0 z-10 flex h-11 items-center justify-between border-b-2 border-ink bg-white px-3 sm:h-16 sm:px-4"
+                    >
+                      <div>
+                        <span className="mb-1 block h-0.5 w-8 bg-accent" aria-hidden />
+                        <p className="text-[8px] font-bold leading-none text-ink sm:text-[12px]">
+                          CANDIDAT EXEMPLE
                         </p>
-                        <p className="mt-1 truncate font-display text-lg font-bold leading-tight tracking-tight text-ink">
-                          Badr Aitoufel
-                        </p>
-                        <p className="mt-0.5 font-mono text-[12px] font-semibold tracking-[0.04em] text-accent">
-                          Développeur Full-Stack
+                        <p className="mt-1 font-mono text-[6px] uppercase leading-none tracking-[0.08em] text-accent sm:text-[8px]">
+                          Profil web · données anonymisées
                         </p>
                       </div>
+                      <p className="hidden font-mono text-[7px] uppercase tracking-[0.1em] text-ink-muted sm:block">
+                        Contact masqué
+                      </p>
                     </div>
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-white via-white/85 to-transparent"
+                    />
+                  </div>
 
-                    {/* Contact */}
-                    <p className="mt-2.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
-                      badr@example.com · Paris · linkedin.com/in/badr
+                  <div className="relative flex flex-col gap-4 border-t border-rule bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                        Preuve du rendu
+                      </p>
+                      <p className="mt-1 text-[13px] font-medium text-ink">
+                        1 page · PDF lisible · prêt à envoyer
+                      </p>
+                    </div>
+                    <p className="inline-flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-success">
+                      <span aria-hidden className="h-1.5 w-1.5 bg-success" />
+                      Identité masquée
                     </p>
-
-                    {/* Score de matching */}
-                    <div className="mt-3 border border-success/25 bg-success-soft/45 p-2.5">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-muted">
-                          Match offre
-                        </span>
-                        <span className="font-display text-xl font-medium leading-none tracking-tight text-success">
-                          91 %
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1 overflow-hidden bg-paper">
-                        <div className="h-full w-[91%] bg-success" />
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {["React", "SEO", "Reporting"].map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-sm bg-paper px-1.5 py-0.5 font-mono text-[7.5px] tracking-[0.04em] text-success"
-                          >
-                            + {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* À propos */}
-                    <div className="mt-4 border-t border-rule pt-3">
-                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
-                        À propos
-                      </p>
-                      <p className="mt-1.5 text-[10.5px] leading-snug text-ink-soft">
-                        3 ans en{" "}
-                        <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
-                          React/TypeScript
-                        </mark>
-                        , spécialisé{" "}
-                        <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
-                          accessibilité
-                        </mark>{" "}
-                        et perfs Core Web Vitals.
-                      </p>
-                    </div>
-
-                    {/* Expérience */}
-                    <div className="mt-4 border-t border-rule pt-3">
-                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
-                        Expérience
-                      </p>
-                      <div className="mt-2.5 space-y-3">
-                        <div>
-                          <p className="text-[11.5px] font-bold leading-tight text-ink">
-                            Frontend Engineer{" "}
-                            <span className="text-ink-muted">·</span>{" "}
-                            <span className="text-accent">Acme Inc.</span>
-                          </p>
-                          <p className="mt-0.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
-                            2023 · 2024 · E-commerce
-                          </p>
-                          <ul className="mt-1 space-y-0.5 text-[10.5px] leading-snug text-ink-soft">
-                            <li className="flex gap-1.5">
-                              <span
-                                aria-hidden
-                                className="mt-1.75 inline-block h-px w-1.5 shrink-0 bg-ink"
-                              />
-                              <span>
-                                Refonte composants UI{" "}
-                                <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
-                                  React
-                                </mark>{" "}
-                                · −30 % bundle
-                              </span>
-                            </li>
-                            <li className="flex gap-1.5">
-                              <span
-                                aria-hidden
-                                className="mt-1.75 inline-block h-px w-1.5 shrink-0 bg-ink"
-                              />
-                              <span>
-                                Audit{" "}
-                                <mark className="rounded-sm bg-accent-soft px-0.5 text-accent">
-                                  accessibilité
-                                </mark>{" "}
-                                AA · LCP &lt; 1.8s
-                              </span>
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div>
-                          <p className="text-[11.5px] font-bold leading-tight text-ink">
-                            Développeur Full-Stack{" "}
-                            <span className="text-ink-muted">·</span>{" "}
-                            <span className="text-accent">BlueBird</span>
-                          </p>
-                          <p className="mt-0.5 font-mono text-[9px] tracking-[0.04em] text-ink-muted">
-                            2021 · 2023 · SaaS B2B
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Compétences */}
-                    <div className="mt-4 border-t border-rule pt-3">
-                      <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ink">
-                        Compétences techniques
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {[
-                          "React",
-                          "TypeScript",
-                          "Next.js",
-                          "A11y",
-                          "Tests",
-                          "Node",
-                          "PostgreSQL",
-                        ].map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-accent-soft px-1.5 py-0.5 font-mono text-[8.5px] tracking-[0.04em] text-accent"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Fade-out bas pour suggérer "il y a plus" */}
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-card via-card/80 to-transparent"
-                  />
-                </div>
-                </div>
-                </div>
-
-                {/* Caption */}
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-faint">
-                    ↪ exemple de rendu
-                  </p>
-                  <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
-                    1 PDF · 1 page
-                  </p>
-                </div>
+                </figure>
               </div>
             </aside>
           </div>
@@ -717,13 +505,20 @@ export default function Landing() {
             ))}
           </div>
 
-          <div className="mt-10 border border-warm/35 bg-warm-soft/60 p-6 lg:p-8">
+          <div className="mt-10 flex flex-col gap-6 border border-warm/35 bg-warm-soft/60 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
             <p className="max-w-4xl font-display text-[clamp(1.6rem,3vw,2.5rem)] font-light leading-[1.08] tracking-[-0.01em] text-ink">
               Arrête d&apos;envoyer le même CV à toutes les offres.{" "}
               <span className="italic font-normal text-warm">
                 Ton CV doit parler le langage de l&apos;annonce.
               </span>
             </p>
+            <Link
+              href={ctaHref}
+              className="cta-primary group inline-flex shrink-0 items-center justify-center gap-3 px-6 py-3.5 text-sm font-medium tracking-tight"
+            >
+              <span>{ctaLabel}</span>
+              <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+            </Link>
           </div>
         </div>
       </section>
@@ -790,9 +585,9 @@ export default function Landing() {
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               href={ctaHref}
-              className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
+              className="cta-primary group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
             >
-              <span>Tester avec mon CV</span>
+              <span>{ctaLabel}</span>
               <span aria-hidden className="transition-transform group-hover:translate-x-1">
                 →
               </span>
@@ -889,6 +684,32 @@ export default function Landing() {
               ))}
             </ul>
           </div>
+
+          <div className="mt-8 flex flex-col gap-5 border border-accent/25 bg-accent-soft/55 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
+            <div>
+              <p className="font-display text-xl font-medium tracking-tight text-ink">
+                Vérifie le résultat avec ta génération offerte.
+              </p>
+              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+                Sans carte bancaire. Si le rendu te convient, les packs commencent à 4,99 €.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-3 sm:items-end">
+              <Link
+                href={ctaHref}
+                className="cta-primary group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
+              >
+                <span>{ctaLabel}</span>
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+              <a
+                href="#tarifs"
+                className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent transition hover:underline"
+              >
+                Comparer les packs ↓
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -966,6 +787,115 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ============ TARIFS ============ */}
+      <section id="tarifs" className="pricing-bg border-b border-rule bg-night text-on-night">
+        <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-8">
+              <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-on-night/60">
+                ● Tarifs transparents
+              </p>
+              <h2 className="mt-4 max-w-4xl font-display text-[clamp(2.4rem,5vw,4.5rem)] font-light leading-[0.96] tracking-[-0.025em] text-on-night">
+                Teste le résultat.{" "}
+                <span className="italic font-normal text-[#ffab73]">
+                  Paie seulement si tu veux continuer.
+                </span>
+              </h2>
+            </div>
+            <div className="lg:col-span-4">
+              <p className="text-[16px] leading-relaxed text-on-night/75">
+                Un crédit génère un CV optimisé ou une lettre de motivation.
+                Aucun abonnement, aucun renouvellement automatique.
+              </p>
+              {launchOfferActive && (
+                <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-[#ffab73]">
+                  ● {LAUNCH_OFFER.headline} jusqu&apos;au {LAUNCH_OFFER.endsOnLabel}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+            {(Object.keys(PACKS) as PackKey[]).map((key) => {
+              const pack = PACKS[key];
+              const featured = "featured" in pack && pack.featured;
+              const bonusCredits = getPackBonusCredits(key);
+              const totalCredits = getPackTotalCredits(key);
+              const unitPrice = formatUnitPrice(pack.amountCents, totalCredits);
+
+              return (
+                <article
+                  key={key}
+                  className={`relative flex min-h-full flex-col border p-7 lg:p-8 ${
+                    featured
+                      ? "border-action bg-accent-soft shadow-[0_28px_80px_-42px_rgba(33,71,232,0.75)]"
+                      : "border-rule bg-paper"
+                  }`}
+                >
+                  {featured && (
+                    <span className="absolute -top-3 left-7 bg-action px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-on-action">
+                      Recommandé
+                    </span>
+                  )}
+                  <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink-muted">
+                    {pack.label}
+                  </p>
+                  <h3 className="mt-5 font-display text-4xl font-medium tracking-tight text-ink">
+                    {totalCredits}
+                    <span className="ml-2 text-base font-normal text-ink-muted">
+                      générations
+                    </span>
+                  </h3>
+                  <p className="mt-3 min-h-12 text-[15px] leading-relaxed text-ink-soft">
+                    {PACK_POSITIONING[key]}
+                  </p>
+                  <div className="mt-6 border-t border-rule pt-5">
+                    <div className="flex items-end justify-between gap-4">
+                      <p className="font-display text-3xl font-medium tracking-tight text-ink">
+                        {pack.price}
+                      </p>
+                      <p className="pb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+                        {unitPrice} / génération
+                      </p>
+                    </div>
+                    {bonusCredits > 0 && (
+                      <p className="mt-3 font-mono text-[12px] uppercase tracking-[0.16em] text-success">
+                        {pack.credits} + {bonusCredits} crédits offerts
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    href={`/buy-credits?pack=${key}`}
+                    className="cta-primary group mt-7 inline-flex min-h-13 items-center justify-between gap-3 px-5 py-3.5 font-mono text-[12px] uppercase tracking-[0.16em]"
+                  >
+                    <span>Choisir {pack.label}</span>
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 grid gap-px overflow-hidden border border-on-night/15 bg-on-night/15 sm:grid-cols-3">
+            {[
+              ["01", "1 CV offert", "Teste le rendu complet sans carte bancaire."],
+              ["02", "Crédits sans expiration", "Utilise-les au rythme de tes candidatures."],
+              ["03", "Paiement Stripe", "CV Optimizer ne stocke aucune donnée carte."],
+            ].map(([number, title, text]) => (
+              <div key={number} className="bg-night/85 p-5 lg:p-6">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#ffab73]">
+                  {number}
+                </p>
+                <p className="mt-3 font-display text-xl font-medium tracking-tight text-on-night">
+                  {title}
+                </p>
+                <p className="mt-2 text-[13px] leading-relaxed text-on-night/65">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ============ CONFIDENTIALITÉ ============ */}
       <section id="confidentialite" className="border-b border-rule bg-paper-deep">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
@@ -1028,9 +958,9 @@ export default function Landing() {
             </p>
             <Link
               href={ctaHref}
-              className="group inline-flex items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-success"
+              className="cta-primary group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
             >
-              <span>Tester avec mon CV</span>
+              <span>{ctaLabel}</span>
               <span aria-hidden className="transition-transform group-hover:translate-x-1">
                 →
               </span>
@@ -1099,24 +1029,24 @@ export default function Landing() {
             <div className="flex min-w-0 flex-col gap-4 lg:col-span-4">
               <Link
                 href={ctaHref}
-                className="group inline-flex w-full min-w-0 items-center justify-between gap-3 bg-paper px-7 py-5 text-base font-medium tracking-tight text-ink transition hover:bg-warm hover:text-paper"
+                className="cta-primary group inline-flex w-full min-w-0 items-center justify-between gap-3 px-7 py-5 text-base font-medium tracking-tight"
               >
-                <span className="min-w-0">Tester avec mon CV</span>
+                <span className="min-w-0">{ctaLabel}</span>
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </Link>
               <a
-                href="#exemple"
+                href="#tarifs"
                 className="group inline-flex w-full min-w-0 items-center justify-between gap-3 border border-paper/30 px-7 py-5 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-faint transition hover:border-paper hover:text-paper sm:text-[13px] sm:tracking-[0.22em]"
               >
-                <span className="min-w-0">Voir un exemple avant/après</span>
+                <span className="min-w-0">Revoir les tarifs</span>
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
                   →
                 </span>
               </a>
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-faint sm:text-[12px] sm:tracking-[0.22em]">
-                1 génération offerte à l'inscription · Pas de carte bancaire · CV supprimé après génération
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-paper/60 sm:text-[12px] sm:tracking-[0.18em]">
+                1 génération offerte · Packs dès 4,99 € · Aucun abonnement
               </p>
             </div>
           </div>
@@ -1138,6 +1068,9 @@ export default function Landing() {
               <Link href="/optimiser" className="hover:text-ink transition">
                 Tester CV
               </Link>
+              <a href="#tarifs" className="hover:text-ink transition">
+                Tarifs
+              </a>
               <Link href="/lettre" className="hover:text-ink transition">
                 Lettre
               </Link>

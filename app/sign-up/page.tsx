@@ -18,6 +18,7 @@ export default function SignUpPage() {
 function SignUpForm() {
   const search = useSearchParams();
   const redirectTo = search.get("redirect") ?? "/";
+  const isCheckoutReturn = redirectTo.startsWith("/buy-credits");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,7 +51,7 @@ function SignUpForm() {
         <Logo size="md" className="mb-10 self-start" />
 
         <h1 className="font-display text-5xl font-light leading-[0.95] tracking-tight text-ink">
-          Crée ton <span className="italic font-normal text-warm">compte</span>.
+          Crée ton <span className="italic font-normal text-accent">compte</span>.
         </h1>
 
         {sent ? (
@@ -70,7 +71,9 @@ function SignUpForm() {
         ) : (
           <>
         <p className="mt-4 text-base text-ink-soft">
-          Optimise tes CV et lettres autant que tu veux. Pas de carte bancaire pour démarrer.
+          {isCheckoutReturn
+            ? "Crée ton compte pour finaliser le pack choisi. Ton choix et le tarif sont conservés."
+            : "Reçois 1 génération offerte pour tester le résultat complet. Pas de carte bancaire, puis des packs dès 4,99 € sans abonnement."}
         </p>
 
         <div className="mt-10 space-y-4">
@@ -78,7 +81,7 @@ function SignUpForm() {
             callbackURL={redirectTo}
             label="S'inscrire avec Google"
           />
-          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
+          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
             <span className="h-px flex-1 bg-rule" />
             ou avec email
             <span className="h-px flex-1 bg-rule" />
@@ -88,13 +91,13 @@ function SignUpForm() {
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <div>
             <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              Prénom <span className="text-ink-faint">(optionnel)</span>
+              Prénom <span className="text-ink-muted">(optionnel)</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-warm focus:shadow-[0_0_0_4px_var(--color-warm-soft)]"
+              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
               placeholder="Badr"
             />
           </div>
@@ -108,14 +111,14 @@ function SignUpForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-warm focus:shadow-[0_0_0_4px_var(--color-warm-soft)]"
+              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
               placeholder="badr@exemple.com"
             />
           </div>
 
           <div>
             <label className="mb-2 block font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
-              Mot de passe <span className="text-ink-faint">(min. 8 caractères)</span>
+              Mot de passe <span className="text-ink-muted">(min. 8 caractères)</span>
             </label>
             <input
               type="password"
@@ -123,7 +126,7 @@ function SignUpForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-warm focus:shadow-[0_0_0_4px_var(--color-warm-soft)]"
+              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
               placeholder="••••••••"
             />
           </div>
@@ -137,7 +140,7 @@ function SignUpForm() {
           <button
             type="submit"
             disabled={loading}
-            className="group inline-flex w-full items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-warm disabled:cursor-not-allowed disabled:opacity-60"
+            className="cta-primary group inline-flex w-full items-center justify-center gap-3 px-7 py-4 text-sm font-medium tracking-tight disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span>{loading ? "Création…" : "Créer mon compte"}</span>
             <span aria-hidden className="transition-transform group-hover:translate-x-1">

@@ -193,10 +193,10 @@ export default function Page() {
       {/* HERO */}
       <section className="hero-bg border-b border-rule">
         <div className="mx-auto max-w-360 px-6 pt-10 pb-16 lg:pt-14 lg:pb-24">
-          <div className="mb-12 flex items-center justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+          <div className="mb-12 flex flex-col items-start justify-between gap-4 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted sm:flex-row sm:items-center">
             <Logo size="md" />
             <ServiceNav />
-            <div className="flex items-center gap-6">
+            <div className="hidden items-center gap-6 lg:flex">
               {!session?.user && (
                 <span className="hidden sm:inline text-ink-soft">
                   1 génération offerte à l&apos;inscription
@@ -253,7 +253,7 @@ export default function Page() {
                 }}
                 placeholder="Colle ici l'intitulé, les missions, le profil recherché…"
                 rows={11}
-                className="w-full resize-none border border-rule bg-card px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-faint shadow-[0_1px_0_0_rgba(15,15,16,0.04)] outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
+                className="w-full resize-none border border-rule bg-card px-5 py-4 text-[15px] leading-relaxed text-ink placeholder:text-ink-muted shadow-[0_1px_0_0_rgba(15,15,16,0.04)] outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
                 required
               />
               <p className="mt-3 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
@@ -294,7 +294,7 @@ export default function Page() {
                 {outOfCredits ? (
                   <Link
                     href="/buy-credits"
-                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent"
+                    className="cta-primary group inline-flex items-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
                   >
                     <span>Acheter des crédits</span>
                     <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
@@ -303,7 +303,7 @@ export default function Page() {
                   <button
                     type="submit"
                     disabled={loading || !cvFile || !offer.trim()}
-                    className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:bg-ink-faint disabled:opacity-60"
+                    className="cta-primary group inline-flex items-center gap-3 px-7 py-4 text-sm font-medium tracking-tight disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span>{loading ? "Optimisation en cours…" : "Optimiser mon CV"}</span>
                     <span
@@ -596,7 +596,7 @@ function Result({
             </div>
             <Link
               href="/buy-credits"
-              className="group inline-flex items-center gap-2 bg-ink px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-paper transition hover:bg-success"
+              className="cta-primary group inline-flex items-center gap-2 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em]"
             >
               Recharger maintenant
               <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>

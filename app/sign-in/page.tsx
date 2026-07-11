@@ -19,6 +19,7 @@ function SignInForm() {
   const router = useRouter();
   const search = useSearchParams();
   const redirectTo = search.get("redirect") ?? "/";
+  const isCheckoutReturn = redirectTo.startsWith("/buy-credits");
   const justReset = search.get("reset") === "ok";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +49,9 @@ function SignInForm() {
           Bon <span className="italic font-normal text-accent">retour</span>.
         </h1>
         <p className="mt-4 text-base text-ink-soft">
-          Connecte-toi pour optimiser ton CV et générer ta lettre.
+          {isCheckoutReturn
+            ? "Connecte-toi pour finaliser ton pack. Ton choix et le tarif sont conservés."
+            : "Connecte-toi pour optimiser ton CV et générer ta lettre."}
         </p>
 
         {justReset && (
@@ -59,7 +62,7 @@ function SignInForm() {
 
         <div className="mt-10 space-y-4">
           <GoogleButton callbackURL={redirectTo} />
-          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-faint">
+          <div className="flex items-center gap-3 font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
             <span className="h-px flex-1 bg-rule" />
             ou avec email
             <span className="h-px flex-1 bg-rule" />
@@ -76,7 +79,7 @@ function SignInForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
+              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
               placeholder="badr@exemple.com"
             />
           </div>
@@ -99,7 +102,7 @@ function SignInForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-faint outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
+              className="w-full border border-rule bg-card px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted outline-none transition focus:border-accent focus:shadow-[0_0_0_4px_var(--color-accent-soft)]"
               placeholder="••••••••"
             />
           </div>
@@ -113,7 +116,7 @@ function SignInForm() {
           <button
             type="submit"
             disabled={loading}
-            className="group inline-flex w-full items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium tracking-tight text-paper transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+            className="cta-primary group inline-flex w-full items-center justify-center gap-3 px-7 py-4 text-sm font-medium tracking-tight disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span>{loading ? "Connexion…" : "Se connecter"}</span>
             <span aria-hidden className="transition-transform group-hover:translate-x-1">

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import { STRIPE_ENABLED } from "@/lib/feature-flags";
 import {
   getPackBonusCredits,
   getPackTotalCredits,
+  isPackKey,
   isLaunchOfferActive,
   LAUNCH_OFFER,
   PACKS,
@@ -24,6 +25,16 @@ type SessionUser = {
 
 type SyncStatus = "idle" | "syncing" | "done" | "error";
 
+const PACK_CONTEXT: Record<PackKey, string> = {
+  starter: "Pour quelques candidatures ciblées",
+  pro: "Pour une recherche active",
+  premium: "Pour candidater sur la durée",
+};
+
+function formatUnitPrice(amountCents: number, credits: number) {
+  return `${(amountCents / 100 / credits).toFixed(2).replace(".", ",")} €`;
+}
+
 export default function BuyCreditsPage() {
   return (
     <Suspense fallback={null}>
@@ -34,6 +45,7 @@ export default function BuyCreditsPage() {
 
 function BuyCreditsContent() {
   const { data: session, isPending, refetch } = useSession();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [loadingPack, setLoadingPack] = useState<PackKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +74,14 @@ function BuyCreditsContent() {
   const success = searchParams.get("success") === "true";
   const canceled = searchParams.get("canceled") === "true";
   const checkoutSessionId = searchParams.get("session_id");
+  const requestedPack = searchParams.get("pack");
+  const selectedPack = requestedPack && isPackKey(requestedPack) ? requestedPack : null;
 
   async function handleBuy(pack: PackKey) {
     if (!STRIPE_ENABLED) return;
     if (!user) {
-      window.location.href = "/sign-in?redirect=/buy-credits";
+      const redirect = encodeURIComponent(`/buy-credits?pack=${pack}`);
+      window.location.href = `/sign-in?redirect=${redirect}`;
       return;
     }
     setError(null);
@@ -325,178 +340,238 @@ function BuyCreditsContent() {
   // ========== VUE NORMALE (pricing) ==========
   return (
     <main className="min-h-screen bg-paper">
-      <div className="mx-auto max-w-3xl px-6 pt-16 pb-24">
-        <div className="mb-12 flex items-center justify-between">
-          <Logo size="md" />
-          <Link
-            href="/"
-            className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted hover:text-ink"
-          >
-            ← Retour
-          </Link>
+      <section className="hero-bg border-b border-rule">
+        <div className="mx-auto max-w-6xl px-6 pb-16 pt-10 lg:pb-20 lg:pt-14">
+          <div className="flex items-center justify-between gap-6">
+            <Logo size="md" />
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted transition hover:text-ink"
+            >
+              ← Retour
+            </button>
+          </div>
+
+          {canceled && (
+            <div className="mt-8 border-l-2 border-warm bg-warm-soft px-5 py-4">
+              <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-warm">
+                ● Paiement annulé
+              </p>
+              <p className="mt-2 text-sm text-ink-soft">
+                Aucun montant n&apos;a été débité. Ton pack reste disponible ci-dessous.
+              </p>
+            </div>
+          )}
+
+          {!STRIPE_ENABLED && (
+            <div className="mt-8 border-l-2 border-warm bg-warm-soft px-5 py-4">
+              <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-warm">
+                ● Paiements bientôt disponibles
+              </p>
+              <p className="mt-2 text-sm text-ink-soft">
+                Choisis le pack qui t&apos;intéresse et laisse ton email pour être prévenu en priorité.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-7">
+              <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-warm">
+                {isAdmin
+                  ? "● Compte admin — accès illimité"
+                  : user
+                    ? credits <= 0
+                      ? "● Prêt à recharger"
+                      : "● Compléter ton solde"
+                    : "● Packs sans abonnement"}
+              </p>
+              <h1 className="mt-5 max-w-3xl font-display text-[clamp(2.8rem,6vw,5.2rem)] font-light leading-[0.94] tracking-[-0.03em] text-ink">
+                Choisis ton rythme.{" "}
+                <span className="italic font-normal text-accent">Garde le contrôle.</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">
+                Un crédit génère un CV optimisé ou une lettre de motivation.
+                Tu paies une fois, puis tu utilises tes crédits quand tu en as besoin.
+              </p>
+              {!isPending && user && (
+                <p className="mt-6 inline-flex border border-rule bg-card px-4 py-3 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-muted">
+                  Solde actuel&nbsp;: {isAdmin ? "∞ (admin)" : `${credits} crédit${credits > 1 ? "s" : ""}`}
+                </p>
+              )}
+            </div>
+
+            <aside className="border border-rule bg-card p-6 lg:col-span-5 lg:p-8">
+              {launchOfferActive ? (
+                <>
+                  <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-warm">
+                    ● {LAUNCH_OFFER.label}
+                  </p>
+                  <p className="mt-4 font-display text-3xl font-medium leading-tight tracking-tight text-ink">
+                    {LAUNCH_OFFER.headline}
+                  </p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
+                    Jusqu&apos;au {LAUNCH_OFFER.endsOnLabel}. Le bonus est ajouté
+                    automatiquement au paiement.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-success">
+                    ● Simple et transparent
+                  </p>
+                  <p className="mt-4 font-display text-3xl font-medium leading-tight tracking-tight text-ink">
+                    Aucun abonnement.
+                  </p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
+                    Aucun renouvellement automatique. Tes crédits n&apos;expirent pas.
+                  </p>
+                </>
+              )}
+              <div className="mt-6 grid grid-cols-2 gap-px bg-rule">
+                <div className="bg-paper p-4">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">Paiement</p>
+                  <p className="mt-2 font-medium text-ink">Stripe</p>
+                </div>
+                <div className="bg-paper p-4">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">Validité</p>
+                  <p className="mt-2 font-medium text-ink">Sans expiration</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink-muted">
+              1 crédit = 1 génération
+            </p>
+            <h2 className="mt-3 font-display text-[clamp(2rem,4vw,3.25rem)] font-light leading-none tracking-tight text-ink">
+              Trois packs. Aucune surprise.
+            </h2>
+          </div>
+          <p className="max-w-sm text-[14px] leading-relaxed text-ink-soft">
+            Le pack Pro offre le meilleur équilibre pour une recherche active.
+          </p>
         </div>
 
-        {!STRIPE_ENABLED && (
-          <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
-            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
-              ● Bêta — places limitées
-            </p>
-            <p className="mt-2 text-sm text-ink-soft">
-              On ouvre les paiements dès qu'on a assez de monde dessus. Dis-nous
-              que tu es chaud, on te recontacte en priorité.
-            </p>
-          </div>
-        )}
-
-        {canceled && (
-          <div className="mb-8 border-l-2 border-warm bg-paper-deep px-5 py-4">
-            <p className="font-mono text-[13px] uppercase tracking-[0.18em] text-warm">
-              ● Paiement annulé
-            </p>
-            <p className="mt-2 text-sm text-ink-soft">
-              Aucun montant n'a été débité. Tu peux réessayer ci-dessous.
-            </p>
-          </div>
-        )}
-
-        <span className="font-mono text-[12px] uppercase tracking-[0.24em] text-warm">
-          {isAdmin ? "● Compte admin — accès illimité" : credits <= 0 ? "● Solde épuisé" : "● Recharger ton solde"}
-        </span>
-
-        <h1 className="mt-6 font-display text-[clamp(2.5rem,6vw,4.5rem)] font-light leading-[0.95] tracking-[-0.02em] text-ink">
-          Achète des{" "}
-          <span className="italic font-normal text-accent">crédits</span>.
-        </h1>
-
-        <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft">
-          Chaque crédit te permet de générer un CV ou une lettre de motivation.
-          Paiement sécurisé via Stripe. Pas d'abonnement.
-        </p>
-
-        {launchOfferActive && (
-          <div className="mt-8 border border-warm bg-warm-soft px-5 py-4">
-            <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-warm">
-              ● {LAUNCH_OFFER.label}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-ink">
-              {LAUNCH_OFFER.headline} sur tous les packs, jusqu'au{" "}
-              {LAUNCH_OFFER.endsOnLabel}. Le bonus est ajouté automatiquement
-              après paiement.
-            </p>
-          </div>
-        )}
-
-        {!isPending && (
-          <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted">
-            Solde actuel : {isAdmin ? "∞ (admin)" : `${credits} crédit${credits > 1 ? "s" : ""}`}
-          </p>
-        )}
-
         {error && (
-          <p
-            role="alert"
-            className="mt-4 font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
-          >
+          <p role="alert" className="mt-6 font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
             ✕ {error}
           </p>
         )}
-
         {waitlistError && (
-          <p
-            role="alert"
-            className="mt-4 font-mono text-[13px] uppercase tracking-[0.16em] text-danger"
-          >
+          <p role="alert" className="mt-6 font-mono text-[13px] uppercase tracking-[0.16em] text-danger">
             ✕ {waitlistError}
           </p>
         )}
 
-        <section className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 lg:grid-cols-3">
           {(Object.keys(PACKS) as PackKey[]).map((key) => {
             const pack = PACKS[key];
-            const featured = "featured" in pack && pack.featured;
+            const recommended = "featured" in pack && pack.featured;
+            const highlighted = selectedPack ? selectedPack === key : recommended;
             const isLoading = loadingPack === key;
             const bonusCredits = getPackBonusCredits(key);
             const totalCredits = getPackTotalCredits(key);
+            const unitPrice = formatUnitPrice(pack.amountCents, totalCredits);
+
             return (
-              <div
+              <article
                 key={key}
-                className={`relative border ${featured ? "border-accent bg-paper-deep" : "border-rule bg-paper"} p-6`}
+                className={`relative flex min-h-full flex-col border p-7 transition lg:p-8 ${
+                  highlighted
+                    ? "order-first border-action bg-accent-soft shadow-[0_28px_80px_-46px_rgba(33,71,232,0.8)] lg:order-none"
+                    : "border-rule bg-card hover:border-ink-faint"
+                }`}
               >
-                {featured && (
-                  <span className="absolute -top-3 left-6 bg-accent px-3 py-1 font-mono text-[12px] uppercase tracking-[0.18em] text-paper">
-                    Recommandé
+                {highlighted && (
+                  <span className="absolute -top-3 left-7 bg-action px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-on-action">
+                    {selectedPack === key ? "Ton choix" : "Recommandé"}
                   </span>
                 )}
-                <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
+                <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink-muted">
                   {pack.label}
                 </p>
-                <p className="mt-4 font-display text-4xl font-light tracking-tight text-ink">
+                <p className="mt-5 font-display text-5xl font-medium leading-none tracking-tight text-ink">
                   {totalCredits}
-                  <span className="ml-2 text-base font-normal text-ink-muted">
-                    crédits
-                  </span>
+                  <span className="ml-2 text-base font-normal text-ink-muted">crédits</span>
                 </p>
                 {bonusCredits > 0 && (
-                  <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-success">
+                  <p className="mt-3 font-mono text-[12px] uppercase tracking-[0.16em] text-success">
                     {pack.credits} + {bonusCredits} offerts
                   </p>
                 )}
-                <p className="mt-2 text-2xl font-medium text-ink">{pack.price}</p>
+                <p className="mt-5 text-[15px] leading-relaxed text-ink-soft">
+                  {PACK_CONTEXT[key]}
+                </p>
+
+                <div className="mt-7 border-t border-rule pt-6">
+                  <div className="flex items-end justify-between gap-4">
+                    <p className="font-display text-3xl font-medium tracking-tight text-ink">
+                      {pack.price}
+                    </p>
+                    <p className="pb-1 font-mono text-[11px] uppercase tracking-[0.13em] text-ink-muted">
+                      {unitPrice} / génération
+                    </p>
+                  </div>
+                  <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+                    Paiement unique · crédits sans expiration
+                  </p>
+                </div>
+
                 {STRIPE_ENABLED ? (
                   <button
+                    type="button"
                     onClick={() => handleBuy(key)}
                     disabled={isLoading || loadingPack !== null}
-                    className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
-                      featured
-                        ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
-                        : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
-                      } disabled:cursor-not-allowed`}
+                    className={`mt-7 min-h-13 w-full px-5 py-3 font-mono text-[12px] uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-55 ${
+                      highlighted
+                        ? "cta-primary"
+                        : "border border-ink bg-transparent text-ink transition hover:bg-ink hover:text-paper"
+                    }`}
                   >
-                    {isLoading
-                      ? "Redirection…"
-                      : launchOfferActive
-                      ? "Profiter de l'offre"
-                      : "Acheter"}
+                    {isLoading ? "Ouverture de Stripe…" : `Choisir ${pack.label}`}
                   </button>
                 ) : (
                   <>
                     <button
+                      type="button"
                       onClick={() => handleWaitlistClick(key)}
                       disabled={waitlistStatus[key] !== "idle"}
-                      className={`mt-6 w-full px-5 py-3 font-mono text-[13px] uppercase tracking-[0.18em] transition ${
+                      className={`mt-7 min-h-13 w-full px-5 py-3 font-mono text-[12px] uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-55 ${
                         waitlistStatus[key] === "done"
                           ? "border border-success bg-success-soft text-success"
-                          : featured
-                            ? "bg-ink text-paper hover:bg-accent disabled:bg-ink-faint disabled:opacity-60"
-                            : "border border-ink text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
-                      } disabled:cursor-not-allowed`}
+                          : highlighted
+                            ? "cta-primary"
+                            : "border border-ink text-ink transition hover:bg-ink hover:text-paper"
+                      }`}
                     >
                       {waitlistStatus[key] === "done"
                         ? "✓ Tu es sur la liste"
                         : waitlistStatus[key] === "loading"
                           ? "Envoi…"
-                          : "Je veux l'acheter"}
+                          : `Choisir ${pack.label}`}
                     </button>
-                    {waitlistStatus[key] === "done" && (
-                      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-success">
-                        On te recontacte dès l'ouverture.
-                      </p>
-                    )}
                     {waitlistEmailOpen === key && (
                       <div className="mt-3 flex flex-col gap-2">
                         <input
                           type="email"
                           value={waitlistEmailDraft[key]}
                           onChange={(e) =>
-                            setWaitlistEmailDraft((d) => ({ ...d, [key]: e.target.value }))
+                            setWaitlistEmailDraft((draft) => ({ ...draft, [key]: e.target.value }))
                           }
                           placeholder="ton@email.com"
-                          className="border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-ink"
+                          className="border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                         />
                         <button
+                          type="button"
                           onClick={() => handleWaitlistConfirm(key)}
                           disabled={waitlistStatus[key] === "loading"}
-                          className="bg-ink px-4 py-2 font-mono text-[12px] uppercase tracking-[0.16em] text-paper transition hover:bg-accent disabled:opacity-60"
+                          className="cta-primary px-4 py-2 font-mono text-[12px] uppercase tracking-[0.16em] disabled:opacity-60"
                         >
                           Confirmer
                         </button>
@@ -504,44 +579,39 @@ function BuyCreditsContent() {
                     )}
                   </>
                 )}
-              </div>
+              </article>
             );
           })}
-        </section>
+        </div>
 
-        <section className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
+        <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
           {[
-            {
-              tone: "text-success",
-              label: "Paiement sécurisé",
-              text: "Stripe traite la carte. CV Optimizer ne stocke aucune donnée bancaire.",
-            },
-            {
-              tone: "text-accent",
-              label: "Sans abonnement",
-              text: "Tu achètes un pack une fois. Aucun renouvellement automatique.",
-            },
-            {
-              tone: "text-warm",
-              label: "Crédits automatiques",
-              text: "Le solde est ajouté après paiement et utilisable sur CV ou lettre.",
-            },
-          ].map((item) => (
-            <article key={item.label} className="bg-card p-5">
-              <p className={`font-mono text-[12px] uppercase tracking-[0.18em] ${item.tone}`}>
-                ● {item.label}
+            ["text-success", "Paiement sécurisé", "Stripe traite la carte. Aucune donnée bancaire n'est stockée ici."],
+            ["text-accent", "Sans abonnement", "Tu achètes un pack une fois. Aucun renouvellement automatique."],
+            ["text-warm", "Crédits durables", "Ils sont ajoutés automatiquement et n'expirent pas."],
+          ].map(([tone, label, text]) => (
+            <article key={label} className="bg-card p-6">
+              <p className={`font-mono text-[12px] uppercase tracking-[0.18em] ${tone}`}>
+                ● {label}
               </p>
-              <p className="mt-3 text-sm leading-relaxed text-ink-soft">{item.text}</p>
+              <p className="mt-3 text-sm leading-relaxed text-ink-soft">{text}</p>
             </article>
           ))}
-        </section>
+        </div>
 
-        <p className="mt-10 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted">
-          {STRIPE_ENABLED
-            ? "● Paiement sécurisé par Stripe · Aucune donnée carte stockée"
-            : "● On t'écrit par email dès l'ouverture des paiements"}
-        </p>
-      </div>
+        <div className="mt-10 flex flex-col gap-4 border-t border-rule pt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {STRIPE_ENABLED
+              ? "Paiement sécurisé par Stripe · Reçu envoyé par email"
+              : "On t'écrit dès l'ouverture des paiements"}
+          </p>
+          <div className="flex flex-wrap gap-5">
+            <Link href="/cgu" className="transition hover:text-ink">CGU</Link>
+            <Link href="/remboursement" className="transition hover:text-ink">Remboursement</Link>
+            <a href="mailto:contact@cv-optimizer.fr" className="transition hover:text-ink">Une question ?</a>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
