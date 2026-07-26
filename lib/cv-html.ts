@@ -140,6 +140,9 @@ export function buildHtml(
 <head>
 <meta charset="UTF-8">
 <title>CV ${escapeHtml(cv.fullName)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @page { size: A4; margin: 14mm; }
@@ -176,9 +179,14 @@ export function buildHtml(
     --tag-pad: 2.5px 7px;
   }
 
-  /* === Niveaux de densité (Puppeteer applique la classe sur <body>) === */
+  /* === Niveaux de densité (Puppeteer applique la classe sur <body>) ===
+     Les niveaux 2-4 ont un plancher sur --base-lh/--item-bullets-lh (1.30)
+     et --container-pad-y (14px) : on ne les écrase plus jamais pour gagner
+     de la place. La compaction supplémentaire vient des espaces entre blocs
+     (section-gap, item-gap, header-mb) et de tags plus resserrés (tag-pad). */
   body.density-1 {
     --base-fs: 10.3pt;
+    --base-lh: 1.44;
     --section-gap: 11px;
     --item-gap: 7px;
     --item-fs: 10.3pt;
@@ -190,70 +198,72 @@ export function buildHtml(
     --header-subtitle-fs: 14.5pt;
     --photo-w: 72px;
     --photo-h: 90px;
+    --tag-fs: 8.2pt;
+    --tag-pad: 2.2px 6.5px;
   }
   body.density-2 {
     --base-fs: 10pt;
-    --base-lh: 1.45;
-    --section-gap: 9px;
+    --base-lh: 1.40;
+    --section-gap: 8px;
     --section-title-mb: 6px;
-    --item-gap: 6px;
+    --item-gap: 5.5px;
     --item-fs: 10pt;
     --item-bullets-fs: 9pt;
-    --item-bullets-lh: 1.3;
+    --item-bullets-lh: 1.32;
     --item-bullets-mb: 1.5px;
     --container-pad-y: 15px;
-    --header-mb: 9px;
+    --header-mb: 8px;
     --header-title-fs: 20pt;
     --header-subtitle-fs: 13.5pt;
     --photo-w: 66px;
     --photo-h: 82px;
-    --tag-fs: 8.1pt;
-    --tag-pad: 2px 6px;
+    --tag-fs: 7.9pt;
+    --tag-pad: 1.8px 5.5px;
   }
   body.density-3 {
     --base-fs: 9.6pt;
-    --base-lh: 1.4;
-    --section-gap: 7px;
+    --base-lh: 1.35;
+    --section-gap: 6px;
     --section-title-fs: 8pt;
-    --section-title-mb: 5px;
-    --item-gap: 5px;
+    --section-title-mb: 4px;
+    --item-gap: 4px;
     --item-fs: 9.7pt;
     --item-bullets-fs: 8.7pt;
-    --item-bullets-lh: 1.25;
+    --item-bullets-lh: 1.30;
     --item-bullets-mb: 1px;
-    --container-pad-y: 12px;
-    --header-mb: 7px;
+    --container-pad-y: 14px;
+    --header-mb: 5px;
     --header-title-fs: 19pt;
     --header-subtitle-fs: 12.5pt;
     --photo-w: 60px;
     --photo-h: 74px;
-    --tag-fs: 7.9pt;
-    --tag-pad: 1.5px 5.5px;
+    --tag-fs: 7.7pt;
+    --tag-pad: 1.3px 5px;
   }
   body.density-4 {
     --base-fs: 9.3pt;
-    --base-lh: 1.35;
-    --section-gap: 6px;
+    --base-lh: 1.30;
+    --section-gap: 5px;
     --section-title-fs: 7.8pt;
-    --section-title-mb: 4px;
-    --item-gap: 4px;
+    --section-title-mb: 3px;
+    --item-gap: 3px;
     --item-fs: 9.4pt;
     --item-bullets-fs: 8.4pt;
-    --item-bullets-lh: 1.2;
+    --item-bullets-lh: 1.30;
     --item-bullets-mb: 0.5px;
-    --container-pad-y: 9px;
+    --container-pad-y: 14px;
     --container-pad-x: 22px;
-    --header-mb: 6px;
+    --header-mb: 4px;
     --header-title-fs: 18pt;
     --header-subtitle-fs: 11.5pt;
     --photo-w: 56px;
     --photo-h: 70px;
-    --tag-fs: 7.7pt;
-    --tag-pad: 1px 5px;
+    --tag-fs: 7.5pt;
+    --tag-pad: 0.8px 4.5px;
   }
 
   html, body {
-    font-family: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+    font-family: "Inter", "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
     color: var(--ink);
     font-size: var(--base-fs);
     line-height: var(--base-lh);
@@ -363,7 +373,6 @@ export function buildHtml(
     font-size: var(--section-title-fs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 2.2pt;
     color: var(--ink);
     margin-bottom: var(--section-title-mb);
     padding-bottom: 5px;
