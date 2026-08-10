@@ -1,7 +1,7 @@
 import type { CVItem, CVSection, OptimizedCV } from "../types";
 
 export type AccentKey = "blue" | "warm" | "green" | "ink";
-export type TemplateKey = "classic" | "single";
+export type TemplateKey = "classic" | "single" | "ats";
 
 export const ACCENT_HEX: Record<AccentKey, string> = {
   blue: "#1f4bff",
@@ -13,6 +13,14 @@ export const ACCENT_HEX: Record<AccentKey, string> = {
 export const TEMPLATE_LABEL: Record<TemplateKey, string> = {
   classic: "Classique",
   single: "Une colonne",
+  ats: "ATS",
+};
+
+/** Infobulle du sélecteur de layout : ce que chaque disposition change. */
+export const TEMPLATE_HINT: Record<TemplateKey, string> = {
+  classic: "Classique — nom à gauche, photo à droite, compétences en pastilles",
+  single: "Une colonne — en-tête centré, photo au-dessus du nom",
+  ats: "ATS — noir et blanc, sans photo ni pastille. Le plus sobre, pensé pour les filtres automatisés",
 };
 
 export type EditorState = {
@@ -291,7 +299,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 // ===== localStorage persistence =====
 const DRAFT_KEY = "cv-optimizer:editor-draft";
 
-const VALID_TEMPLATES: TemplateKey[] = ["classic", "single"];
+const VALID_TEMPLATES: TemplateKey[] = ["classic", "single", "ats"];
 
 export function readDraft(): EditorState | null {
   if (typeof window === "undefined") return null;

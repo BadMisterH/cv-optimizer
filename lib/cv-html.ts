@@ -7,7 +7,10 @@
  */
 import type { CVSection, OptimizedCV } from "@/app/types";
 
-export type Template = "classic" | "single";
+// Dupliqué volontairement depuis lib/cv-pdf-shared : ce module est importé par
+// l'aperçu client (LivePreview) et doit rester exempt de toute dépendance
+// server-only. Garder les deux listes de templates synchronisées.
+export type Template = "classic" | "single" | "ats";
 
 function escapeHtml(unsafe: string): string {
   return unsafe
@@ -71,7 +74,20 @@ function ensureProtocol(url: string): string {
   return `https://${trimmed}`;
 }
 
-function buildContactHtml(contact: OptimizedCV["contact"]): string {
+/** Retire le protocole pour l'affichage ("https://github.com/x" → "github.com/x"). */
+function stripProtocol(url: string): string {
+  return url.trim().replace(/\/+$/, "").replace(/^https?:\/\//i, "");
+}
+
+/**
+ * `bareUrls` affiche les URLs sans protocole (le lien cliquable le garde) et
+ * `separator` change le caractère entre deux coordonnées — les deux suivent le
+ * template ATS pour que l'aperçu corresponde exactement au PDF généré.
+ */
+function buildContactHtml(
+  contact: OptimizedCV["contact"],
+  { bareUrls = false, separator = " · " }: { bareUrls?: boolean; separator?: string } = {}
+): string {
   const parts: string[] = [];
 
   if (contact.email?.trim()) {
@@ -93,13 +109,14 @@ function buildContactHtml(contact: OptimizedCV["contact"]): string {
   for (const url of [contact.linkedin, contact.github, contact.portfolio]) {
     if (url?.trim()) {
       const full = ensureProtocol(url);
+      const label = bareUrls ? stripProtocol(url) : full;
       parts.push(
-        `<a class="link" href="${escapeHtml(full)}">${escapeHtml(full)}</a>`
+        `<a class="link" href="${escapeHtml(full)}">${escapeHtml(label)}</a>`
       );
     }
   }
 
-  return parts.join('<span class="sep"> · </span>');
+  return parts.join(`<span class="sep">${escapeHtml(separator)}</span>`);
 }
 
 export function buildHtml(
@@ -108,7 +125,11 @@ export function buildHtml(
   accentColor: string = "#1f4bff",
   template: Template = "classic"
 ): string {
-  const contactHtml = buildContactHtml(cv.contact);
+  const isAts = template === "ats";
+  const contactHtml = buildContactHtml(cv.contact, {
+    bareUrls: isAts,
+    separator: isAts ? " | " : " · ",
+  });
   const safeAccent = /^#[0-9a-fA-F]{3,8}$/.test(accentColor) ? accentColor : "#1f4bff";
   const containerClass = `container template-${template}`;
 
@@ -516,6 +537,112 @@ export function buildHtml(
     padding-left: 10pt;
     border-left: 1.2pt solid var(--accent);
   }
+
+  /* ========== TEMPLATE ATS ==========
+     Reproduction du resume classique noir & blanc : aucune couleur, aucune
+     photo, aucune pastille. Les compétences redeviennent une liste inline
+     ("Catégorie : a, b, c") et les titres de section reprennent une casse
+     normale soulignée d'un filet pleine largeur. La couleur d'accent est
+     volontairement ignorée — c'est tout l'intérêt de ce template. */
+  .template-ats {
+    --ink: #000;
+    --ink-soft: #000;
+    --ink-muted: #000;
+    --ink-faint: #000;
+  }
+  .template-ats .header {
+    text-align: center;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: var(--header-mb);
+  }
+  .template-ats .header::before { display: none; }
+  .template-ats .top-line { justify-content: center; }
+  .template-ats .title-block { text-align: center; }
+  .template-ats .photo { display: none; }
+  .template-ats .title { color: #000; letter-spacing: -0.4pt; }
+  .template-ats .subtitle {
+    color: #000;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    font-size: calc(var(--header-subtitle-fs) * 0.72);
+  }
+  .template-ats .contact { justify-content: center; color: #000; gap: 0 6px; }
+  .template-ats .contact .link { color: #000; }
+  .template-ats .contact .sep { color: #000; }
+
+  .template-ats .section-title {
+    display: block;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    font-size: calc(var(--section-title-fs) * 1.45);
+    color: #000;
+    border-bottom: 0.75pt solid #000;
+    padding-bottom: 1.5px;
+  }
+  .template-ats .section-title::before { display: none; }
+
+  .template-ats .item-heading,
+  .template-ats .item-company,
+  .template-ats .item-meta {
+    color: #000;
+    letter-spacing: 0;
+  }
+  .template-ats .item-company::before { content: ","; margin-right: 4px; color: #000; }
+  .template-ats .item-company { font-weight: 400; margin-left: 0; }
+  .template-ats .item-meta { text-transform: none; }
+
+  .template-ats .item-bullets { color: #000; }
+  .template-ats .item-bullets li::before {
+    background: #000;
+    border-radius: 50%;
+    transform: none;
+    width: 2.6pt;
+    height: 2.6pt;
+    top: 0.55em;
+  }
+
+  /* Accroche : paragraphe simple, sans filet latéral coloré */
+  .template-ats .accroche {
+    border-left: none;
+    padding-left: 0;
+    color: #000;
+  }
+
+  /* Compétences : "Catégorie : a, b, c" sur une ligne de texte continue */
+  .template-ats .item-skill-cat {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 4px;
+    margin-bottom: 2px;
+  }
+  .template-ats .skill-cat-header { display: inline; margin: 0; gap: 0; }
+  .template-ats .skill-cat-header::after { content: none; }
+  .template-ats .skill-cat-heading {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 700;
+    font-size: var(--item-fs);
+    color: #000;
+  }
+  .template-ats .skill-cat-heading::after { content: " :"; }
+  .template-ats .skills { display: inline; margin: 0; gap: 0; }
+  .template-ats .skills span {
+    display: inline;
+    border: none;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: var(--item-fs);
+    color: #000;
+  }
+  /* Espace insécable : une espace littérale dans content est rognée au rendu */
+  .template-ats .skills span:not(:last-child)::after { content: ",\\00a0"; }
 
   /* ========== VARIATIONS TEMPLATE ========== */
   /* Single (centré) */

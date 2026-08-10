@@ -123,7 +123,7 @@ async function extractedTextFor(template: Template): Promise<string> {
 // libs + rendu réel), largement au-delà du timeout par défaut de Vitest
 // (5s). On rend une seule fois par template (beforeAll) plutôt qu'une fois
 // par assertion — 2 renders au lieu de 8 — avec un timeout de hook généreux.
-describe.each<Template>(["classic", "single"])("lisibilité ATS — template %s", (template) => {
+describe.each<Template>(["classic", "single", "ats"])("lisibilité ATS — template %s", (template) => {
   let text: string;
 
   beforeAll(async () => {

@@ -1,5 +1,4 @@
 import "server-only";
-import path from "node:path";
 import React from "react";
 import {
   Document,
@@ -8,36 +7,20 @@ import {
   Text,
   Image,
   Link,
-  Font,
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { OptimizedCV } from "@/app/types";
+import {
+  COLORS,
+  buildContactItems,
+  type CVPdfOptions,
+  type Template,
+} from "./cv-pdf-shared";
+import { AtsPage } from "./cv-pdf-ats";
 
-// ─── Police ───────────────────────────────────────────────────────────────────
-// Inter (SIL OFL 1.1, embarquable librement) auto-hébergée dans le repo — pas
-// de fetch réseau à chaque génération de PDF. Fichiers locaux résolus via
-// fontkit.open() (Font.register ne fait un fetch() que si `src` est une URL).
-const FONTS_DIR = path.join(process.cwd(), "lib", "fonts", "inter");
-Font.register({
-  family: "Inter",
-  fonts: [
-    { src: path.join(FONTS_DIR, "Inter-400.woff"), fontWeight: 400 },
-    { src: path.join(FONTS_DIR, "Inter-500.woff"), fontWeight: 500 },
-    { src: path.join(FONTS_DIR, "Inter-600.woff"), fontWeight: 600 },
-    { src: path.join(FONTS_DIR, "Inter-700.woff"), fontWeight: 700 },
-  ],
-});
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type Template = "classic" | "single";
-
-export interface CVPdfOptions {
-  photo?: string;
-  accentColor?: string;
-  template?: Template;
-  density?: number;
-}
+// L'enregistrement de la police Inter et les helpers de contact vivent dans
+// ./cv-pdf-shared, partagés avec le template ATS (./cv-pdf-ats).
+export type { Template, CVPdfOptions };
 
 // ─── Densité ──────────────────────────────────────────────────────────────────
 
@@ -79,42 +62,6 @@ const DENSITIES: DensityConfig[] = [
   // 4 — compact
   { baseFontSize: 9.3, lineHeight: 1.30, sectionGap: 3.5, sectionTitleMb: 2, sectionTitleFs: 7.6, itemGap: 2.5, itemBulletsLh: 1.30, itemBulletsMb: 0, containerPadY: 7, containerPadX: 18, headerMb: 3, titleFontSize: 16, subtitleFontSize: 11, photoW: 56, photoH: 68, tagFontSize: 7.4, tagPadH: 4.5, tagPadV: 1.2 },
 ];
-
-// ─── Couleurs ─────────────────────────────────────────────────────────────────
-
-const COLORS = {
-  ink: "#0f0f10",
-  inkSoft: "#2a2a2c",
-  inkMuted: "#5d5b56",
-  inkFaint: "#a09d94",
-  rule: "#e8e6df",
-} as const;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function ensureProtocol(url: string): string {
-  const t = url.trim().replace(/\/+$/, "");
-  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
-}
-
-type ContactItem =
-  | { kind: "link"; label: string; href: string }
-  | { kind: "text"; label: string };
-
-function buildContactItems(contact: OptimizedCV["contact"]): ContactItem[] {
-  const items: ContactItem[] = [];
-  if (contact.email?.trim())
-    items.push({ kind: "link", label: contact.email.trim(), href: `mailto:${contact.email.trim()}` });
-  if (contact.phone?.trim())
-    items.push({ kind: "link", label: contact.phone.trim(), href: `tel:${contact.phone.trim().replace(/[^\d+]/g, "")}` });
-  if (contact.location?.trim())
-    items.push({ kind: "text", label: contact.location.trim() });
-  for (const url of [contact.linkedin, contact.github, contact.portfolio]) {
-    if (url?.trim())
-      items.push({ kind: "link", label: ensureProtocol(url), href: ensureProtocol(url) });
-  }
-  return items;
-}
 
 // ─── CVHeader ─────────────────────────────────────────────────────────────────
 
@@ -272,7 +219,7 @@ function CVAccroche({ text, accent, d }: { text: string; accent: string; d: Dens
             fontFamily: "Inter",
             fontWeight: 700,
             textTransform: "uppercase",
-                        color: COLORS.ink,
+            color: COLORS.ink,
           }}
         >
           Profil
@@ -485,7 +432,7 @@ function CVSection({ section, accent, d }: CVSectionProps) {
             fontFamily: "Inter",
             fontWeight: 700,
             textTransform: "uppercase",
-                        color: COLORS.ink,
+            color: COLORS.ink,
           }}
         >
           {section.title}
@@ -509,6 +456,16 @@ interface CVDocumentProps {
 }
 
 function CVDocument({ cv, photo, accentColor, template, density }: CVDocumentProps) {
+  // Le template ATS a sa propre page : pas de photo, pas de couleur d'accent,
+  // pas de pastilles — sa mise en page ne partage rien avec classic/single.
+  if (template === "ats") {
+    return (
+      <Document>
+        <AtsPage cv={cv} density={density} />
+      </Document>
+    );
+  }
+
   const d = DENSITIES[Math.max(0, Math.min(4, density))];
   const accent = /^#[0-9a-fA-F]{3,8}$/.test(accentColor) ? accentColor : "#1f4bff";
 

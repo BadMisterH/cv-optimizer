@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AccentKey, EditorAction, TemplateKey } from "@/app/lib/editorState";
-import { ACCENT_HEX, TEMPLATE_LABEL } from "@/app/lib/editorState";
+import { ACCENT_HEX, TEMPLATE_HINT, TEMPLATE_LABEL } from "@/app/lib/editorState";
 
 type Props = {
   accent: AccentKey;
@@ -18,7 +18,7 @@ const ACCENT_LABEL: Record<AccentKey, string> = {
   green: "Vert",
   ink: "Noir",
 };
-const TEMPLATE_ORDER: TemplateKey[] = ["classic", "single"];
+const TEMPLATE_ORDER: TemplateKey[] = ["classic", "single", "ats"];
 
 function TemplateIcon({ template, active }: { template: TemplateKey; active: boolean }) {
   const stroke = active ? "currentColor" : "currentColor";
@@ -39,6 +39,16 @@ function TemplateIcon({ template, active }: { template: TemplateKey; active: boo
           <line x1="4" y1="8" x2="20" y2="8" stroke={stroke} strokeWidth="0.6" />
           <line x1="4" y1="11" x2="20" y2="11" stroke={stroke} strokeWidth="0.6" />
           <line x1="4" y1="14" x2="20" y2="14" stroke={stroke} strokeWidth="0.6" />
+        </>
+      )}
+      {/* ATS : nom centré, puis titres de section soulignés d'un filet plein */}
+      {template === "ats" && (
+        <>
+          <line x1="9" y1="3.5" x2="15" y2="3.5" stroke={stroke} strokeWidth="1.5" />
+          <line x1="3" y1="7" x2="21" y2="7" stroke={stroke} strokeWidth="1" />
+          <line x1="3" y1="9.5" x2="17" y2="9.5" stroke={stroke} strokeWidth="0.6" />
+          <line x1="3" y1="12.5" x2="21" y2="12.5" stroke={stroke} strokeWidth="1" />
+          <line x1="3" y1="15" x2="17" y2="15" stroke={stroke} strokeWidth="0.6" />
         </>
       )}
     </svg>
@@ -164,8 +174,8 @@ export function EditorToolbar({ accent, template, dispatch, onReset }: Props) {
                   role="radio"
                   aria-checked={active}
                   onClick={() => dispatch({ type: "SET_TEMPLATE", template: key })}
-                  title={TEMPLATE_LABEL[key]}
-                  aria-label={TEMPLATE_LABEL[key]}
+                  title={TEMPLATE_HINT[key]}
+                  aria-label={TEMPLATE_HINT[key]}
                   className={`inline-flex h-7 items-center gap-1.5 rounded-full px-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ink lg:px-2.5 ${
                     active
                       ? "bg-ink text-paper"

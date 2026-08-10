@@ -6,7 +6,7 @@ import { countPdfPages } from "@/lib/pdf-utils";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const VALID_TEMPLATES: Template[] = ["classic", "single"];
+const VALID_TEMPLATES: Template[] = ["classic", "single", "ats"];
 const MAX_DENSITY = 4;
 
 export async function POST(req: Request) {
