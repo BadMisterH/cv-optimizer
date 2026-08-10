@@ -7,7 +7,7 @@ import {
 } from "@/lib/anthropic-budget";
 import { alertAnthropicApiError } from "@/lib/alerting";
 import { extractPdfText } from "@/lib/pdf-text";
-import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
+import { checkUsageGate, refundCredit, reserveCredit } from "@/lib/usage-gate";
 
 // Opus réservé à la génération créative du CV (le cœur du travail : priorisation,
 // reformulation, adaptation à l'offre). L'extraction (transcription fidèle, peu de
@@ -1342,98 +1342,125 @@ export async function POST(req: Request) {
       );
     }
 
-    const pdfBuffer = Buffer.from(await cvEntry.arrayBuffer());
-    const pdfBase64 = pdfBuffer.toString("base64");
+    // Crédit réservé AVANT tout appel IA (et non après génération) : sinon deux
+    // requêtes simultanées passent toutes les deux le gate, génèrent toutes les
+    // deux, et une seule est débitée — N CV facturés une fois. Le débit est
+    // atomique ; tout échec en aval repasse par `refundCredit` dans le finally.
+    const needsCredit = gate.isAuthenticated && !gate.isAdmin;
+    let remainingCredits: number | null = null;
 
-    const client = new Anthropic();
-    const offerText = offer.trim();
+    if (needsCredit) {
+      remainingCredits = await reserveCredit(gate.userId);
+      if (remainingCredits === null) {
+        return NextResponse.json(
+          {
+            error: "Tu n'as plus de crédits. Achète un pack pour continuer.",
+            redirect: "/buy-credits",
+          },
+          { status: 402 }
+        );
+      }
+    }
 
-    const extractedFacts = await extractSourceFacts(client, pdfBase64);
+    let generationDelivered = false;
+    try {
+      const pdfBuffer = Buffer.from(await cvEntry.arrayBuffer());
+      const pdfBase64 = pdfBuffer.toString("base64");
 
-    // Vérité terrain : l'extraction (IA) est confrontée au texte réel du PDF (déterministe).
-    // Toute techno/compétence extraite mais introuvable dans le PDF est une hallucination
-    // d'extraction — retirée AVANT génération pour que rien en aval ne lui fasse confiance.
-    const pdfText = await extractPdfText(pdfBuffer);
-    const verification = filterUnverifiedTechnologies(extractedFacts, pdfText);
-    const sourceFacts = verification.sourceFacts;
-    if (verification.removed.length > 0) {
+      const client = new Anthropic();
+      const offerText = offer.trim();
+
+      const extractedFacts = await extractSourceFacts(client, pdfBase64);
+
+      // Vérité terrain : l'extraction (IA) est confrontée au texte réel du PDF (déterministe).
+      // Toute techno/compétence extraite mais introuvable dans le PDF est une hallucination
+      // d'extraction — retirée AVANT génération pour que rien en aval ne lui fasse confiance.
+      const pdfText = await extractPdfText(pdfBuffer);
+      const verification = filterUnverifiedTechnologies(extractedFacts, pdfText);
+      const sourceFacts = verification.sourceFacts;
+      if (verification.removed.length > 0) {
+        console.log(
+          "[api/optimize] hallucinations d'extraction retirées:",
+          JSON.stringify(verification.removed)
+        );
+      }
       console.log(
-        "[api/optimize] hallucinations d'extraction retirées:",
-        JSON.stringify(verification.removed)
+        "[api/optimize] source counts:",
+        JSON.stringify({
+          experiences: sourceFacts.experiences.length,
+          education: sourceFacts.education.length,
+          projects: sourceFacts.projects.length,
+          skills: sourceFacts.skills.length,
+          languages: sourceFacts.languages.length,
+          interests: sourceFacts.interests.length,
+        })
       );
-    }
-    console.log(
-      "[api/optimize] source counts:",
-      JSON.stringify({
-        experiences: sourceFacts.experiences.length,
-        education: sourceFacts.education.length,
-        projects: sourceFacts.projects.length,
-        skills: sourceFacts.skills.length,
-        languages: sourceFacts.languages.length,
-        interests: sourceFacts.interests.length,
-      })
-    );
-    let parsed = await generateOptimizedCV(client, sourceFacts, offerText);
-    console.log(
-      "[api/optimize] generated sections:",
-      JSON.stringify(parsed.cv.sections.map((s) => ({ title: s.title, items: s.items.length })))
-    );
+      let parsed = await generateOptimizedCV(client, sourceFacts, offerText);
+      console.log(
+        "[api/optimize] generated sections:",
+        JSON.stringify(parsed.cv.sections.map((s) => ({ title: s.title, items: s.items.length })))
+      );
 
-    // Filet de sécurité déterministe sur les compétences, appliqué AVANT validation : une
-    // skill inventée par la génération est retirée (règle 1 : rien d'inventé ne passe) sans
-    // déclencher ni réparation ni 422 (règle 12 : jamais l'utilisateur sans sortie). Seules
-    // les vraies fabrications structurelles restent bloquantes plus bas.
-    let strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
-    parsed = strip.payload;
-    let removedSkills = strip.removed;
-    let { strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts);
-
-    if (strongViolations.length > 0) {
-      parsed = await generateOptimizedCV(client, sourceFacts, offerText, strongViolations);
-      strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
+      // Filet de sécurité déterministe sur les compétences, appliqué AVANT validation : une
+      // skill inventée par la génération est retirée (règle 1 : rien d'inventé ne passe) sans
+      // déclencher ni réparation ni 422 (règle 12 : jamais l'utilisateur sans sortie). Seules
+      // les vraies fabrications structurelles restent bloquantes plus bas.
+      let strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
       parsed = strip.payload;
-      removedSkills = strip.removed;
-      ({ strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts));
+      let removedSkills = strip.removed;
+      let { strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts);
+
+      if (strongViolations.length > 0) {
+        parsed = await generateOptimizedCV(client, sourceFacts, offerText, strongViolations);
+        strip = stripUnjustifiedSkillTags(parsed, sourceFacts);
+        parsed = strip.payload;
+        removedSkills = strip.removed;
+        ({ strongViolations, ambiguousNotes } = await checkFidelity(client, parsed, sourceFacts));
+      }
+
+      if (strongViolations.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "La génération a été bloquée car elle modifiait ou occultait des faits du CV source. Réessaie avec un PDF plus lisible ou ajuste le CV source.",
+            details: strongViolations.slice(0, 8),
+          },
+          { status: 422 }
+        );
+      }
+
+      const reviewFlags = [...ambiguousNotes];
+      const allRemovedSkills = Array.from(new Set([...verification.removed, ...removedSkills]));
+      if (allRemovedSkills.length > 0) {
+        reviewFlags.push(
+          `Compétences retirées car absentes de ton CV source : ${allRemovedSkills.join(", ")}. Ajoute-les à ton CV d'origine si tu les maîtrises réellement, puis relance.`
+        );
+      }
+
+      const cleaned = stripInternalFields(dedupeItemHeadings(parsed));
+      const finalResponse: OptimizeResponse = {
+        ...cleaned,
+        modifications: [
+          ...cleaned.modifications,
+          "Audit anti-invention validé : coordonnées, localisation, entreprises, dates, compétences, chiffres et complétude des expériences contrôlés par rapport au CV source.",
+        ],
+        reviewFlags,
+        // Solde serveur frais issu de la réservation, jamais le cache client de la
+        // session (qui ne reflète pas encore cette génération côté front).
+        remainingCredits,
+      };
+
+      // requireAuth garantit gate.isAuthenticated ici — plus de cookie anonyme à poser.
+      generationDelivered = true;
+      return NextResponse.json(finalResponse);
+    } finally {
+      // Couvre d'un coup le 422 anti-invention ci-dessus ET toute exception
+      // remontant vers le catch externe : le `finally` s'exécute avant que le
+      // `return` ne sorte, donc aucun chemin d'échec ne garde le crédit.
+      if (needsCredit && !generationDelivered) {
+        await refundCredit(gate.userId);
+      }
     }
-
-    if (strongViolations.length > 0) {
-      return NextResponse.json(
-        {
-          error:
-            "La génération a été bloquée car elle modifiait ou occultait des faits du CV source. Réessaie avec un PDF plus lisible ou ajuste le CV source.",
-          details: strongViolations.slice(0, 8),
-        },
-        { status: 422 }
-      );
-    }
-
-    const reviewFlags = [...ambiguousNotes];
-    const allRemovedSkills = Array.from(new Set([...verification.removed, ...removedSkills]));
-    if (allRemovedSkills.length > 0) {
-      reviewFlags.push(
-        `Compétences retirées car absentes de ton CV source : ${allRemovedSkills.join(", ")}. Ajoute-les à ton CV d'origine si tu les maîtrises réellement, puis relance.`
-      );
-    }
-
-    // Déduit AVANT de construire la réponse : remainingCredits doit être la valeur
-    // serveur fraîche juste après déduction, jamais le cache client de la session (qui
-    // ne reflète pas encore cette génération au moment où le front l'affichera).
-    const remainingCredits =
-      gate.isAuthenticated && !gate.isAdmin ? await deductCredit(gate.userId) : null;
-
-    const cleaned = stripInternalFields(dedupeItemHeadings(parsed));
-    const finalResponse: OptimizeResponse = {
-      ...cleaned,
-      modifications: [
-        ...cleaned.modifications,
-        "Audit anti-invention validé : coordonnées, localisation, entreprises, dates, compétences, chiffres et complétude des expériences contrôlés par rapport au CV source.",
-      ],
-      reviewFlags,
-      remainingCredits,
-    };
-
-    // requireAuth garantit gate.isAuthenticated ici — plus de cookie anonyme à poser.
-    return NextResponse.json(finalResponse);
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       await alertAnthropicApiError(err.status ?? 0, err.message, "/api/optimize");

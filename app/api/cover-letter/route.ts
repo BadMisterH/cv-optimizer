@@ -6,7 +6,7 @@ import {
   checkAnthropicBudgetGate,
 } from "@/lib/anthropic-budget";
 import { alertAnthropicApiError } from "@/lib/alerting";
-import { checkUsageGate, deductCredit } from "@/lib/usage-gate";
+import { checkUsageGate, refundCredit, reserveCredit } from "@/lib/usage-gate";
 
 export const runtime = "nodejs";
 
@@ -438,61 +438,84 @@ export async function POST(req: Request) {
       );
     }
 
-    const today = todayInFrench();
+    // Crédit réservé AVANT tout appel IA (et non après génération) : sinon deux
+    // requêtes simultanées passent toutes les deux le gate, génèrent toutes les
+    // deux, et une seule est débitée — N lettres facturées une fois. Le débit est
+    // atomique ; tout échec en aval repasse par `refundCredit` dans le finally.
+    const needsCredit = gate.isAuthenticated && !gate.isAdmin;
 
-    const userContent: Anthropic.Messages.ContentBlockParam[] = [];
-
-    // Ancienne lettre en tête de contexte (calibration de style)
-    if (prevLetterBase64) {
-      userContent.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: prevLetterBase64 },
-        title: "Ancienne lettre de motivation",
-      } as Anthropic.Messages.ContentBlockParam);
-    }
-
-    if (cvPdfBase64) {
-      userContent.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: cvPdfBase64 },
-      });
-      userContent.push({
-        type: "text",
-        text: `=== OFFRE ===\n${offer}\n\n=== DATE D'ENVOI ===\n${today}`,
-      });
-    } else {
-      userContent.push({
-        type: "text",
-        text: `=== CV (JSON structuré, déjà optimisé pour cette offre) ===\n${cvAsText}\n\n=== OFFRE ===\n${offer}\n\n=== DATE D'ENVOI ===\n${today}`,
-      });
-    }
-
-    const client = new Anthropic();
-
-    let parsed = await generateCoverLetter(client, userContent);
-    let strategyViolations = validateLetterStrategy(parsed);
-
-    if (strategyViolations.length > 0) {
-      parsed = await generateCoverLetter(client, userContent, strategyViolations);
-      strategyViolations = validateLetterStrategy(parsed);
-    }
-
-    if (strategyViolations.length > 0) {
+    if (needsCredit && (await reserveCredit(gate.userId)) === null) {
       return NextResponse.json(
         {
-          error:
-            "La lettre a été bloquée car son accroche reste trop générique. Réessaie avec une offre plus détaillée.",
-          details: strategyViolations.slice(0, 6),
+          error: "Tu n'as plus de crédits. Achète un pack pour continuer.",
+          redirect: "/buy-credits",
         },
-        { status: 422 }
+        { status: 402 }
       );
     }
 
-    if (gate.isAuthenticated && !gate.isAdmin) {
-      await deductCredit(gate.userId);
-    }
+    let generationDelivered = false;
+    try {
+      const today = todayInFrench();
 
-    return NextResponse.json(parsed);
+      const userContent: Anthropic.Messages.ContentBlockParam[] = [];
+
+      // Ancienne lettre en tête de contexte (calibration de style)
+      if (prevLetterBase64) {
+        userContent.push({
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: prevLetterBase64 },
+          title: "Ancienne lettre de motivation",
+        } as Anthropic.Messages.ContentBlockParam);
+      }
+
+      if (cvPdfBase64) {
+        userContent.push({
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: cvPdfBase64 },
+        });
+        userContent.push({
+          type: "text",
+          text: `=== OFFRE ===\n${offer}\n\n=== DATE D'ENVOI ===\n${today}`,
+        });
+      } else {
+        userContent.push({
+          type: "text",
+          text: `=== CV (JSON structuré, déjà optimisé pour cette offre) ===\n${cvAsText}\n\n=== OFFRE ===\n${offer}\n\n=== DATE D'ENVOI ===\n${today}`,
+        });
+      }
+
+      const client = new Anthropic();
+
+      let parsed = await generateCoverLetter(client, userContent);
+      let strategyViolations = validateLetterStrategy(parsed);
+
+      if (strategyViolations.length > 0) {
+        parsed = await generateCoverLetter(client, userContent, strategyViolations);
+        strategyViolations = validateLetterStrategy(parsed);
+      }
+
+      if (strategyViolations.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "La lettre a été bloquée car son accroche reste trop générique. Réessaie avec une offre plus détaillée.",
+            details: strategyViolations.slice(0, 6),
+          },
+          { status: 422 }
+        );
+      }
+
+      generationDelivered = true;
+      return NextResponse.json(parsed);
+    } finally {
+      // Couvre d'un coup le 422 ci-dessus ET toute exception remontant vers le
+      // catch externe : le `finally` s'exécute avant que le `return` ne sorte,
+      // donc aucun chemin d'échec ne garde le crédit.
+      if (needsCredit && !generationDelivered) {
+        await refundCredit(gate.userId);
+      }
+    }
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       await alertAnthropicApiError(err.status ?? 0, err.message, "/api/cover-letter");

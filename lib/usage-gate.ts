@@ -99,12 +99,46 @@ export async function checkUsageGate(
  * Déduit 1 crédit de manière atomique. À appeler APRÈS une génération réussie.
  * Renvoie le nouveau solde, ou null si race condition (déjà à 0).
  */
-export async function deductCredit(userId: string): Promise<number | null> {
+/**
+ * Réserve 1 crédit de façon atomique, AVANT de lancer la génération.
+ *
+ * `checkUsageGate` ne suffit pas à lui seul : il lit le solde, puis la
+ * génération dure ~30 s avant que le crédit ne soit débité. Deux requêtes
+ * simultanées lisaient donc toutes les deux « 1 crédit », généraient toutes
+ * les deux, et une seule était débitée — N générations facturées une fois.
+ * Le débit conditionnel (`WHERE credits > 0`) est atomique côté Postgres :
+ * sur N appels concurrents, exactement N-limités réussissent.
+ *
+ * Renvoie le solde restant après débit, ou `null` si l'utilisateur n'avait
+ * plus de crédit (y compris quand une requête concurrente vient de prendre le
+ * dernier). L'appelant DOIT rembourser via `refundCredit` si la génération
+ * échoue ensuite.
+ */
+export async function reserveCredit(userId: string): Promise<number | null> {
   const result = await pool.query<{ credits: number }>(
     'UPDATE "user" SET credits = credits - 1 WHERE id = $1 AND credits > 0 RETURNING credits',
     [userId]
   );
   return result.rows[0]?.credits ?? null;
+}
+
+/**
+ * Rend un crédit réservé quand la génération n'a pas abouti (erreur IA,
+ * réponse bloquée par l'audit anti-invention, exception).
+ *
+ * Ne lève jamais : un remboursement raté ne doit pas masquer l'erreur
+ * d'origine ni transformer un 422 propre en 500. L'échec est journalisé pour
+ * pouvoir recréditer manuellement.
+ */
+export async function refundCredit(userId: string): Promise<void> {
+  try {
+    await pool.query('UPDATE "user" SET credits = credits + 1 WHERE id = $1', [userId]);
+  } catch (err) {
+    console.error(
+      `[usage-gate] REMBOURSEMENT ÉCHOUÉ pour user=${userId} — recréditer manuellement:`,
+      err
+    );
+  }
 }
 
 export async function getCredits(userId: string): Promise<number> {
