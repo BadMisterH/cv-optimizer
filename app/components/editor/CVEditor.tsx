@@ -9,6 +9,7 @@ import {
   ACCENT_HEX,
   type EditorState,
   editorReducer,
+  DRAFT_KEY,
   readDraft,
   saveDraft,
   clearDraft,
@@ -22,12 +23,15 @@ type Props = {
   cv: OptimizedCV;
   photo: string | null;
   onChange?: (state: EditorState) => void;
+  /** Clé localStorage du brouillon. Par défaut celle du CV généré par l'IA ;
+   *  la saisie manuelle (/creer) passe la sienne pour ne pas l'écraser. */
+  draftKey?: string;
 };
 
-export function CVEditor({ cv, photo, onChange }: Props) {
+export function CVEditor({ cv, photo, onChange, draftKey = DRAFT_KEY }: Props) {
   // Initialise depuis le draft localStorage s'il existe pour ce CV, sinon depuis le CV fraîchement généré
   const [state, dispatch] = useReducer(editorReducer, undefined, () => {
-    const draft = readDraft();
+    const draft = readDraft(draftKey);
     if (draft && draft.cv.fullName === cv.fullName) return draft;
     return { cv, accent: "blue" as const, template: "classic" as const };
   });
@@ -43,9 +47,9 @@ export function CVEditor({ cv, photo, onChange }: Props) {
 
   // Persiste à chaque changement
   useEffect(() => {
-    saveDraft(state);
+    saveDraft(state, draftKey);
     onChange?.(state);
-  }, [state, onChange]);
+  }, [state, onChange, draftKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -63,7 +67,7 @@ export function CVEditor({ cv, photo, onChange }: Props) {
   }
 
   function handleReset() {
-    clearDraft();
+    clearDraft(draftKey);
     dispatch({ type: "RESET", cv });
   }
 

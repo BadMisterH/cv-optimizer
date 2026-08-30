@@ -29,6 +29,49 @@ export type EditorState = {
   template: TemplateKey;
 };
 
+/**
+ * Squelette de CV vierge pour la saisie manuelle (page /creer), sans passer
+ * par l'IA.
+ *
+ * Tous les champs sont vides : `EditableText` affiche alors un placeholder
+ * grisé, donc rien n'est à effacer avant d'écrire. En revanche les sections
+ * d'un CV français sont déjà posées, avec un item chacune — un éditeur
+ * totalement nu n'indique pas où écrire ni qu'on peut ajouter des blocs.
+ *
+ * Renvoie un objet neuf à chaque appel : partagé, il servirait d'état mutable
+ * et les modifications d'un remplissage fuiteraient dans le suivant.
+ */
+export function createBlankCV(): OptimizedCV {
+  const blankItem = (): CVItem => ({
+    heading: "",
+    subheading: "",
+    company: "",
+    bullets: [""],
+    tags: [],
+  });
+
+  return {
+    fullName: "",
+    title: "",
+    accroche: "",
+    contact: {
+      email: "",
+      phone: "",
+      location: "",
+      linkedin: "",
+      github: "",
+      portfolio: "",
+    },
+    sections: [
+      { title: "Expérience", items: [blankItem()] },
+      { title: "Formation", items: [blankItem()] },
+      // Compétences : des tags, pas des puces (cf. rendu "catégorie" des templates)
+      { title: "Compétences", items: [{ ...blankItem(), bullets: [], tags: [""] }] },
+      { title: "Langues", items: [blankItem()] },
+    ],
+  };
+}
+
 type SectionPath = { sectionIndex: number };
 type ItemPath = SectionPath & { itemIndex: number };
 type BulletPath = ItemPath & { bulletIndex: number };
@@ -297,14 +340,18 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 }
 
 // ===== localStorage persistence =====
-const DRAFT_KEY = "cv-optimizer:editor-draft";
+/** Brouillon du CV issu d'une génération IA (/optimiser). */
+export const DRAFT_KEY = "cv-optimizer:editor-draft";
+/** Brouillon de la saisie manuelle (/creer) — cloisonné pour que les deux
+ *  parcours ne s'écrasent pas l'un l'autre. */
+export const BLANK_DRAFT_KEY = "cv-optimizer:blank-draft";
 
 const VALID_TEMPLATES: TemplateKey[] = ["classic", "single", "ats"];
 
-export function readDraft(): EditorState | null {
+export function readDraft(key: string = DRAFT_KEY): EditorState | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const draft = JSON.parse(raw) as EditorState;
     if (!VALID_TEMPLATES.includes(draft.template)) draft.template = "classic";
@@ -314,16 +361,16 @@ export function readDraft(): EditorState | null {
   }
 }
 
-export function saveDraft(state: EditorState): void {
+export function saveDraft(state: EditorState, key: string = DRAFT_KEY): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+    localStorage.setItem(key, JSON.stringify(state));
   } catch {
     // localStorage full or disabled, on ignore silencieusement
   }
 }
 
-export function clearDraft(): void {
+export function clearDraft(key: string = DRAFT_KEY): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(DRAFT_KEY);
+  localStorage.removeItem(key);
 }

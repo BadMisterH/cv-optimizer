@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { UserMenu } from "./UserMenu";
 
 const services = [
+  { href: "/creer", label: "Créer" },
   { href: "/optimiser", label: "CV" },
   { href: "/lettre", label: "Lettre" },
   { href: "/historique", label: "Historique" },

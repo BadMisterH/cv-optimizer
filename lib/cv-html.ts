@@ -46,13 +46,19 @@ function renderItem(it: CVSection["items"][number]): string {
       : `<div class="item-header"><div><span class="item-heading">${heading}</span>${company ? `<span class="item-company">${company}</span>` : ""}</div>${subheading ? `<span class="item-meta">${subheading}</span>` : ""}</div>`
     : "";
 
-  const bullets = it.bullets.length
-    ? `<ul class="item-bullets">${it.bullets
+  // Une puce ou une pastille vide (champ jamais rempli, ou vidé par l'utilisateur)
+  // ne doit jamais atteindre le rendu : elle apparaîtrait comme un marqueur ou une
+  // bulle orpheline.
+  const filledBullets = it.bullets.filter((b) => b.trim().length > 0);
+  const filledTags = it.tags.filter((t) => t.trim().length > 0);
+
+  const bullets = filledBullets.length
+    ? `<ul class="item-bullets">${filledBullets
         .map((b) => `<li>${escapeHtml(b)}</li>`)
         .join("")}</ul>`
     : "";
-  const tags = it.tags.length
-    ? `<div class="skills">${it.tags
+  const tags = filledTags.length
+    ? `<div class="skills">${filledTags
         .map((tag) => `<span>${escapeHtml(tag)}</span>`)
         .join("")}</div>`
     : "";

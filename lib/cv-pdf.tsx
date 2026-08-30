@@ -250,7 +250,13 @@ interface CVItemProps {
 }
 
 function CVItem({ item, accent, d }: CVItemProps) {
-  const isSkillCat = item.tags.length > 0 && item.bullets.length === 0 && !!item.heading;
+  // Une puce ou une pastille vide (champ jamais rempli, ou vidé par l'utilisateur)
+  // ne doit jamais atteindre le PDF : elle sortirait comme un marqueur ou une
+  // bulle orpheline.
+  const bullets = item.bullets.filter((b) => b.trim().length > 0);
+  const tags = item.tags.filter((t) => t.trim().length > 0);
+
+  const isSkillCat = tags.length > 0 && bullets.length === 0 && !!item.heading;
 
   return (
     <View style={{ marginBottom: d.itemGap }}>
@@ -330,9 +336,9 @@ function CVItem({ item, accent, d }: CVItemProps) {
       ) : null}
 
       {/* Bullets */}
-      {item.bullets.length > 0 ? (
+      {bullets.length > 0 ? (
         <View style={{ marginTop: 2, paddingLeft: 12 }}>
-          {item.bullets.map((b, i) => (
+          {bullets.map((b, i) => (
             <View
               key={i}
               style={{
@@ -369,9 +375,9 @@ function CVItem({ item, accent, d }: CVItemProps) {
       ) : null}
 
       {/* Tags */}
-      {item.tags.length > 0 ? (
+      {tags.length > 0 ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 3 }}>
-          {item.tags.map((tag, i) => (
+          {tags.map((tag, i) => (
             <View
               key={i}
               style={{

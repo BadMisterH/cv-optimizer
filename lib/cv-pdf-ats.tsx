@@ -163,9 +163,15 @@ function AtsItem({
   d: AtsDensity;
   isLast: boolean;
 }) {
+  // Une puce ou un tag vide (champ jamais rempli, ou vidé par l'utilisateur) ne
+  // doit jamais atteindre le PDF : il sortirait comme un marqueur orphelin ou
+  // une virgule isolée dans la liste inline.
+  const bullets = item.bullets.filter((b) => b.trim().length > 0);
+  const tags = item.tags.filter((t) => t.trim().length > 0);
+
   // Catégorie de compétences : « Label : a, b, c » sur une seule ligne de texte.
   // Un parseur lit un flux continu — bien plus fiable que des pastilles.
-  const isSkillCategory = item.tags.length > 0 && item.bullets.length === 0;
+  const isSkillCategory = tags.length > 0 && bullets.length === 0;
 
   if (isSkillCategory) {
     return (
@@ -180,14 +186,14 @@ function AtsItem({
         {item.heading ? (
           <Text style={{ fontWeight: 700 }}>{item.heading} : </Text>
         ) : null}
-        {item.tags.join(", ")}
+        {tags.join(", ")}
       </Text>
     );
   }
 
   const hasHeadingRow = !!(item.heading || item.company || item.subheading);
   // Une ligne simple (formation, langue) se serre ; un bloc à puces respire.
-  const gap = item.bullets.length > 0 ? d.itemGap : d.compactItemGap;
+  const gap = bullets.length > 0 ? d.itemGap : d.compactItemGap;
 
   return (
     <View style={{ marginBottom: isLast ? 0 : gap }} wrap={false}>
@@ -232,9 +238,9 @@ function AtsItem({
         </View>
       ) : null}
 
-      {item.bullets.length > 0 ? (
+      {bullets.length > 0 ? (
         <View style={{ marginTop: hasHeadingRow ? 1.5 : 0 }}>
-          {item.bullets.map((bullet, i) => (
+          {bullets.map((bullet, i) => (
             <View
               key={i}
               style={{ flexDirection: "row", marginBottom: d.bulletMb, paddingLeft: 10 }}
@@ -266,7 +272,7 @@ function AtsItem({
       ) : null}
 
       {/* Un item avec des tags ET des bullets : les tags ferment l'item, inline. */}
-      {item.tags.length > 0 && item.bullets.length > 0 ? (
+      {tags.length > 0 && bullets.length > 0 ? (
         <Text
           style={{
             fontSize: d.bodyFs,
@@ -276,7 +282,7 @@ function AtsItem({
             marginTop: 1,
           }}
         >
-          {item.tags.join(", ")}
+          {tags.join(", ")}
         </Text>
       ) : null}
     </View>
