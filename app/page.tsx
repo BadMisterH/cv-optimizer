@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import resultCvAnonymized from "./assets/result-cv-anonymized.png";
 import { signOut, useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import {
@@ -395,37 +396,18 @@ export default function Landing() {
                       Résultat final
                     </span>
                     <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-                      Exemple généré
+                      Exemple fictif
                     </span>
                   </figcaption>
 
                   <div className="relative h-[430px] overflow-hidden bg-white sm:h-[610px] xl:h-[590px]">
                     <Image
-                      src="/ResultCV.png"
-                      alt="Aperçu d'un CV optimisé généré par CV Optimizer"
-                      width={1654}
-                      height={2339}
+                      src={resultCvAnonymized}
+                      alt="Exemple fictif d'un CV optimisé généré par CV Optimizer"
                       priority
                       sizes="(max-width: 639px) calc(100vw - 48px), (max-width: 1279px) 500px, 460px"
                       className="h-auto w-full"
                     />
-                    <div
-                      aria-label="Informations personnelles anonymisées"
-                      className="absolute inset-x-0 top-0 z-10 flex h-11 items-center justify-between border-b-2 border-ink bg-white px-3 sm:h-16 sm:px-4"
-                    >
-                      <div>
-                        <span className="mb-1 block h-0.5 w-8 bg-accent" aria-hidden />
-                        <p className="text-[8px] font-bold leading-none text-ink sm:text-[12px]">
-                          CANDIDAT EXEMPLE
-                        </p>
-                        <p className="mt-1 font-mono text-[6px] uppercase leading-none tracking-[0.08em] text-accent sm:text-[8px]">
-                          Profil web · données anonymisées
-                        </p>
-                      </div>
-                      <p className="hidden font-mono text-[7px] uppercase tracking-[0.1em] text-ink-muted sm:block">
-                        Contact masqué
-                      </p>
-                    </div>
                     <div
                       aria-hidden
                       className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-white via-white/85 to-transparent"
@@ -443,7 +425,7 @@ export default function Landing() {
                     </div>
                     <p className="inline-flex shrink-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-success">
                       <span aria-hidden className="h-1.5 w-1.5 bg-success" />
-                      Identité masquée
+                      Données 100 % fictives
                     </p>
                   </div>
                 </figure>
