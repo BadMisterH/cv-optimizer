@@ -1,12 +1,8 @@
 @import "tailwindcss";
 
-/* Active la variante Tailwind `dark:` ciblée sur [data-theme="dark"]
-   posé par next-themes sur <html>. Permet `dark:bg-foo` dans les composants
-   tout en gardant les overrides de tokens CSS plus bas. */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
-/* Colors : @theme (sans inline) → utility classes utilisent var(--color-...)
-   donc les overrides [data-theme="dark"] plus bas s'appliquent au runtime. */
+/* Palette unique, en clair. Le site n'a pas de thème sombre : les surfaces
+   sombres qui subsistent (bouton principal, section tarifs) sont des choix
+   de composition sur fond clair, pas un thème commutable. */
 @theme {
   --color-paper: #fbfaf6;
   --color-paper-deep: #f2efe6;
@@ -58,28 +54,6 @@ html {
   scroll-margin-top: 80px;
 }
 
-/* ===== Dark mode ===== */
-[data-theme="dark"] {
-  color-scheme: dark;
-  --color-paper: #10131a;
-  --color-paper-deep: #161b26;
-  --color-card: #1b202c;
-  --color-ink: #f4f1e9;
-  --color-ink-soft: #d7d4cc;
-  --color-ink-muted: #aaa8a1;
-  --color-ink-faint: #807f7a;
-  --color-rule: #3c414c;
-  --color-rule-soft: #252b36;
-  --color-accent: #86a0ff;
-  --color-accent-hover: #a0b2ff;
-  --color-accent-soft: #19254b;
-  --color-warm: #ff9a6c;
-  --color-warm-soft: #3a2118;
-  --color-success: #78c59a;
-  --color-success-soft: #172d23;
-  --color-danger: #ff746a;
-}
-
 .hero-bg {
   background:
     radial-gradient(
@@ -95,11 +69,22 @@ html {
     var(--color-paper);
 }
 
+/* Même composition que .hero-bg, en miroir (accent en haut à droite, chaud en
+   bas à gauche) et posée sur le ton papier plus profond : la section tarifs
+   se détache des sections voisines sans recourir à un fond sombre. */
 .pricing-bg {
   background:
-    radial-gradient(circle at 82% 8%, rgb(36 79 208 / 24%), transparent 34%),
-    radial-gradient(circle at 8% 92%, rgb(173 70 27 / 15%), transparent 30%),
-    linear-gradient(145deg, #10131a 0%, #0c1019 100%);
+    radial-gradient(
+      ellipse 55% 45% at 88% 4%,
+      var(--color-accent-soft) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 40% at 4% 96%,
+      var(--color-warm-soft) 0%,
+      transparent 55%
+    ),
+    var(--color-paper-deep);
 }
 
 .cta-primary {

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import { ThemeProvider } from "./components/ThemeProvider";
 import {
   SITE_AUTHOR,
   SITE_DESCRIPTION,
@@ -112,12 +111,11 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      suppressHydrationWarning
       data-scroll-behavior="smooth"
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-paper text-ink font-sans">
-        <ThemeProvider>{children}</ThemeProvider>
+        {children}
         <Analytics />
       </body>
     </html>

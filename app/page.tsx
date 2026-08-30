@@ -788,27 +788,27 @@ export default function Landing() {
       </section>
 
       {/* ============ TARIFS ============ */}
-      <section id="tarifs" className="pricing-bg border-b border-rule bg-night text-on-night">
+      <section id="tarifs" className="pricing-bg border-b border-rule bg-paper-deep text-ink">
         <div className="mx-auto max-w-360 px-6 py-20 lg:py-28">
           <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-8">
-              <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-on-night/60">
+              <p className="font-mono text-[13px] uppercase tracking-[0.2em] text-ink-muted">
                 ● Tarifs transparents
               </p>
-              <h2 className="mt-4 max-w-4xl font-display text-[clamp(2.4rem,5vw,4.5rem)] font-light leading-[0.96] tracking-[-0.025em] text-on-night">
+              <h2 className="mt-4 max-w-4xl font-display text-[clamp(2.4rem,5vw,4.5rem)] font-light leading-[0.96] tracking-[-0.025em] text-ink">
                 Teste le résultat.{" "}
-                <span className="italic font-normal text-[#ffab73]">
+                <span className="italic font-normal text-warm">
                   Paie seulement si tu veux continuer.
                 </span>
               </h2>
             </div>
             <div className="lg:col-span-4">
-              <p className="text-[16px] leading-relaxed text-on-night/75">
+              <p className="text-[16px] leading-relaxed text-ink-soft">
                 Un crédit génère un CV optimisé ou une lettre de motivation.
                 Aucun abonnement, aucun renouvellement automatique.
               </p>
               {launchOfferActive && (
-                <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-[#ffab73]">
+                <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-warm">
                   ● {LAUNCH_OFFER.headline} jusqu&apos;au {LAUNCH_OFFER.endsOnLabel}
                 </p>
               )}
@@ -876,20 +876,20 @@ export default function Landing() {
             })}
           </div>
 
-          <div className="mt-8 grid gap-px overflow-hidden border border-on-night/15 bg-on-night/15 sm:grid-cols-3">
+          <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
             {[
               ["01", "1 CV offert", "Teste le rendu complet sans carte bancaire."],
               ["02", "Crédits sans expiration", "Utilise-les au rythme de tes candidatures."],
               ["03", "Paiement Stripe", "CV Optimizer ne stocke aucune donnée carte."],
             ].map(([number, title, text]) => (
-              <div key={number} className="bg-night/85 p-5 lg:p-6">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#ffab73]">
+              <div key={number} className="bg-card p-5 lg:p-6">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-warm">
                   {number}
                 </p>
-                <p className="mt-3 font-display text-xl font-medium tracking-tight text-on-night">
+                <p className="mt-3 font-display text-xl font-medium tracking-tight text-ink">
                   {title}
                 </p>
-                <p className="mt-2 text-[13px] leading-relaxed text-on-night/65">{text}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{text}</p>
               </div>
             ))}
           </div>
