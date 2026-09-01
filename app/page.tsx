@@ -58,6 +58,9 @@ const FAQ_ITEMS = [
 ] as const;
 
 const NAV_LINKS = [
+  // Seule entrée qui pointe vers une page et non vers une ancre : le
+  // constructeur gratuit doit être atteignable dès l'en-tête, sans compte.
+  { href: "/creer", label: "Créer" },
   { href: "#comment", label: "Étapes" },
   { href: "#exemple", label: "Exemple" },
   { href: "#tarifs", label: "Tarifs" },
@@ -309,6 +312,17 @@ export default function Landing() {
     : isLogged
       ? "Optimiser mon CV"
       : "Optimiser mon CV gratuitement";
+  // « 1 génération offerte » serait un mensonge pour qui vient de consommer la
+  // sienne : on lui annonce ce qui lui reste réellement d'accessible sans payer.
+  const freeClaim = isOutOfCredits
+    ? "Création manuelle gratuite"
+    : "1 génération offerte";
+  // Deux boutons côte à côte annonçant « gratuitement » n'expliquent pas en quoi
+  // ils diffèrent. Pour qui a encore des crédits, la distinction utile est qui
+  // rédige (l'IA ou moi) ; pour qui n'en a plus, c'est le prix.
+  const freeBuilderLabel = isOutOfCredits
+    ? "Créer un CV gratuitement"
+    : "Créer un CV moi-même";
   const launchOfferActive = isLaunchOfferActive();
 
   return (
@@ -357,19 +371,23 @@ export default function Landing() {
                     →
                   </span>
                 </Link>
-                <a
-                  href="#exemple"
+                {/* Chemin gratuit, toujours offert : sans compte, sans crédit et
+                    sans IA. C'est aussi la sortie de secours de quelqu'un à 0
+                    crédit, qu'on ne veut jamais laisser face au seul paiement.
+                    L'exemple avant/après reste accessible par le menu (EXEMPLE). */}
+                <Link
+                  href="/creer"
                   className="group inline-flex min-h-14 items-center justify-center gap-3 border border-rule bg-card/60 px-7 py-4 font-mono text-[13px] uppercase tracking-[0.18em] text-ink-muted transition hover:border-ink hover:bg-card hover:text-ink"
                 >
-                  Voir un exemple avant/après
-                  <span aria-hidden className="transition-transform group-hover:translate-y-0.5">
-                    ↓
+                  {freeBuilderLabel}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                    →
                   </span>
-                </a>
+                </Link>
               </div>
 
               <div className="mt-6 flex max-w-2xl flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-muted">
-                <span>● 1 génération offerte</span>
+                <span>● {freeClaim}</span>
                 <span>● Sans carte bancaire</span>
                 <span>● CV supprimé après génération</span>
                 <a

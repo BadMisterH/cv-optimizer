@@ -293,13 +293,24 @@ export default function Page() {
                   </div>
                 )}
                 {outOfCredits ? (
-                  <Link
-                    href="/buy-credits"
-                    className="cta-primary group inline-flex items-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
-                  >
-                    <span>Acheter des crédits</span>
-                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
-                  </Link>
+                  // Jamais le paiement comme seule issue : la création manuelle
+                  // reste gratuite et fonctionne sans crédit.
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Link
+                      href="/buy-credits"
+                      className="cta-primary group inline-flex items-center gap-3 px-7 py-4 text-sm font-medium tracking-tight"
+                    >
+                      <span>Acheter des crédits</span>
+                      <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                    </Link>
+                    <Link
+                      href="/creer"
+                      className="group inline-flex items-center gap-2 border border-rule px-6 py-4 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted transition hover:border-ink hover:text-ink"
+                    >
+                      Créer un CV gratuitement
+                      <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                    </Link>
+                  </div>
                 ) : (
                   <button
                     type="submit"
@@ -595,13 +606,22 @@ function Result({
                 </p>
               )}
             </div>
-            <Link
-              href="/buy-credits"
-              className="cta-primary group inline-flex items-center gap-2 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em]"
-            >
-              Recharger maintenant
-              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/buy-credits"
+                className="cta-primary group inline-flex items-center gap-2 px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em]"
+              >
+                Recharger maintenant
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
+              <Link
+                href="/creer"
+                className="group inline-flex items-center gap-2 border border-rule px-5 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-ink-muted transition hover:border-ink hover:text-ink"
+              >
+                Ou créer un CV gratuitement
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
+            </div>
           </div>
         )}
 
