@@ -28,6 +28,10 @@ const FAQ_ITEMS = [
     a: "Non. CV Optimizer reformule, priorise et clarifie ce qui existe déjà dans ton CV. Il ne crée pas de poste, de diplôme, de compétence ou de résultat que tu n'as jamais eu.",
   },
   {
+    q: "Mon CV ne va pas sonner trop généré par IA ?",
+    a: "Non. Le modèle bannit les bullets purement descriptifs du type \"Gestion de...\", \"Participation à...\" ou \"Responsable de...\" sans action ni contexte, et reformule chaque phrase avec un verbe d'action et un contexte concret. Le style reste le tien, pas celui d'un CV visiblement généré par un chatbot.",
+  },
+  {
     q: "Est-ce que mes données restent confidentielles ?",
     a: "Oui. Ton CV n'est pas vendu, n'est pas utilisé pour entraîner un modèle et le contenu du CV n'est pas conservé après génération. Seuls les éléments nécessaires au compte et aux crédits sont stockés.",
   },
@@ -657,7 +661,29 @@ export default function Landing() {
             </article>
           </div>
 
-          <div className="mt-10 grid gap-6 border border-rule bg-paper p-6 lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
+          {/* Zone de score, pas un chiffre précis inventé : ce couple avant/après est un
+              exemple statique, pas une génération réelle passée dans le calcul du score.
+              Les seuils (rouge <60, orange 60-79, vert 80+) sont ceux du vrai composant
+              ATSScore — concret sans donner un chiffre qui n'a jamais été mesuré. */}
+          <div className="mt-6 flex flex-wrap items-center gap-4 border border-rule bg-paper px-6 py-5 lg:px-8">
+            <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-ink-muted">
+              Score ATS · à titre indicatif
+            </p>
+            <div className="flex items-center gap-2 font-mono text-[13px] uppercase tracking-[0.16em]">
+              <span className="border border-dashed border-danger bg-danger-soft px-2.5 py-1 text-danger">
+                Zone rouge · &lt;60
+              </span>
+              <span aria-hidden className="text-ink-faint">→</span>
+              <span className="border border-dashed border-success bg-success-soft px-2.5 py-1 text-success">
+                Zone verte · 80+
+              </span>
+            </div>
+            <p className="text-[13px] leading-relaxed text-ink-muted">
+              C&apos;est le type de bascule qu&apos;entraîne ce genre de reformulation.
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-6 border border-rule bg-paper p-6 lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
             <div>
               <p className="font-mono text-[13px] uppercase tracking-[0.22em] text-ink-muted">
                 Pourquoi c&apos;est mieux ?
@@ -806,6 +832,10 @@ export default function Landing() {
               <p className="text-[16px] leading-relaxed text-ink-soft">
                 Un crédit génère un CV optimisé ou une lettre de motivation.
                 Aucun abonnement, aucun renouvellement automatique.
+              </p>
+              <p className="mt-4 text-[14px] leading-relaxed text-ink-muted">
+                À titre de comparaison, un accompagnement CV avec un coach
+                carrière coûte en général entre 50 et 150 €.
               </p>
               {launchOfferActive && (
                 <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-warm">
